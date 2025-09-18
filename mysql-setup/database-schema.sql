@@ -1,21 +1,20 @@
--- SemScan Attendance System Database Schema
+-- SemScan Attendance System - Simplified Database Schema
 -- MySQL 8.4 Database Schema
 
-USE attendance;
+-- Create database
+CREATE DATABASE IF NOT EXISTS semscan_db;
+USE semscan_db;
 
 -- =============================================
 -- 1. USERS TABLE
 -- =============================================
 CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(36) PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    role ENUM('student', 'teacher', 'admin') NOT NULL DEFAULT 'student',
-    student_id VARCHAR(50) UNIQUE NULL, -- Only for students
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
+    email VARCHAR(255) UNIQUE NOT NULL,
+    role ENUM('STUDENT', 'TEACHER', 'ADMIN') NOT NULL DEFAULT 'STUDENT',
+    student_id VARCHAR(50) UNIQUE NULL
 );
 
 -- =============================================
@@ -27,277 +26,139 @@ CREATE TABLE IF NOT EXISTS courses (
     course_code VARCHAR(50) UNIQUE NOT NULL,
     description TEXT,
     lecturer_id VARCHAR(36) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (lecturer_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 -- =============================================
--- 3. ENROLLMENTS TABLE (Students in Courses)
--- =============================================
-CREATE TABLE IF NOT EXISTS enrollments (
-    enrollment_id VARCHAR(36) PRIMARY KEY,
-    course_id VARCHAR(36) NOT NULL,
-    student_id VARCHAR(36) NOT NULL,
-    enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('active', 'dropped', 'completed') DEFAULT 'active',
-    FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE,
-    FOREIGN KEY (student_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    UNIQUE KEY unique_enrollment (course_id, student_id)
-);
-
--- =============================================
--- 4. SESSIONS TABLE
+-- 3. SESSIONS TABLE
 -- =============================================
 CREATE TABLE IF NOT EXISTS sessions (
     session_id VARCHAR(36) PRIMARY KEY,
     course_id VARCHAR(36) NOT NULL,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NULL,
-    status ENUM('open', 'closed') DEFAULT 'open',
-    qr_code_data TEXT, -- Store QR code payload
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE,
-    INDEX idx_course_time (course_id, start_time),
-    INDEX idx_status (status)
+    status ENUM('OPEN', 'CLOSED') DEFAULT 'OPEN',
+    qr_code_data TEXT,
+    FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE
 );
 
 -- =============================================
--- 5. ATTENDANCE TABLE
+-- 4. ATTENDANCE TABLE
 -- =============================================
 CREATE TABLE IF NOT EXISTS attendance (
     attendance_id VARCHAR(36) PRIMARY KEY,
     session_id VARCHAR(36) NOT NULL,
     student_id VARCHAR(36) NOT NULL,
     attendance_time TIMESTAMP NOT NULL,
-    status ENUM('present', 'late', 'absent') DEFAULT 'present',
-    method ENUM('qr_scan', 'manual', 'proxy') DEFAULT 'qr_scan',
-    latitude DECIMAL(10, 8) NULL, -- Optional location tracking
-    longitude DECIMAL(11, 8) NULL,
-    device_info TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('PRESENT', 'LATE', 'ABSENT') DEFAULT 'PRESENT',
+    method ENUM('QR_SCAN', 'MANUAL', 'PROXY') DEFAULT 'QR_SCAN',
     FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    UNIQUE KEY unique_attendance (session_id, student_id),
-    INDEX idx_session_time (session_id, attendance_time),
-    INDEX idx_student_time (student_id, attendance_time)
+    UNIQUE KEY unique_attendance (session_id, student_id)
 );
 
 -- =============================================
--- 6. ABSENCE REQUESTS TABLE
+-- 5. ABSENCE REQUESTS TABLE
 -- =============================================
 CREATE TABLE IF NOT EXISTS absence_requests (
     request_id VARCHAR(36) PRIMARY KEY,
     student_id VARCHAR(36) NOT NULL,
     course_id VARCHAR(36) NOT NULL,
-    session_id VARCHAR(36) NULL, -- NULL for general absence
+    session_id VARCHAR(36) NULL,
     reason VARCHAR(255) NOT NULL,
     note TEXT,
-    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-    reviewed_by VARCHAR(36) NULL, -- Teacher who reviewed
-    reviewed_at TIMESTAMP NULL,
-    review_notes TEXT NULL,
+    status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(course_id) ON DELETE CASCADE,
-    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE,
-    FOREIGN KEY (reviewed_by) REFERENCES users(user_id) ON DELETE SET NULL,
-    INDEX idx_student_status (student_id, status),
-    INDEX idx_course_status (course_id, status),
-    INDEX idx_status (status)
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
 );
 
 -- =============================================
--- 7. TEACHER API KEYS TABLE
--- =============================================
-CREATE TABLE IF NOT EXISTS teacher_api_keys (
-    key_id VARCHAR(36) PRIMARY KEY,
-    teacher_id VARCHAR(36) NOT NULL,
-    api_key VARCHAR(255) UNIQUE NOT NULL,
-    key_name VARCHAR(100) NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_used_at TIMESTAMP NULL,
-    expires_at TIMESTAMP NULL,
-    FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_api_key (api_key),
-    INDEX idx_teacher (teacher_id)
-);
-
--- =============================================
--- 8. SYSTEM SETTINGS TABLE
--- =============================================
-CREATE TABLE IF NOT EXISTS system_settings (
-    setting_id VARCHAR(36) PRIMARY KEY,
-    setting_key VARCHAR(100) UNIQUE NOT NULL,
-    setting_value TEXT,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- =============================================
--- 9. AUDIT LOG TABLE (Optional - for tracking changes)
--- =============================================
-CREATE TABLE IF NOT EXISTS audit_log (
-    log_id VARCHAR(36) PRIMARY KEY,
-    table_name VARCHAR(100) NOT NULL,
-    record_id VARCHAR(36) NOT NULL,
-    action ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
-    old_values JSON NULL,
-    new_values JSON NULL,
-    user_id VARCHAR(36) NULL,
-    ip_address VARCHAR(45) NULL,
-    user_agent TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_table_record (table_name, record_id),
-    INDEX idx_user_time (user_id, created_at),
-    INDEX idx_action_time (action, created_at)
-);
-
--- =============================================
--- INDEXES FOR PERFORMANCE
+-- SAMPLE DATA
 -- =============================================
 
--- Additional indexes for better query performance
-CREATE INDEX idx_courses_lecturer ON courses(lecturer_id);
-CREATE INDEX idx_sessions_course_status ON sessions(course_id, status);
-CREATE INDEX idx_attendance_student_time ON attendance(student_id, attendance_time);
-CREATE INDEX idx_absence_requests_submitted ON absence_requests(submitted_at);
-
--- =============================================
--- SAMPLE DATA (Optional - for testing)
--- =============================================
-
--- Insert sample teacher
-INSERT INTO users (user_id, email, first_name, last_name, role) 
-VALUES ('teacher-001', 'teacher@university.edu', 'John', 'Smith', 'teacher')
+-- Insert sample teachers
+INSERT INTO users (user_id, email, first_name, last_name, role) VALUES
+('teacher-001', 'john.smith@university.edu', 'John', 'Smith', 'TEACHER'),
+('teacher-002', 'sarah.jones@university.edu', 'Sarah', 'Jones', 'TEACHER'),
+('teacher-003', 'mike.wilson@university.edu', 'Mike', 'Wilson', 'TEACHER'),
+('admin-001', 'admin@university.edu', 'Admin', 'User', 'ADMIN')
 ON DUPLICATE KEY UPDATE email = email;
 
 -- Insert sample students
 INSERT INTO users (user_id, email, first_name, last_name, role, student_id) VALUES
-('student-001', 'alice@student.edu', 'Alice', 'Johnson', 'student', 'STU001'),
-('student-002', 'bob@student.edu', 'Bob', 'Brown', 'student', 'STU002'),
-('student-003', 'charlie@student.edu', 'Charlie', 'Davis', 'student', 'STU003')
+('student-001', 'alice.johnson@student.edu', 'Alice', 'Johnson', 'STUDENT', 'STU001'),
+('student-002', 'bob.brown@student.edu', 'Bob', 'Brown', 'STUDENT', 'STU002'),
+('student-003', 'charlie.davis@student.edu', 'Charlie', 'Davis', 'STUDENT', 'STU003'),
+('student-004', 'diana.wilson@student.edu', 'Diana', 'Wilson', 'STUDENT', 'STU004'),
+('student-005', 'eve.garcia@student.edu', 'Eve', 'Garcia', 'STUDENT', 'STU005'),
+('student-006', 'frank.miller@student.edu', 'Frank', 'Miller', 'STUDENT', 'STU006'),
+('student-007', 'grace.lee@student.edu', 'Grace', 'Lee', 'STUDENT', 'STU007'),
+('student-008', 'henry.taylor@student.edu', 'Henry', 'Taylor', 'STUDENT', 'STU008')
 ON DUPLICATE KEY UPDATE email = email;
 
--- Insert sample course
-INSERT INTO courses (course_id, course_name, course_code, description, lecturer_id) 
-VALUES ('course-001', 'Introduction to Computer Science', 'CS101', 'Basic programming concepts and algorithms', 'teacher-001')
+-- Insert sample courses
+INSERT INTO courses (course_id, course_name, course_code, description, lecturer_id) VALUES
+('course-001', 'Introduction to Computer Science', 'CS101', 'Basic programming concepts and algorithms', 'teacher-001'),
+('course-002', 'Data Structures and Algorithms', 'CS201', 'Advanced data structures and algorithm design', 'teacher-001'),
+('course-003', 'Database Systems', 'CS301', 'Database design and management', 'teacher-002'),
+('course-004', 'Web Development', 'CS401', 'Full-stack web development', 'teacher-002'),
+('course-005', 'Software Engineering', 'CS501', 'Software development methodologies', 'teacher-003'),
+('course-006', 'Machine Learning', 'CS601', 'Introduction to machine learning', 'teacher-003')
 ON DUPLICATE KEY UPDATE course_name = course_name;
 
--- Insert sample enrollments
-INSERT INTO enrollments (enrollment_id, course_id, student_id) VALUES
-('enroll-001', 'course-001', 'student-001'),
-('enroll-002', 'course-001', 'student-002'),
-('enroll-003', 'course-001', 'student-003')
-ON DUPLICATE KEY UPDATE enrollment_id = enrollment_id;
+-- Insert sample sessions
+INSERT INTO sessions (session_id, course_id, start_time, status, qr_code_data) VALUES
+-- CS101 sessions
+('session-001', 'course-001', '2024-09-18 10:00:00', 'CLOSED', 'QR_CS101_001'),
+('session-002', 'course-001', '2024-09-20 10:00:00', 'OPEN', 'QR_CS101_002'),
+('session-003', 'course-001', '2024-09-25 10:00:00', 'OPEN', 'QR_CS101_003'),
 
--- Insert sample API key for teacher
-INSERT INTO teacher_api_keys (key_id, teacher_id, api_key, key_name) 
-VALUES ('key-001', 'teacher-001', 'test-api-key-12345', 'Default API Key')
-ON DUPLICATE KEY UPDATE api_key = api_key;
+-- CS201 sessions
+('session-004', 'course-002', '2024-09-19 14:00:00', 'CLOSED', 'QR_CS201_001'),
+('session-005', 'course-002', '2024-09-21 14:00:00', 'OPEN', 'QR_CS201_002'),
 
--- Insert system settings
-INSERT INTO system_settings (setting_id, setting_key, setting_value, description) VALUES
-('setting-001', 'qr_timeout_minutes', '15', 'QR code validity period in minutes'),
-('setting-002', 'max_absence_requests', '5', 'Maximum absence requests per student per course'),
-('setting-003', 'attendance_threshold', '75', 'Minimum attendance percentage required')
-ON DUPLICATE KEY UPDATE setting_value = setting_value;
+-- CS301 sessions
+('session-006', 'course-003', '2024-09-18 16:00:00', 'CLOSED', 'QR_CS301_001'),
+('session-007', 'course-003', '2024-09-22 16:00:00', 'OPEN', 'QR_CS301_002'),
 
--- =============================================
--- VIEWS FOR COMMON QUERIES
--- =============================================
+-- CS401 sessions
+('session-008', 'course-004', '2024-09-19 12:00:00', 'OPEN', 'QR_CS401_001'),
 
--- View for attendance summary
-CREATE OR REPLACE VIEW attendance_summary AS
-SELECT 
-    c.course_name,
-    c.course_code,
-    s.session_id,
-    s.start_time,
-    s.status as session_status,
-    COUNT(DISTINCT e.student_id) as total_enrolled,
-    COUNT(DISTINCT a.student_id) as attended_count,
-    COUNT(DISTINCT ar.student_id) as absence_request_count
-FROM courses c
-JOIN sessions s ON c.course_id = s.course_id
-LEFT JOIN enrollments e ON c.course_id = e.course_id AND e.status = 'active'
-LEFT JOIN attendance a ON s.session_id = a.session_id
-LEFT JOIN absence_requests ar ON s.session_id = ar.session_id AND ar.status = 'approved'
-GROUP BY c.course_id, s.session_id;
+-- CS501 sessions
+('session-009', 'course-005', '2024-09-20 15:00:00', 'OPEN', 'QR_CS501_001'),
 
--- View for student attendance history
-CREATE OR REPLACE VIEW student_attendance_history AS
-SELECT 
-    u.user_id,
-    u.first_name,
-    u.last_name,
-    u.student_id,
-    c.course_name,
-    c.course_code,
-    s.start_time,
-    s.session_id,
-    a.status as attendance_status,
-    a.attendance_time,
-    ar.status as absence_request_status,
-    ar.reason as absence_reason
-FROM users u
-JOIN enrollments e ON u.user_id = e.student_id
-JOIN courses c ON e.course_id = c.course_id
-LEFT JOIN sessions s ON c.course_id = s.course_id
-LEFT JOIN attendance a ON s.session_id = a.session_id AND u.user_id = a.student_id
-LEFT JOIN absence_requests ar ON s.session_id = ar.session_id AND u.user_id = ar.student_id
-WHERE u.role = 'student' AND e.status = 'active';
+-- CS601 sessions
+('session-010', 'course-006', '2024-09-21 11:00:00', 'OPEN', 'QR_CS601_001')
+ON DUPLICATE KEY UPDATE start_time = start_time;
 
--- =============================================
--- STORED PROCEDURES (Optional)
--- =============================================
+-- Insert sample attendance records
+INSERT INTO attendance (attendance_id, session_id, student_id, attendance_time, status, method) VALUES
+-- Session 1 (CS101 - CLOSED) - Some students attended
+('attendance-001', 'session-001', 'student-001', '2024-09-18 10:05:00', 'PRESENT', 'QR_SCAN'),
+('attendance-002', 'session-001', 'student-002', '2024-09-18 10:15:00', 'LATE', 'QR_SCAN'),
+('attendance-003', 'session-001', 'student-003', '2024-09-18 10:02:00', 'PRESENT', 'QR_SCAN'),
+('attendance-004', 'session-001', 'student-004', '2024-09-18 10:08:00', 'PRESENT', 'QR_SCAN'),
 
-DELIMITER //
+-- Session 4 (CS201 - CLOSED) - Some students attended
+('attendance-005', 'session-004', 'student-001', '2024-09-19 14:03:00', 'PRESENT', 'QR_SCAN'),
+('attendance-006', 'session-004', 'student-002', '2024-09-19 14:20:00', 'LATE', 'QR_SCAN'),
+('attendance-007', 'session-004', 'student-005', '2024-09-19 14:01:00', 'PRESENT', 'QR_SCAN'),
 
--- Procedure to close a session and mark remaining students as absent
-CREATE PROCEDURE CloseSession(IN session_uuid VARCHAR(36))
-BEGIN
-    DECLARE course_uuid VARCHAR(36);
-    DECLARE session_start TIMESTAMP;
-    
-    -- Get session details
-    SELECT course_id, start_time INTO course_uuid, session_start
-    FROM sessions WHERE session_id = session_uuid;
-    
-    -- Update session status
-    UPDATE sessions 
-    SET status = 'closed', end_time = NOW() 
-    WHERE session_id = session_uuid;
-    
-    -- Mark students who didn't attend as absent
-    INSERT INTO absence_requests (request_id, student_id, course_id, session_id, reason, status)
-    SELECT 
-        UUID() as request_id,
-        e.student_id,
-        course_uuid,
-        session_uuid,
-        'Auto-marked absent - no attendance recorded',
-        'approved'
-    FROM enrollments e
-    WHERE e.course_id = course_uuid 
-    AND e.status = 'active'
-    AND e.student_id NOT IN (
-        SELECT student_id FROM attendance WHERE session_id = session_uuid
-    )
-    AND e.student_id NOT IN (
-        SELECT student_id FROM absence_requests WHERE session_id = session_uuid
-    );
-    
-END //
+-- Session 6 (CS301 - CLOSED) - Some students attended
+('attendance-008', 'session-006', 'student-003', '2024-09-18 16:05:00', 'PRESENT', 'QR_SCAN'),
+('attendance-009', 'session-006', 'student-006', '2024-09-18 16:02:00', 'PRESENT', 'QR_SCAN'),
+('attendance-010', 'session-006', 'student-007', '2024-09-18 16:10:00', 'LATE', 'QR_SCAN')
+ON DUPLICATE KEY UPDATE attendance_time = attendance_time;
 
-DELIMITER ;
+-- Insert sample absence requests
+INSERT INTO absence_requests (request_id, student_id, course_id, session_id, reason, note, status, submitted_at) VALUES
+('request-001', 'student-005', 'course-001', 'session-001', 'Medical appointment', 'Had a doctor appointment', 'APPROVED', '2024-09-17 15:30:00'),
+('request-002', 'student-008', 'course-002', 'session-004', 'Family emergency', 'Family member in hospital', 'APPROVED', '2024-09-18 09:15:00'),
+('request-003', 'student-002', 'course-003', 'session-006', 'Transportation issue', 'Bus was late', 'PENDING', '2024-09-18 16:45:00'),
+('request-004', 'student-004', 'course-001', NULL, 'General absence', 'Will be absent for next week', 'PENDING', '2024-09-19 10:20:00'),
+('request-005', 'student-006', 'course-002', 'session-004', 'Technical difficulties', 'Could not access online materials', 'REJECTED', '2024-09-18 14:30:00')
+ON DUPLICATE KEY UPDATE reason = reason;
 
--- =============================================
--- COMPLETION MESSAGE
--- =============================================
 SELECT 'SemScan Database Schema Created Successfully!' as Status;

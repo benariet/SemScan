@@ -28,20 +28,18 @@ semscan-backend/
 └── src/main/
     ├── java/com/semscan/backend/
     │   ├── SemScanBackendApplication.java     # Main application class
-    │   ├── entity/                            # JPA Entities (6 files)
-    │   │   ├── User.java                      # User management
+    │   ├── entity/                            # JPA Entities (5 files)
+    │   │   ├── User.java                      # User management (students, teachers, admins)
     │   │   ├── Course.java                    # Course information
     │   │   ├── Session.java                   # Attendance sessions
     │   │   ├── Attendance.java                # Attendance records
-    │   │   ├── AbsenceRequest.java            # Absence requests
-    │   │   └── TeacherApiKey.java             # API authentication
-    │   ├── repository/                        # Data Access Layer (6 files)
+    │   │   └── AbsenceRequest.java            # Absence requests
+    │   ├── repository/                        # Data Access Layer (5 files)
     │   │   ├── UserRepository.java
     │   │   ├── CourseRepository.java
     │   │   ├── SessionRepository.java
     │   │   ├── AttendanceRepository.java
-    │   │   ├── AbsenceRequestRepository.java
-    │   │   └── TeacherApiKeyRepository.java
+    │   │   └── AbsenceRequestRepository.java
     │   ├── controller/                        # REST Controllers (4 files)
     │   │   ├── CourseController.java          # Course CRUD operations
     │   │   ├── SessionController.java         # Session management
@@ -159,7 +157,7 @@ server.port=8080
 server.servlet.context-path=/
 
 # Database Configuration
-spring.datasource.url=jdbc:mysql://localhost:3306/attendance?useSSL=false&serverTimezone=UTC&characterEncoding=utf8mb4&useUnicode=true
+spring.datasource.url=jdbc:mysql://localhost:3306/semscan_db?useSSL=false&serverTimezone=UTC&characterEncoding=utf8mb4&useUnicode=true
 spring.datasource.username=attend
 spring.datasource.password=strongpass
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
@@ -239,16 +237,24 @@ public class SemScanBackendApplication {
 ### **Database Connection Details**
 - **Host**: `localhost` (or `10.0.2.2` from Android emulator)
 - **Port**: `3306`
-- **Database**: `attendance`
+- **Database**: `semscan_db`
 - **Username**: `attend`
 - **Password**: `strongpass`
 - **Driver**: `com.mysql.cj.jdbc.Driver`
 
+### **Simplified Schema Structure**
+The database has been simplified to 5 core tables:
+1. **users** - Students, teachers, and admins
+2. **courses** - Course information with lecturer assignment
+3. **sessions** - Attendance sessions with QR codes
+4. **attendance** - Attendance records
+5. **absence_requests** - Absence request workflow
+
 ### **Sample Data Available**
-- **1 Teacher**: John Smith (teacher@university.edu)
-- **5 Students**: Alice, Bob, Charlie, Diana, Eve
-- **3 Courses**: CS101, CS201, CS301
-- **4 Sessions**: Mix of open/closed sessions
+- **3 Teachers**: John Smith, Sarah Jones, Mike Wilson
+- **8 Students**: Alice, Bob, Charlie, Diana, Eve, Frank, Grace, Henry
+- **6 Courses**: CS101, CS201, CS301, CS401, CS501, CS601
+- **10 Sessions**: Mix of open/closed sessions with QR codes
 - **API Key**: `test-api-key-12345`
 
 ---
@@ -529,6 +535,6 @@ semscan-backend/
 **Status**: Complete backend implementation ready for separation and containerization! 🎉
 
 **Date**: September 18, 2025
-**Total Files**: 19 Java classes + configuration files
+**Total Files**: 17 Java classes + configuration files
 **API Endpoints**: 25+ REST endpoints implemented
-**Database Tables**: 6 tables with relationships
+**Database Tables**: 5 tables with relationships
