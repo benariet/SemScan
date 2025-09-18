@@ -19,6 +19,8 @@
     <string name="start_session_show_qr">Start Session (Show QR)</string>
     <string name="attendance_approvals">Attendance / Approvals</string>
     <string name="export_to_excel">Export to Excel (CSV)</string>
+    <string name="manage_courses">Manage Courses</string>
+    <string name="records_dashboard">Records Dashboard</string>
     
     <!-- QR Scanner -->
     <string name="qr_scanner_title">Scan QR Code</string>
@@ -53,6 +55,18 @@
     <string name="reason_exam">Exam</string>
     <string name="reason_other">Other</string>
     
+    <!-- Course Management -->
+    <string name="add_course">Add Course</string>
+    <string name="course_name">Course Name</string>
+    <string name="enter_course_name">Enter course name</string>
+    <string name="course_code">Course Code</string>
+    <string name="enter_course_code">Enter course code</string>
+    <string name="course_description">Course Description</string>
+    <string name="enter_course_description">Enter course description</string>
+    <string name="no_courses_found">No courses found</string>
+    <string name="add_your_first_course">Add your first course to get started</string>
+    <string name="course">Course</string>
+    
     <!-- Attendance Management -->
     <string name="present_tab">Present</string>
     <string name="absence_requests_tab">Absence Requests</string>
@@ -67,6 +81,11 @@
     <string name="select_date_range">Select Date Range</string>
     <string name="from_date">From Date</string>
     <string name="to_date">To Date</string>
+    <string name="export">Export</string>
+    
+    <!-- Records Dashboard -->
+    <string name="view_type">View Type</string>
+    <string name="refresh">Refresh</string>
     
     <!-- Common -->
     <string name="ok">OK</string>
