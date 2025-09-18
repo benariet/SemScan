@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SemScan</string>
+    
+    <!-- Role Selection -->
+    <string name="select_role">Select Your Role</string>
+    <string name="teacher">Teacher</string>
+    <string name="student">Student</string>
+    <string name="role_description">Choose your role to access the appropriate features</string>
+    
+    <!-- Student Home -->
+    <string name="student_home_title">Student Dashboard</string>
+    <string name="scan_attendance">Scan Attendance</string>
+    <string name="im_absent_reason">I\'m Absent - Reason</string>
+    <string name="settings">Settings</string>
+    
+    <!-- Teacher Home -->
+    <string name="teacher_home_title">Teacher Dashboard</string>
+    <string name="start_session_show_qr">Start Session (Show QR)</string>
+    <string name="attendance_approvals">Attendance / Approvals</string>
+    <string name="export_to_excel">Export to Excel (CSV)</string>
+    
+    <!-- QR Scanner -->
+    <string name="qr_scanner_title">Scan QR Code</string>
+    <string name="qr_scanner_instruction">Point your camera at the QR code</string>
+    <string name="scanning">Scanning...</string>
+    <string name="qr_scan_success">QR Code scanned successfully</string>
+    <string name="qr_scan_error">Failed to scan QR code</string>
+    
+    <!-- QR Display -->
+    <string name="qr_display_title">Session QR Code</string>
+    <string name="session_active">Session Active</string>
+    <string name="present_count">Present: %d</string>
+    <string name="end_session">End Session</string>
+    
+    <!-- Attendance -->
+    <string name="attendance_confirmed">Attendance Confirmed</string>
+    <string name="already_present">You are already marked present for this session</string>
+    <string name="window_closed">Attendance window is closed</string>
+    <string name="session_closed">Session is closed</string>
+    
+    <!-- Absence Requests -->
+    <string name="submit_absence_title">Submit Absence Reason</string>
+    <string name="select_course">Select Course</string>
+    <string name="select_session">Select Session</string>
+    <string name="reason">Reason</string>
+    <string name="note">Note (Optional)</string>
+    <string name="submit">Submit</string>
+    
+    <!-- Absence Reasons -->
+    <string name="reason_sick">Sick</string>
+    <string name="reason_family">Family</string>
+    <string name="reason_exam">Exam</string>
+    <string name="reason_other">Other</string>
+    
+    <!-- Attendance Management -->
+    <string name="present_tab">Present</string>
+    <string name="absence_requests_tab">Absence Requests</string>
+    <string name="approve">Approve</string>
+    <string name="reject">Reject</string>
+    <string name="no_attendance_data">No attendance data available</string>
+    <string name="no_absence_requests">No absence requests</string>
+    
+    <!-- Export -->
+    <string name="export_success">Export successful</string>
+    <string name="export_error">Export failed</string>
+    <string name="select_date_range">Select Date Range</string>
+    <string name="from_date">From Date</string>
+    <string name="to_date">To Date</string>
+    
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="loading">Loading...</string>
+    <string name="error">Error</string>
+    <string name="success">Success</string>
+    <string name="retry">Retry</string>
+    <string name="back">Back</string>
+    <string name="next">Next</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="change_role">Change Role</string>
+    <string name="user_id">User ID</string>
+    <string name="api_base_url">API Base URL</string>
+    <string name="about">About</string>
+    <string name="version">Version %s</string>
+    
+    <!-- Permissions -->
+    <string name="camera_permission_required">Camera permission is required to scan QR codes</string>
+    <string name="permission_denied">Permission denied</string>
+    <string name="go_to_settings">Go to Settings</string>
+</resources>

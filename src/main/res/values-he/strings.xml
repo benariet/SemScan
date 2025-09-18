@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">מסקאן</string>
+    
+    <!-- Role Selection -->
+    <string name="select_role">בחר את התפקיד שלך</string>
+    <string name="teacher">מורה</string>
+    <string name="student">תלמיד</string>
+    <string name="role_description">בחר את התפקיד שלך כדי לגשת לתכונות המתאימות</string>
+    
+    <!-- Student Home -->
+    <string name="student_home_title">לוח בקרה תלמיד</string>
+    <string name="scan_attendance">סרוק נוכחות</string>
+    <string name="im_absent_reason">אני נעדר - סיבה</string>
+    <string name="settings">הגדרות</string>
+    
+    <!-- Teacher Home -->
+    <string name="teacher_home_title">לוח בקרה מורה</string>
+    <string name="start_session_show_qr">התחל שיעור (הצג QR)</string>
+    <string name="attendance_approvals">נוכחות / אישורים</string>
+    <string name="export_to_excel">ייצא לאקסל (CSV)</string>
+    
+    <!-- QR Scanner -->
+    <string name="qr_scanner_title">סרוק קוד QR</string>
+    <string name="qr_scanner_instruction">כוון את המצלמה לקוד QR</string>
+    <string name="scanning">סורק...</string>
+    <string name="qr_scan_success">קוד QR נסרק בהצלחה</string>
+    <string name="qr_scan_error">נכשל בסריקת קוד QR</string>
+    
+    <!-- QR Display -->
+    <string name="qr_display_title">קוד QR של השיעור</string>
+    <string name="session_active">שיעור פעיל</string>
+    <string name="present_count">נוכחים: %d</string>
+    <string name="end_session">סיים שיעור</string>
+    
+    <!-- Attendance -->
+    <string name="attendance_confirmed">נוכחות אושרה</string>
+    <string name="already_present">אתה כבר מסומן כנוכח בשיעור זה</string>
+    <string name="window_closed">חלון הנוכחות נסגר</string>
+    <string name="session_closed">השיעור נסגר</string>
+    
+    <!-- Absence Requests -->
+    <string name="submit_absence_title">שלח סיבת היעדרות</string>
+    <string name="select_course">בחר קורס</string>
+    <string name="select_session">בחר שיעור</string>
+    <string name="reason">סיבה</string>
+    <string name="note">הערה (אופציונלי)</string>
+    <string name="submit">שלח</string>
+    
+    <!-- Absence Reasons -->
+    <string name="reason_sick">חולה</string>
+    <string name="reason_family">משפחה</string>
+    <string name="reason_exam">בחינה</string>
+    <string name="reason_other">אחר</string>
+    
+    <!-- Attendance Management -->
+    <string name="present_tab">נוכחים</string>
+    <string name="absence_requests_tab">בקשות היעדרות</string>
+    <string name="approve">אשר</string>
+    <string name="reject">דחה</string>
+    <string name="no_attendance_data">אין נתוני נוכחות זמינים</string>
+    <string name="no_absence_requests">אין בקשות היעדרות</string>
+    
+    <!-- Export -->
+    <string name="export_success">ייצוא הצליח</string>
+    <string name="export_error">ייצוא נכשל</string>
+    <string name="select_date_range">בחר טווח תאריכים</string>
+    <string name="from_date">מתאריך</string>
+    <string name="to_date">עד תאריך</string>
+    
+    <!-- Common -->
+    <string name="ok">אישור</string>
+    <string name="cancel">ביטול</string>
+    <string name="loading">טוען...</string>
+    <string name="error">שגיאה</string>
+    <string name="success">הצלחה</string>
+    <string name="retry">נסה שוב</string>
+    <string name="back">חזור</string>
+    <string name="next">הבא</string>
+    <string name="save">שמור</string>
+    <string name="delete">מחק</string>
+    <string name="edit">ערוך</string>
+    
+    <!-- Settings -->
+    <string name="settings_title">הגדרות</string>
+    <string name="change_role">שנה תפקיד</string>
+    <string name="user_id">מזהה משתמש</string>
+    <string name="api_base_url">כתובת API בסיסית</string>
+    <string name="about">אודות</string>
+    <string name="version">גרסה %s</string>
+    
+    <!-- Permissions -->
+    <string name="camera_permission_required">נדרשת הרשאת מצלמה לסריקת קודי QR</string>
+    <string name="permission_denied">הרשאה נדחתה</string>
+    <string name="go_to_settings">עבור להגדרות</string>
+</resources>

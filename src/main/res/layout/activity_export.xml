@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background_light">
+
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/primary_blue"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:title="@string/export_to_excel"
+        app:titleTextColor="@color/white"
+        app:navigationIcon="@drawable/ic_arrow_back" />
+
+    <!-- Main Content -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Export Type Selection -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Export Type"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/gray_800"
+                android:layout_marginBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/radio_group_export_type"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp">
+
+                <RadioButton
+                    android:id="@+id/radio_session"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Export by Session"
+                    android:textSize="16sp"
+                    android:checked="true"
+                    android:layout_marginBottom="8dp" />
+
+                <RadioButton
+                    android:id="@+id/radio_date_range"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Export by Date Range"
+                    android:textSize="16sp" />
+
+            </RadioGroup>
+
+            <!-- Session Selection -->
+            <LinearLayout
+                android:id="@+id/layout_session_selection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Select Session"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/gray_800"
+                    android:layout_marginBottom="8dp" />
+
+                <Spinner
+                    android:id="@+id/spinner_session"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/spinner_background" />
+
+            </LinearLayout>
+
+            <!-- Date Range Selection -->
+            <LinearLayout
+                android:id="@+id/layout_date_range"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="24dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/select_date_range"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/gray_800"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/from_date"
+                        android:textSize="14sp"
+                        android:textColor="@color/gray_700"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/btn_from_date"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Select Date"
+                        android:background="@drawable/button_secondary"
+                        android:textColor="@color/gray_700" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/to_date"
+                        android:textSize="14sp"
+                        android:textColor="@color/gray_700"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/btn_to_date"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Select Date"
+                        android:background="@drawable/button_secondary"
+                        android:textColor="@color/gray_700" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Export Format -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Export Format"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/gray_800"
+                android:layout_marginBottom="8dp" />
+
+            <RadioGroup
+                android:id="@+id/radio_group_format"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp">
+
+                <RadioButton
+                    android:id="@+id/radio_csv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="CSV (Comma Separated Values)"
+                    android:textSize="16sp"
+                    android:checked="true"
+                    android:layout_marginBottom="8dp" />
+
+                <RadioButton
+                    android:id="@+id/radio_excel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Excel (XLSX)"
+                    android:textSize="16sp" />
+
+            </RadioGroup>
+
+            <!-- Export Button -->
+            <Button
+                android:id="@+id/btn_export"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Export Data"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@drawable/button_primary"
+                android:textColor="@color/white" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>
+

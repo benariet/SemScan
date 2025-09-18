@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="28" />
+
+    <application
+        android:name=".SemScanApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SemScan"
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:targetApi="31">
+        
+        <activity
+            android:name=".ui.RolePickerActivity"
+            android:exported="true"
+            android:theme="@style/Theme.SemScan">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
+        <activity
+            android:name=".ui.student.StudentHomeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.teacher.TeacherHomeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.teacher.TeacherStartSessionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait"
+            android:keepScreenOn="true" />
+            
+        <activity
+            android:name=".ui.teacher.TeacherAttendanceActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.student.SubmitAbsenceActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.qr.QRScannerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.qr.QRDisplayActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait"
+            android:keepScreenOn="true" />
+            
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.teacher.ExportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.teacher.CourseManagementActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.teacher.RecordsDashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+
+    </application>
+
+</manifest>
