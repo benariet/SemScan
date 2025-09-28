@@ -15,19 +15,14 @@ import androidx.cardview.widget.CardView;
 import org.example.semscan.R;
 import org.example.semscan.ui.RolePickerActivity;
 import org.example.semscan.ui.SettingsActivity;
-import org.example.semscan.ui.teacher.CourseManagementActivity;
-import org.example.semscan.ui.teacher.RecordsDashboardActivity;
-import org.example.semscan.ui.teacher.TeacherAttendanceActivity;
 import org.example.semscan.ui.teacher.TeacherStartSessionActivity;
+import org.example.semscan.ui.teacher.ExportActivity;
 import org.example.semscan.utils.PreferencesManager;
 
 public class TeacherHomeActivity extends AppCompatActivity {
     
     private CardView cardStartSession;
-    private CardView cardAttendance;
     private CardView cardExport;
-    private CardView cardManageCourses;
-    private CardView cardRecordsDashboard;
     private Button btnSettings;
     private Button btnChangeRole;
     private PreferencesManager preferencesManager;
@@ -52,10 +47,7 @@ public class TeacherHomeActivity extends AppCompatActivity {
     
     private void initializeViews() {
         cardStartSession = findViewById(R.id.card_start_session);
-        cardAttendance = findViewById(R.id.card_attendance);
         cardExport = findViewById(R.id.card_export);
-        cardManageCourses = findViewById(R.id.card_manage_courses);
-        cardRecordsDashboard = findViewById(R.id.card_records_dashboard);
         btnSettings = findViewById(R.id.btn_settings);
         btnChangeRole = findViewById(R.id.btn_change_role);
     }
@@ -77,31 +69,10 @@ public class TeacherHomeActivity extends AppCompatActivity {
             }
         });
         
-        cardAttendance.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openAttendanceManagement();
-            }
-        });
-        
         cardExport.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 openExport();
-            }
-        });
-        
-        cardManageCourses.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openCourseManagement();
-            }
-        });
-        
-        cardRecordsDashboard.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openRecordsDashboard();
             }
         });
         
@@ -125,28 +96,10 @@ public class TeacherHomeActivity extends AppCompatActivity {
         startActivity(intent);
     }
     
-    private void openAttendanceManagement() {
-        Intent intent = new Intent(this, TeacherAttendanceActivity.class);
-        startActivity(intent);
-    }
-    
-    private void openExport() {
-        Intent intent = new Intent(this, ExportActivity.class);
-        startActivity(intent);
-    }
+    // Export removed from home - accessed directly from QR display after session ends
     
     private void openSettings() {
         Intent intent = new Intent(this, SettingsActivity.class);
-        startActivity(intent);
-    }
-    
-    private void openCourseManagement() {
-        Intent intent = new Intent(this, CourseManagementActivity.class);
-        startActivity(intent);
-    }
-    
-    private void openRecordsDashboard() {
-        Intent intent = new Intent(this, RecordsDashboardActivity.class);
         startActivity(intent);
     }
     

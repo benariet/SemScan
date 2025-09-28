@@ -47,14 +47,14 @@ public class RolePickerActivity extends AppCompatActivity {
         cardTeacher.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                selectRole("teacher");
+                selectRole("PRESENTER");
             }
         });
         
         cardStudent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                selectRole("student");
+                selectRole("STUDENT");
             }
         });
         
@@ -73,7 +73,7 @@ public class RolePickerActivity extends AppCompatActivity {
     
     private void navigateToHome() {
         Intent intent;
-        if (preferencesManager.isTeacher()) {
+        if (preferencesManager.isPresenter()) {
             intent = new Intent(this, TeacherHomeActivity.class);
         } else if (preferencesManager.isStudent()) {
             intent = new Intent(this, StudentHomeActivity.class);

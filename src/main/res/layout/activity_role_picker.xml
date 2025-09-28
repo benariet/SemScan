@@ -93,7 +93,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Start sessions, view attendance, manage approvals"
+                        android:text="Start sessions and display QR codes"
                         android:textSize="14sp"
                         android:textColor="@color/gray_600"
                         android:layout_marginTop="4dp" />
@@ -153,7 +153,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Scan attendance, submit absence reasons"
+                        android:text="Scan QR codes for attendance"
                         android:textSize="14sp"
                         android:textColor="@color/gray_600"
                         android:layout_marginTop="4dp" />

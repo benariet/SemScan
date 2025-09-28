@@ -15,7 +15,7 @@ import androidx.appcompat.widget.Toolbar;
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
-import org.example.semscan.data.model.Course;
+import org.example.semscan.data.model.Seminar;
 import org.example.semscan.data.model.Session;
 import org.example.semscan.ui.qr.QRDisplayActivity;
 import org.example.semscan.utils.PreferencesManager;
@@ -29,14 +29,14 @@ import retrofit2.Response;
 
 public class TeacherStartSessionActivity extends AppCompatActivity {
     
-    private Spinner spinnerCourse;
+    private Spinner spinnerSeminar;
     private Button btnStartSession;
     
     private PreferencesManager preferencesManager;
     private ApiService apiService;
     
-    private List<Course> courses = new ArrayList<>();
-    private String selectedCourseId;
+    private List<Seminar> seminars = new ArrayList<>();
+    private String selectedSeminarId;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,11 +51,11 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
         setupSpinner();
         setupClickListeners();
         
-        loadCourses();
+        loadSeminars();
     }
     
     private void initializeViews() {
-        spinnerCourse = findViewById(R.id.spinner_course);
+        spinnerSeminar = findViewById(R.id.spinner_course);
         btnStartSession = findViewById(R.id.btn_start_session);
     }
     
@@ -69,19 +69,19 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
     }
     
     private void setupSpinner() {
-        spinnerCourse.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        spinnerSeminar.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position > 0) { // Skip "Select Course" placeholder
-                    selectedCourseId = courses.get(position - 1).getCourseId();
+                if (position > 0) { // Skip "Select Seminar" placeholder
+                    selectedSeminarId = seminars.get(position - 1).getSeminarId();
                 } else {
-                    selectedCourseId = null;
+                    selectedSeminarId = null;
                 }
             }
-            
+
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                selectedCourseId = null;
+                selectedSeminarId = null;
             }
         });
     }
@@ -95,52 +95,52 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
         });
     }
     
-    private void loadCourses() {
+    private void loadSeminars() {
         String apiKey = preferencesManager.getTeacherApiKey();
         if (apiKey == null) {
             Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
             return;
         }
         
-        Call<List<Course>> call = apiService.getCourses(apiKey);
-        call.enqueue(new Callback<List<Course>>() {
+        Call<List<Seminar>> call = apiService.getSeminars(apiKey);
+        call.enqueue(new Callback<List<Seminar>>() {
             @Override
-            public void onResponse(Call<List<Course>> call, Response<List<Course>> response) {
+            public void onResponse(Call<List<Seminar>> call, Response<List<Seminar>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    courses.clear();
-                    courses.addAll(response.body());
-                    updateCourseSpinner();
+                    seminars.clear();
+                    seminars.addAll(response.body());
+                    updateSeminarSpinner();
                 } else {
                     Toast.makeText(TeacherStartSessionActivity.this, 
-                            "Failed to load courses", Toast.LENGTH_SHORT).show();
+                            "Failed to load seminars", Toast.LENGTH_SHORT).show();
                 }
             }
             
             @Override
-            public void onFailure(Call<List<Course>> call, Throwable t) {
+            public void onFailure(Call<List<Seminar>> call, Throwable t) {
                 Toast.makeText(TeacherStartSessionActivity.this, 
                         "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
     
-    private void updateCourseSpinner() {
-        List<String> courseNames = new ArrayList<>();
-        courseNames.add("Select Course");
+    private void updateSeminarSpinner() {
+        List<String> seminarNames = new ArrayList<>();
+        seminarNames.add("Select Seminar");
         
-        for (Course course : courses) {
-            courseNames.add(course.getCourseName());
+        for (Seminar seminar : seminars) {
+            seminarNames.add(seminar.getSeminarName());
         }
         
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, 
-                android.R.layout.simple_spinner_item, courseNames);
+                android.R.layout.simple_spinner_item, seminarNames);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerCourse.setAdapter(adapter);
+        spinnerSeminar.setAdapter(adapter);
     }
     
     private void startSession() {
-        if (selectedCourseId == null) {
-            Toast.makeText(this, "Please select a course", Toast.LENGTH_SHORT).show();
+        if (selectedSeminarId == null) {
+            Toast.makeText(this, "Please select a seminar", Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -153,7 +153,7 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
         long startTime = System.currentTimeMillis();
         
         ApiService.CreateSessionRequest request = new ApiService.CreateSessionRequest(
-                selectedCourseId, startTime);
+                selectedSeminarId, startTime);
         
         Call<Session> call = apiService.createSession(apiKey, request);
         call.enqueue(new Callback<Session>() {
@@ -179,7 +179,7 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
     private void openQRDisplay(Session session) {
         Intent intent = new Intent(this, QRDisplayActivity.class);
         intent.putExtra("sessionId", session.getSessionId());
-        intent.putExtra("courseId", session.getCourseId());
+        intent.putExtra("seminarId", session.getSeminarId());
         intent.putExtra("startTime", session.getStartTime());
         intent.putExtra("endTime", session.getEndTime() != null ? session.getEndTime() : 0L);
         intent.putExtra("status", session.getStatus());

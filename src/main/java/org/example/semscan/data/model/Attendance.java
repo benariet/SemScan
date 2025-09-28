@@ -3,28 +3,42 @@ package org.example.semscan.data.model;
 import com.google.gson.annotations.SerializedName;
 
 public class Attendance {
+    @SerializedName("attendance_id")
+    private String attendanceId;
+    
     @SerializedName("session_id")
     private String sessionId;
     
-    @SerializedName("user_id")
-    private String userId;
+    @SerializedName("student_id")
+    private String studentId;
     
-    private long timestamp;
-    private String status; // "present"
+    @SerializedName("attendance_time")
+    private long attendanceTime;
+    
+    private String method; // "QR_SCAN", "MANUAL", "PROXY"
     
     @SerializedName("already_present")
     private boolean alreadyPresent;
     
     public Attendance() {}
     
-    public Attendance(String sessionId, String userId, long timestamp, String status) {
+    public Attendance(String attendanceId, String sessionId, String studentId, long attendanceTime, String method) {
+        this.attendanceId = attendanceId;
         this.sessionId = sessionId;
-        this.userId = userId;
-        this.timestamp = timestamp;
-        this.status = status;
+        this.studentId = studentId;
+        this.attendanceTime = attendanceTime;
+        this.method = method;
     }
     
     // Getters and Setters
+    public String getAttendanceId() {
+        return attendanceId;
+    }
+    
+    public void setAttendanceId(String attendanceId) {
+        this.attendanceId = attendanceId;
+    }
+    
     public String getSessionId() {
         return sessionId;
     }
@@ -33,28 +47,28 @@ public class Attendance {
         this.sessionId = sessionId;
     }
     
-    public String getUserId() {
-        return userId;
+    public String getStudentId() {
+        return studentId;
     }
     
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
     }
     
-    public long getTimestamp() {
-        return timestamp;
+    public long getAttendanceTime() {
+        return attendanceTime;
     }
     
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+    public void setAttendanceTime(long attendanceTime) {
+        this.attendanceTime = attendanceTime;
     }
     
-    public String getStatus() {
-        return status;
+    public String getMethod() {
+        return method;
     }
     
-    public void setStatus(String status) {
-        this.status = status;
+    public void setMethod(String method) {
+        this.method = method;
     }
     
     public boolean isAlreadyPresent() {
@@ -65,17 +79,26 @@ public class Attendance {
         this.alreadyPresent = alreadyPresent;
     }
     
-    public boolean isPresent() {
-        return "present".equals(status);
+    public boolean isQrScan() {
+        return "QR_SCAN".equals(method);
+    }
+    
+    public boolean isManual() {
+        return "MANUAL".equals(method);
+    }
+    
+    public boolean isProxy() {
+        return "PROXY".equals(method);
     }
     
     @Override
     public String toString() {
         return "Attendance{" +
-                "sessionId='" + sessionId + '\'' +
-                ", userId='" + userId + '\'' +
-                ", timestamp=" + timestamp +
-                ", status='" + status + '\'' +
+                "attendanceId='" + attendanceId + '\'' +
+                ", sessionId='" + sessionId + '\'' +
+                ", studentId='" + studentId + '\'' +
+                ", attendanceTime=" + attendanceTime +
+                ", method='" + method + '\'' +
                 ", alreadyPresent=" + alreadyPresent +
                 '}';
     }

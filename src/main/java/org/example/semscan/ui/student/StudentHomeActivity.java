@@ -21,7 +21,6 @@ import org.example.semscan.utils.PreferencesManager;
 public class StudentHomeActivity extends AppCompatActivity {
     
     private CardView cardScanAttendance;
-    private CardView cardSubmitAbsence;
     private Button btnSettings;
     private Button btnChangeRole;
     private PreferencesManager preferencesManager;
@@ -46,7 +45,6 @@ public class StudentHomeActivity extends AppCompatActivity {
     
     private void initializeViews() {
         cardScanAttendance = findViewById(R.id.card_scan_attendance);
-        cardSubmitAbsence = findViewById(R.id.card_submit_absence);
         btnSettings = findViewById(R.id.btn_settings);
         btnChangeRole = findViewById(R.id.btn_change_role);
     }
@@ -68,12 +66,6 @@ public class StudentHomeActivity extends AppCompatActivity {
             }
         });
         
-        cardSubmitAbsence.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openSubmitAbsence();
-            }
-        });
         
         btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -95,10 +87,6 @@ public class StudentHomeActivity extends AppCompatActivity {
         startActivity(intent);
     }
     
-    private void openSubmitAbsence() {
-        Intent intent = new Intent(this, SubmitAbsenceActivity.class);
-        startActivity(intent);
-    }
     
     private void openSettings() {
         Intent intent = new Intent(this, SettingsActivity.class);

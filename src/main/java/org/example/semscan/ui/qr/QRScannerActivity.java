@@ -135,7 +135,7 @@ public class QRScannerActivity extends AppCompatActivity {
         // Parse QR content
         QRPayload payload = QRUtils.parseQRContent(qrContent);
         if (payload == null || !QRUtils.isValidQRContent(qrContent)) {
-            showError("Invalid QR code format");
+            showError("Invalid session code");
             return;
         }
         
@@ -144,16 +144,16 @@ public class QRScannerActivity extends AppCompatActivity {
     }
     
     private void submitAttendance(String sessionId) {
-        String userId = preferencesManager.getUserId();
-        if (userId == null) {
-            showError("User ID not found. Please check settings.");
+        String studentId = preferencesManager.getUserId();
+        if (studentId == null) {
+            showError("Student ID not found. Please check settings.");
             return;
         }
         
-        long timestamp = System.currentTimeMillis();
+        long timestampMs = System.currentTimeMillis();
         
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
-                sessionId, userId, timestamp);
+                sessionId, studentId, timestampMs);
         
         Call<Attendance> call = apiService.submitAttendance(request);
         call.enqueue(new Callback<Attendance>() {
@@ -163,9 +163,9 @@ public class QRScannerActivity extends AppCompatActivity {
                     Attendance attendance = response.body();
                     if (attendance != null) {
                         if (attendance.isAlreadyPresent()) {
-                            showSuccess("You are already marked present for this session");
+                            showSuccess("Already checked in");
                         } else {
-                            showSuccess("Attendance confirmed successfully!");
+                            showSuccess("Checked in for this session");
                         }
                     } else {
                         showError("Invalid response from server");
@@ -185,16 +185,16 @@ public class QRScannerActivity extends AppCompatActivity {
     private void handleErrorResponse(int responseCode) {
         switch (responseCode) {
             case 409:
-                showError("Attendance window is closed or session is closed");
+                showError("This session is not accepting new check-ins");
                 break;
             case 404:
-                showError("Session not found");
+                showError("Invalid session code");
                 break;
             case 400:
-                showError("Invalid request");
+                showError("Invalid session code");
                 break;
             default:
-                showError("Server error: " + responseCode);
+                showError("Invalid session code");
                 break;
         }
     }

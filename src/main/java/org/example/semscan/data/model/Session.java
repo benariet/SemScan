@@ -6,8 +6,8 @@ public class Session {
     @SerializedName("session_id")
     private String sessionId;
     
-    @SerializedName("course_id")
-    private String courseId;
+    @SerializedName("seminar_id")
+    private String seminarId;
     
     @SerializedName("start_time")
     private long startTime;
@@ -19,9 +19,9 @@ public class Session {
     
     public Session() {}
     
-    public Session(String sessionId, String courseId, long startTime, Long endTime, String status) {
+    public Session(String sessionId, String seminarId, long startTime, Long endTime, String status) {
         this.sessionId = sessionId;
-        this.courseId = courseId;
+        this.seminarId = seminarId;
         this.startTime = startTime;
         this.endTime = endTime;
         this.status = status;
@@ -36,12 +36,12 @@ public class Session {
         this.sessionId = sessionId;
     }
     
-    public String getCourseId() {
-        return courseId;
+    public String getSeminarId() {
+        return seminarId;
     }
     
-    public void setCourseId(String courseId) {
-        this.courseId = courseId;
+    public void setSeminarId(String seminarId) {
+        this.seminarId = seminarId;
     }
     
     public long getStartTime() {
@@ -69,11 +69,11 @@ public class Session {
     }
     
     public boolean isOpen() {
-        return "open".equals(status);
+        return "OPEN".equals(status);
     }
     
     public boolean isClosed() {
-        return "closed".equals(status);
+        return "CLOSED".equals(status);
     }
     
     public boolean isWithinScanWindow() {
@@ -86,7 +86,7 @@ public class Session {
     public String toString() {
         return "Session{" +
                 "sessionId='" + sessionId + '\'' +
-                ", courseId='" + courseId + '\'' +
+                ", seminarId='" + seminarId + '\'' +
                 ", startTime=" + startTime +
                 ", endTime=" + endTime +
                 ", status='" + status + '\'' +

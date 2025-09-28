@@ -8,7 +8,7 @@ public class PreferencesManager {
     private static final String KEY_USER_ROLE = "user_role";
     private static final String KEY_USER_ID = "user_id";
     private static final String KEY_API_BASE_URL = "api_base_url";
-    private static final String KEY_TEACHER_API_KEY = "teacher_api_key";
+    private static final String KEY_PRESENTER_API_KEY = "presenter_api_key";
     
     private static PreferencesManager instance;
     private SharedPreferences prefs;
@@ -33,12 +33,16 @@ public class PreferencesManager {
         return prefs.getString(KEY_USER_ROLE, null);
     }
     
+    public boolean isPresenter() {
+        return "PRESENTER".equals(getUserRole());
+    }
+    
     public boolean isTeacher() {
-        return "teacher".equals(getUserRole());
+        return "PRESENTER".equals(getUserRole()); // For backward compatibility
     }
     
     public boolean isStudent() {
-        return "student".equals(getUserRole());
+        return "STUDENT".equals(getUserRole());
     }
     
     public boolean hasRole() {
@@ -63,13 +67,22 @@ public class PreferencesManager {
         return prefs.getString(KEY_API_BASE_URL, "http://10.0.2.2:8080/");
     }
     
-    // Teacher API Key
+    // Presenter API Key
+    public void setPresenterApiKey(String apiKey) {
+        prefs.edit().putString(KEY_PRESENTER_API_KEY, apiKey).apply();
+    }
+    
+    public String getPresenterApiKey() {
+        return prefs.getString(KEY_PRESENTER_API_KEY, null);
+    }
+    
+    // For backward compatibility
     public void setTeacherApiKey(String apiKey) {
-        prefs.edit().putString(KEY_TEACHER_API_KEY, apiKey).apply();
+        setPresenterApiKey(apiKey);
     }
     
     public String getTeacherApiKey() {
-        return prefs.getString(KEY_TEACHER_API_KEY, null);
+        return getPresenterApiKey();
     }
     
     // Clear all preferences

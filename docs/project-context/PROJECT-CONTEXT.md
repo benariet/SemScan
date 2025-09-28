@@ -2,23 +2,23 @@
 
 ## 📋 **Project Overview**
 **Project**: SemScan QR Attendance System - Mobile Application  
-**Type**: Android MVP App (Mobile-Only)  
-**Status**: Complete Android application ready for backend integration  
-**Date**: September 18, 2025  
+**Type**: Android Lean MVP App (Mobile-Only)  
+**Status**: Simplified Proof of Concept ready for backend integration  
+**Date**: September 18, 2025 → January 2025 (Updated to Lean MVP)  
 
 ---
 
 ## 🎯 **What We've Accomplished**
 
-### ✅ **Complete Android MVP Application**
-- **Role-based system**: Teacher and Student roles
-- **QR Code functionality**: Generation and scanning
-- **Course Management**: CRUD operations for teachers
-- **Attendance Tracking**: Real-time attendance monitoring
-- **Records Dashboard**: View all attendance data
-- **Absence Requests**: Student absence submission system
-- **Settings**: Role switching and configuration
+### ✅ **Complete Android Lean MVP Application**
+- **Role-based system**: Teacher and Student roles only
+- **QR Code functionality**: Generation and scanning (sessionId only)
+- **Core Attendance**: Student scan QR → submit attendance → get feedback
+- **Session Management**: Teacher start session → display QR → export data
+- **Simplified Export**: Session-based CSV/Excel export only
+- **Settings**: Role switching and basic configuration
 - **Material Design**: Modern UI with proper theming
+- **No Complex Features**: Removed absence requests, course management, detailed analytics
 
 ### ✅ **Development Environment**
 - **Gradle setup**: Android project with all dependencies
@@ -37,31 +37,22 @@ SemScan/
 │   │   ├── RolePickerActivity.java          # Role selection
 │   │   ├── SettingsActivity.java            # App settings
 │   │   ├── student/
-│   │   │   ├── StudentHomeActivity.java     # Student dashboard
-│   │   │   └── SubmitAbsenceActivity.java   # Absence requests
+│   │   │   └── StudentHomeActivity.java     # Student dashboard (Scan only)
 │   │   ├── teacher/
-│   │   │   ├── TeacherHomeActivity.java     # Teacher dashboard
+│   │   │   ├── TeacherHomeActivity.java     # Teacher dashboard (Start/Export)
 │   │   │   ├── TeacherStartSessionActivity.java # Session creation
-│   │   │   ├── TeacherAttendanceActivity.java   # Live attendance
-│   │   │   ├── CourseManagementActivity.java    # Course CRUD
-│   │   │   └── RecordsDashboardActivity.java    # Records view
+│   │   │   └── ExportActivity.java          # Export attendance data
 │   │   ├── qr/
 │   │   │   ├── QRScannerActivity.java       # QR scanning
 │   │   │   └── QRDisplayActivity.java       # QR display
-│   │   ├── fragments/
-│   │   │   ├── PresentAttendanceFragment.java
-│   │   │   └── AbsenceRequestsFragment.java
 │   │   └── adapters/
-│   │       ├── AttendanceAdapter.java
-│   │       ├── AbsenceRequestAdapter.java
-│   │       └── CourseAdapter.java
+│   │       └── AttendanceAdapter.java       # (Simplified)
 │   ├── data/
 │   │   ├── model/                          # Data models
 │   │   │   ├── User.java
 │   │   │   ├── Course.java
 │   │   │   ├── Session.java
 │   │   │   ├── Attendance.java
-│   │   │   ├── AbsenceRequest.java
 │   │   │   └── QRPayload.java
 │   │   └── api/
 │   │       ├── ApiService.java             # Retrofit interface
@@ -98,9 +89,10 @@ SemScan/
 - **Min SDK**: 24 (Android 7.0)
 - **Target SDK**: 34 (Android 14)
 - **Build Tools**: Gradle 8.11.1
-- **Java Version**: 11
+- **Java Version**: 21 (updated from 11, Kotlin removed)
 - **Architecture**: MVVM with Fragments
 - **UI Framework**: Material Components (not Material 3 for compatibility)
+- **Language**: Java-only (Kotlin completely removed)
 
 ### **Key Dependencies**
 ```kotlin
@@ -231,7 +223,150 @@ The backend has been separated into its own project with complete documentation:
 
 ---
 
-**Session Date**: September 17-18, 2025  
-**Total Files**: 70+ Android files  
-**Android Activities**: 10+ activities with complete UI  
-**Status**: Complete mobile application ready for backend integration
+---
+
+## 📅 **Session Updates - January 2025**
+
+### **🎯 Major Pivot: Lean MVP Approach**
+**Date**: January 2025  
+**Decision**: Simplified the app to a lean Proof of Concept (POC) focusing only on core attendance functionality.
+
+### **🗑️ Features Removed (Non-MVP)**
+- **Absence Request System**: Removed `SubmitAbsenceActivity`, absence request fragments, and related UI
+- **Course Management**: Removed `CourseManagementActivity` and course CRUD operations
+- **Records Dashboard**: Removed `RecordsDashboardActivity` and detailed attendance analytics
+- **Complex Teacher Features**: Removed detailed attendance management and approval workflows
+- **Hebrew/RTL Support**: Disabled RTL layout support as requested
+- **Kotlin Dependencies**: Removed Kotlin plugin and KTX dependencies (Java-only project)
+
+### **✅ Simplified MVP Features**
+- **Student Flow**: Choose role → Scan QR → Submit attendance → Get feedback
+- **Teacher Flow**: Choose role → Start session → Display QR → Export attendance
+- **Core Screens**: Role Selector, Student Home (Scan only), Teacher Home (Start/Export), QR Scanner/Display
+- **QR Payload**: Simple JSON with `sessionId` only
+- **Export**: Session-based CSV/Excel export only
+
+### **🔧 Technical Changes Made**
+
+#### **Build Configuration**
+- **Java Version**: Updated to Java 21 (from Java 17)
+- **Kotlin**: Completely removed Kotlin plugin and dependencies
+- **Dependencies**: Replaced KTX dependencies with standard Android libraries
+- **RTL Support**: Disabled in `AndroidManifest.xml`
+
+#### **Code Cleanup**
+- **Deleted Activities**: 
+  - `SubmitAbsenceActivity.java`
+  - `CourseManagementActivity.java` 
+  - `RecordsDashboardActivity.java`
+  - `TeacherAttendanceActivity.java`
+- **Deleted Layouts**: All corresponding XML layout files
+- **Simplified Activities**:
+  - `StudentHomeActivity.java` - Only "Scan Attendance" button
+  - `TeacherHomeActivity.java` - Only "Start Session" and "Export" buttons
+  - `ExportActivity.java` - Session-only export (removed date range options)
+
+#### **API Simplification**
+- **Removed Endpoints**: All absence request, course management, and complex attendance endpoints
+- **Kept Core Endpoints**: Session creation, attendance submission, session-based export
+- **Simplified DTOs**: Removed absence request and complex management DTOs
+
+#### **UI Text Updates**
+- **Role Selector**: Updated descriptions to match actual MVP functionality
+  - Teacher: "Start sessions and display QR codes"
+  - Student: "Scan QR codes for attendance"
+- **Error Messages**: Updated to match UX copy specifications
+  - Success: "Checked in for this session"
+  - Duplicate: "Already checked in"
+  - Window closed: "This session is not accepting new check-ins"
+  - Invalid session: "Invalid session code"
+
+### **🗄️ Database Schema Updates**
+
+#### **New MVP Schema** (`mysql-setup/database-schema-mvp.sql`)
+- **Removed Tables**: `absence_requests`, `audit_log`, complex `system_settings`
+- **Simplified Tables**: 
+  - `users`: Only `STUDENT` and `TEACHER` roles
+  - `sessions`: Standard MySQL TIMESTAMP (`start_time`, `end_time`)
+  - `attendance`: Standard MySQL TIMESTAMP (`attendance_time`)
+- **Added Tables**: `teacher_api_keys` for API authentication
+- **Sample Data**: Updated to use standard TIMESTAMP format, removed absence requests
+
+#### **Updated Main Schema** (`mysql-setup/database-schema.sql`)
+- Applied same simplifications to main schema file
+- Maintained backward compatibility where possible
+
+### **🐛 Issues Resolved Today**
+
+#### **Build Issues**
+1. **Java Version Error**: Fixed `IllegalArgumentException: 25` by removing Kotlin and setting Java 21
+2. **Missing Classes**: Fixed import errors for deleted activities
+3. **Gradle Configuration**: Updated to Java-only project
+
+#### **Runtime Issues**
+1. **Android Studio Run Configuration**: Guided user to use "Android App" configuration instead of "Application"
+2. **ADB Path Issues**: Used full path to ADB executable
+3. **APK Installation**: Located correct APK file (`SemScan-debug.apk`)
+4. **Emulator Issues**: Started and waited for emulator to fully boot
+5. **UI Text**: Fixed outdated role selector descriptions
+
+### **📁 New Files Created**
+- `mysql-setup/database-schema-mvp.sql` - Clean lean MVP database schema
+- `mysql-setup/MVP-SCHEMA-CHANGES.md` - Detailed schema change documentation
+- Updated `docs/project-context/PROJECT-CONTEXT.md` - This comprehensive update
+
+### **🎯 Current MVP Status**
+- **Android App**: Lean, focused on core attendance functionality
+- **Database**: Simplified schema matching MVP requirements
+- **Build**: Java 21, no Kotlin, clean dependencies
+- **UI**: Updated text and simplified navigation
+- **API**: Streamlined endpoints for MVP only
+
+### **✅ Ready for Testing**
+The app now perfectly matches the lean MVP specification:
+1. **Student**: Role selection → Scan QR → Submit attendance → Feedback
+2. **Teacher**: Role selection → Start session → Display QR → Export data
+3. **Database**: Standard MySQL TIMESTAMP, no absence requests
+4. **Export**: Session-based CSV/Excel export only
+
+---
+
+**Session Date**: September 17-18, 2025 → January 2025  
+**Total Files**: 70+ → 50+ Android files (simplified)  
+**Android Activities**: 10+ → 6 activities (MVP-focused)  
+**Status**: Complete lean MVP ready for backend integration
+
+---
+
+## 📝 **Today's Session Summary (January 2025)**
+
+### **🎯 Major Achievements**
+1. **Successfully transformed** the app from a complex system to a lean MVP
+2. **Removed all non-essential features** (absence requests, course management, detailed analytics)
+3. **Updated database schema** to match MVP requirements with standard TIMESTAMP
+4. **Resolved multiple build and runtime issues** (Java version, Android Studio configuration, ADB setup)
+5. **Updated UI text** to accurately reflect simplified functionality
+
+### **🗂️ Files Modified Today**
+- **Android App**: 15+ files updated/removed for MVP simplification
+- **Database**: 3 schema files created/updated for lean MVP
+- **Documentation**: Comprehensive context file updated with all changes
+- **Build System**: Gradle configuration updated to Java 21, Kotlin removed
+
+### **🚀 Current State**
+- **App**: Lean MVP with core attendance functionality only
+- **Database**: Simplified schema with standard TIMESTAMP
+- **Build**: Clean Java 21 project, no Kotlin dependencies
+- **UI**: Updated text and simplified navigation
+- **Ready for**: Backend integration and testing
+
+### **📋 Next Steps**
+1. **Backend Integration**: Connect to external API
+2. **End-to-End Testing**: Verify complete attendance flow
+3. **Production Setup**: Configure for deployment
+4. **Feature Expansion**: Add features back as needed post-MVP
+
+**Total Session Time**: ~3 hours  
+**Issues Resolved**: 6 major issues (build, runtime, configuration)  
+**Files Updated**: 20+ files across app, database, and documentation  
+**Status**: ✅ **Lean MVP Complete and Ready**

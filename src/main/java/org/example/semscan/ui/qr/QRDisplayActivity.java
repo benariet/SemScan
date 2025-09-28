@@ -60,18 +60,18 @@ public class QRDisplayActivity extends AppCompatActivity {
         
         // Get session from intent
         String sessionId = getIntent().getStringExtra("sessionId");
-        String courseId = getIntent().getStringExtra("courseId");
+        String seminarId = getIntent().getStringExtra("seminarId");
         long startTime = getIntent().getLongExtra("startTime", 0);
         long endTime = getIntent().getLongExtra("endTime", 0);
         String status = getIntent().getStringExtra("status");
         
-        if (sessionId == null || courseId == null) {
+        if (sessionId == null || seminarId == null) {
             Toast.makeText(this, "No session data", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
         
-        currentSession = new Session(sessionId, courseId, startTime, endTime > 0 ? endTime : null, status);
+        currentSession = new Session(sessionId, seminarId, startTime, endTime > 0 ? endTime : null, status);
         
         initializeViews();
         setupToolbar();
@@ -165,6 +165,13 @@ public class QRDisplayActivity extends AppCompatActivity {
         });
     }
     
+    private void openExport() {
+        Intent intent = new Intent(this, ExportActivity.class);
+        intent.putExtra("sessionId", currentSession.getSessionId());
+        startActivity(intent);
+        finish();
+    }
+    
     private void showEndSessionDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("End Session")
@@ -192,7 +199,8 @@ public class QRDisplayActivity extends AppCompatActivity {
             public void onResponse(Call<Session> call, Response<Session> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(QRDisplayActivity.this, "Session ended successfully", Toast.LENGTH_SHORT).show();
-                    finish();
+                    // Navigate to export after session ends
+                    openExport();
                 } else {
                     Toast.makeText(QRDisplayActivity.this, "Failed to end session", Toast.LENGTH_SHORT).show();
                 }

@@ -6,17 +6,27 @@ public class User {
     @SerializedName("user_id")
     private String userId;
     
-    private String name;
+    @SerializedName("first_name")
+    private String firstName;
+    
+    @SerializedName("last_name")
+    private String lastName;
+    
     private String email;
-    private String role; // "teacher" or "student"
+    private String role; // "STUDENT" or "PRESENTER"
+    
+    @SerializedName("student_id")
+    private String studentId;
     
     public User() {}
     
-    public User(String userId, String name, String email, String role) {
+    public User(String userId, String firstName, String lastName, String email, String role, String studentId) {
         this.userId = userId;
-        this.name = name;
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.email = email;
         this.role = role;
+        this.studentId = studentId;
     }
     
     // Getters and Setters
@@ -28,12 +38,24 @@ public class User {
         this.userId = userId;
     }
     
-    public String getName() {
-        return name;
+    public String getFirstName() {
+        return firstName;
     }
     
-    public void setName(String name) {
-        this.name = name;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+    
+    public String getLastName() {
+        return lastName;
+    }
+    
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+    
+    public String getFullName() {
+        return firstName + " " + lastName;
     }
     
     public String getEmail() {
@@ -52,21 +74,31 @@ public class User {
         this.role = role;
     }
     
-    public boolean isTeacher() {
-        return "teacher".equals(role);
+    public String getStudentId() {
+        return studentId;
+    }
+    
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
+    }
+    
+    public boolean isPresenter() {
+        return "PRESENTER".equals(role);
     }
     
     public boolean isStudent() {
-        return "student".equals(role);
+        return "STUDENT".equals(role);
     }
     
     @Override
     public String toString() {
         return "User{" +
                 "userId='" + userId + '\'' +
-                ", name='" + name + '\'' +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
                 ", role='" + role + '\'' +
+                ", studentId='" + studentId + '\'' +
                 '}';
     }
 }
