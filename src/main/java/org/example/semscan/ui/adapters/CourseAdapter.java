@@ -91,3 +91,4 @@ public class CourseAdapter extends BaseAdapter {
     }
 }
 
+
