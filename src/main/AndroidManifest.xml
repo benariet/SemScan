@@ -34,12 +34,12 @@
             android:theme="@style/Theme.SemScan" />
             
         <activity
-            android:name=".ui.teacher.TeacherHomeActivity"
+            android:name=".ui.teacher.PresenterHomeActivity"
             android:exported="false"
             android:theme="@style/Theme.SemScan" />
             
         <activity
-            android:name=".ui.teacher.TeacherStartSessionActivity"
+            android:name=".ui.teacher.PresenterStartSessionActivity"
             android:exported="false"
             android:theme="@style/Theme.SemScan"
             android:screenOrientation="portrait"

@@ -79,7 +79,7 @@ public class ExportActivity extends AppCompatActivity {
     
     
     private void exportData() {
-        String apiKey = preferencesManager.getTeacherApiKey();
+        String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
             return;

@@ -1,5 +1,6 @@
 package org.example.semscan.ui.qr;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
@@ -24,6 +25,7 @@ import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Session;
+import org.example.semscan.ui.teacher.ExportActivity;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.utils.QRUtils;
 
@@ -136,7 +138,7 @@ public class QRDisplayActivity extends AppCompatActivity {
     }
     
     private void updateAttendanceCount() {
-        String apiKey = preferencesManager.getTeacherApiKey();
+        String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             return;
         }
@@ -187,7 +189,7 @@ public class QRDisplayActivity extends AppCompatActivity {
     }
     
     private void endSession() {
-        String apiKey = preferencesManager.getTeacherApiKey();
+        String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
             return;

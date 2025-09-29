@@ -15,14 +15,12 @@ import androidx.cardview.widget.CardView;
 import org.example.semscan.R;
 import org.example.semscan.ui.RolePickerActivity;
 import org.example.semscan.ui.SettingsActivity;
-import org.example.semscan.ui.teacher.TeacherStartSessionActivity;
-import org.example.semscan.ui.teacher.ExportActivity;
+import org.example.semscan.ui.teacher.PresenterStartSessionActivity;
 import org.example.semscan.utils.PreferencesManager;
 
-public class TeacherHomeActivity extends AppCompatActivity {
+public class PresenterHomeActivity extends AppCompatActivity {
     
     private CardView cardStartSession;
-    private CardView cardExport;
     private Button btnSettings;
     private Button btnChangeRole;
     private PreferencesManager preferencesManager;
@@ -30,12 +28,12 @@ public class TeacherHomeActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_teacher_home);
+        setContentView(R.layout.activity_presenter_home);
         
         preferencesManager = PreferencesManager.getInstance(this);
         
-        // Check if user is actually a teacher
-        if (!preferencesManager.isTeacher()) {
+        // Check if user is actually a presenter
+        if (!preferencesManager.isPresenter()) {
             navigateToRolePicker();
             return;
         }
@@ -47,7 +45,6 @@ public class TeacherHomeActivity extends AppCompatActivity {
     
     private void initializeViews() {
         cardStartSession = findViewById(R.id.card_start_session);
-        cardExport = findViewById(R.id.card_export);
         btnSettings = findViewById(R.id.btn_settings);
         btnChangeRole = findViewById(R.id.btn_change_role);
     }
@@ -69,13 +66,6 @@ public class TeacherHomeActivity extends AppCompatActivity {
             }
         });
         
-        cardExport.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openExport();
-            }
-        });
-        
         btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -92,7 +82,7 @@ public class TeacherHomeActivity extends AppCompatActivity {
     }
     
     private void openStartSession() {
-        Intent intent = new Intent(this, TeacherStartSessionActivity.class);
+        Intent intent = new Intent(this, PresenterStartSessionActivity.class);
         startActivity(intent);
     }
     
@@ -117,7 +107,7 @@ public class TeacherHomeActivity extends AppCompatActivity {
     
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_teacher_home, menu);
+        getMenuInflater().inflate(R.menu.menu_presenter_home, menu);
         return true;
     }
     

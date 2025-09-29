@@ -73,7 +73,7 @@ public class SettingsActivity extends AppCompatActivity {
     private void loadCurrentSettings() {
         editUserId.setText(preferencesManager.getUserId());
         editApiUrl.setText(preferencesManager.getApiBaseUrl());
-        editApiKey.setText(preferencesManager.getTeacherApiKey());
+        editApiKey.setText(preferencesManager.getPresenterApiKey());
     }
     
     private void saveSettings() {
@@ -95,7 +95,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Save settings
         preferencesManager.setUserId(userId);
         preferencesManager.setApiBaseUrl(apiUrl);
-        preferencesManager.setTeacherApiKey(apiKey);
+        preferencesManager.setPresenterApiKey(apiKey);
         
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show();
     }

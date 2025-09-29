@@ -4,7 +4,7 @@
     
     <!-- Role Selection -->
     <string name="select_role">בחר את התפקיד שלך</string>
-    <string name="teacher">מורה</string>
+    <string name="presenter">מציג</string>
     <string name="student">תלמיד</string>
     <string name="role_description">בחר את התפקיד שלך כדי לגשת לתכונות המתאימות</string>
     
@@ -14,8 +14,8 @@
     <string name="im_absent_reason">אני נעדר - סיבה</string>
     <string name="settings">הגדרות</string>
     
-    <!-- Teacher Home -->
-    <string name="teacher_home_title">לוח בקרה מורה</string>
+    <!-- Presenter Home -->
+    <string name="presenter_home_title">לוח בקרה מציג</string>
     <string name="start_session_show_qr">התחל שיעור (הצג QR)</string>
     <string name="attendance_approvals">נוכחות / אישורים</string>
     <string name="export_to_excel">ייצא לאקסל (CSV)</string>

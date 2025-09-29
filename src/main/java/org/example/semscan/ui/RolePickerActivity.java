@@ -11,12 +11,12 @@ import androidx.cardview.widget.CardView;
 
 import org.example.semscan.R;
 import org.example.semscan.ui.student.StudentHomeActivity;
-import org.example.semscan.ui.teacher.TeacherHomeActivity;
+import org.example.semscan.ui.teacher.PresenterHomeActivity;
 import org.example.semscan.utils.PreferencesManager;
 
 public class RolePickerActivity extends AppCompatActivity {
     
-    private CardView cardTeacher;
+    private CardView cardPresenter;
     private CardView cardStudent;
     private Button btnSettings;
     private PreferencesManager preferencesManager;
@@ -38,13 +38,13 @@ public class RolePickerActivity extends AppCompatActivity {
     }
     
     private void initializeViews() {
-        cardTeacher = findViewById(R.id.card_teacher);
+        cardPresenter = findViewById(R.id.card_presenter);
         cardStudent = findViewById(R.id.card_student);
         btnSettings = findViewById(R.id.btn_settings);
     }
     
     private void setupClickListeners() {
-        cardTeacher.setOnClickListener(new View.OnClickListener() {
+        cardPresenter.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 selectRole("PRESENTER");
@@ -74,7 +74,7 @@ public class RolePickerActivity extends AppCompatActivity {
     private void navigateToHome() {
         Intent intent;
         if (preferencesManager.isPresenter()) {
-            intent = new Intent(this, TeacherHomeActivity.class);
+            intent = new Intent(this, PresenterHomeActivity.class);
         } else if (preferencesManager.isStudent()) {
             intent = new Intent(this, StudentHomeActivity.class);
         } else {

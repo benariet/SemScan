@@ -4,7 +4,7 @@
     
     <!-- Role Selection -->
     <string name="select_role">Select Your Role</string>
-    <string name="teacher">Teacher</string>
+    <string name="presenter">Presenter</string>
     <string name="student">Student</string>
     <string name="role_description">Choose your role to access the appropriate features</string>
     
@@ -14,8 +14,8 @@
     <string name="im_absent_reason">I\'m Absent - Reason</string>
     <string name="settings">Settings</string>
     
-    <!-- Teacher Home -->
-    <string name="teacher_home_title">Teacher Dashboard</string>
+    <!-- Presenter Home -->
+    <string name="presenter_home_title">Presenter Dashboard</string>
     <string name="start_session_show_qr">Start Session (Show QR)</string>
     <string name="attendance_approvals">Attendance / Approvals</string>
     <string name="export_to_excel">Export to Excel (CSV)</string>

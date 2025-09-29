@@ -27,7 +27,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class TeacherStartSessionActivity extends AppCompatActivity {
+public class PresenterStartSessionActivity extends AppCompatActivity {
     
     private Spinner spinnerSeminar;
     private Button btnStartSession;
@@ -41,7 +41,7 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_teacher_start_session);
+        setContentView(R.layout.activity_presenter_start_session);
         
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance().getApiService();
@@ -96,7 +96,7 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
     }
     
     private void loadSeminars() {
-        String apiKey = preferencesManager.getTeacherApiKey();
+        String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
             return;
@@ -111,14 +111,14 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
                     seminars.addAll(response.body());
                     updateSeminarSpinner();
                 } else {
-                    Toast.makeText(TeacherStartSessionActivity.this, 
+                    Toast.makeText(PresenterStartSessionActivity.this, 
                             "Failed to load seminars", Toast.LENGTH_SHORT).show();
                 }
             }
             
             @Override
             public void onFailure(Call<List<Seminar>> call, Throwable t) {
-                Toast.makeText(TeacherStartSessionActivity.this, 
+                Toast.makeText(PresenterStartSessionActivity.this, 
                         "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
@@ -144,7 +144,7 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
             return;
         }
         
-        String apiKey = preferencesManager.getTeacherApiKey();
+        String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
             return;
@@ -163,14 +163,14 @@ public class TeacherStartSessionActivity extends AppCompatActivity {
                     Session session = response.body();
                     openQRDisplay(session);
                 } else {
-                    Toast.makeText(TeacherStartSessionActivity.this, 
+                    Toast.makeText(PresenterStartSessionActivity.this, 
                             "Failed to create session", Toast.LENGTH_SHORT).show();
                 }
             }
             
             @Override
             public void onFailure(Call<Session> call, Throwable t) {
-                Toast.makeText(TeacherStartSessionActivity.this, 
+                Toast.makeText(PresenterStartSessionActivity.this, 
                         "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });

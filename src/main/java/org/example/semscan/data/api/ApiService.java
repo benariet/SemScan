@@ -19,7 +19,7 @@ import retrofit2.http.Query;
 
 public interface ApiService {
     
-    // Sessions (Teacher endpoints require X-API-Key header)
+    // Sessions (Presenter endpoints require X-API-Key header)
     @POST("api/v1/sessions")
     Call<Session> createSession(
             @Header("X-API-Key") String apiKey,
