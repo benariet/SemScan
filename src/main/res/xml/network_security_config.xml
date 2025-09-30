@@ -7,6 +7,8 @@
         <domain includeSubdomains="true">127.0.0.1</domain>
         <!-- Add your local development server IP here -->
         <domain includeSubdomains="true">192.168.1.100</domain>
+        <domain includeSubdomains="true">132.73.167.231</domain>
+        <domain includeSubdomains="true">132.72.167.231</domain>
     </domain-config>
     
     <!-- For production, remove cleartextTrafficPermitted="true" -->

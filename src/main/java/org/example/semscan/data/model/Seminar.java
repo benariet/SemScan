@@ -3,18 +3,18 @@ package org.example.semscan.data.model;
 import com.google.gson.annotations.SerializedName;
 
 public class Seminar {
-    @SerializedName("seminar_id")
+    @SerializedName(value = "seminar_id", alternate = {"seminarId", "id"})
     private String seminarId;
     
-    @SerializedName("seminar_name")
+    @SerializedName(value = "seminar_name", alternate = {"seminarName", "name"})
     private String seminarName;
     
-    @SerializedName("seminar_code")
+    @SerializedName(value = "seminar_code", alternate = {"seminarCode", "code"})
     private String seminarCode;
     
     private String description;
     
-    @SerializedName("presenter_id")
+    @SerializedName(value = "presenter_id", alternate = {"presenterId"})
     private String presenterId;
     
     public Seminar() {}

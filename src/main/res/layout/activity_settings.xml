@@ -35,31 +35,35 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/user_id"
-                        android:textSize="16sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@color/gray_800"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <EditText
                         android:id="@+id/edit_user_id"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="56dp"
                         android:background="@drawable/edittext_background"
-                        android:padding="12dp"
-                        android:hint="Enter your user ID"
-                        android:inputType="text" />
+                        android:padding="16dp"
+                        android:hint="Enter your user ID (e.g., student-001)"
+                        android:inputType="text"
+                        android:textSize="16sp"
+                        android:textColor="@color/gray_800"
+                        android:textColorHint="@color/gray_500" />
 
                 </LinearLayout>
 
@@ -71,50 +75,57 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/api_base_url"
-                        android:textSize="16sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@color/gray_800"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <EditText
                         android:id="@+id/edit_api_url"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="56dp"
                         android:background="@drawable/edittext_background"
-                        android:padding="12dp"
-                        android:hint="http://10.0.2.2:8080/"
-                        android:inputType="textUri" />
+                        android:padding="16dp"
+                        android:hint="http://132.73.167.231:8080/"
+                        android:inputType="textUri"
+                        android:textSize="16sp"
+                        android:textColor="@color/gray_800"
+                        android:textColorHint="@color/gray_500" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Presenter API Key"
-                        android:textSize="16sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@color/gray_800"
-                        android:layout_marginTop="16dp"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="12dp" />
 
                     <EditText
                         android:id="@+id/edit_api_key"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="56dp"
                         android:background="@drawable/edittext_background"
-                        android:padding="12dp"
-                        android:hint="Enter teacher API key"
-                        android:inputType="textPassword" />
+                        android:padding="16dp"
+                        android:hint="Enter presenter API key (optional for students)"
+                        android:inputType="textPassword"
+                        android:textSize="16sp"
+                        android:textColor="@color/gray_800"
+                        android:textColorHint="@color/gray_500" />
 
                 </LinearLayout>
 
@@ -125,15 +136,16 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="16dp">
+                android:layout_marginTop="8dp">
 
                 <Button
                     android:id="@+id/btn_save"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="56dp"
                     android:layout_weight="1"
                     android:text="@string/save"
                     android:textSize="16sp"
+                    android:textStyle="bold"
                     android:background="@drawable/button_primary"
                     android:textColor="@color/white"
                     android:layout_marginEnd="8dp" />
@@ -141,12 +153,13 @@
                 <Button
                     android:id="@+id/btn_clear_data"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="56dp"
                     android:layout_weight="1"
                     android:text="Clear Data"
                     android:textSize="16sp"
+                    android:textStyle="bold"
                     android:background="@drawable/button_secondary"
-                    android:textColor="@color/gray_700"
+                    android:textColor="@color/gray_800"
                     android:layout_marginStart="8dp" />
 
             </LinearLayout>
@@ -157,37 +170,38 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/about"
-                        android:textSize="16sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@color/gray_800"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/app_name"
-                        android:textSize="18sp"
+                        android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="@color/primary_blue"
-                        android:layout_marginBottom="4dp" />
+                        android:layout_marginBottom="8dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/version"
-                        android:textSize="14sp"
+                        android:textSize="16sp"
                         android:textColor="@color/gray_600" />
 
                 </LinearLayout>

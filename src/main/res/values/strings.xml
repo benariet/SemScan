@@ -22,6 +22,18 @@
     <string name="manage_courses">Manage Courses</string>
     <string name="records_dashboard">Records Dashboard</string>
     
+    <!-- Seminar Management -->
+    <string name="create_new_seminar">Create New Seminar</string>
+    <string name="seminar_name">Seminar Name</string>
+    <string name="seminar_code">Seminar Code</string>
+    <string name="seminar_description">Description (Optional)</string>
+    <string name="enter_seminar_name">Enter seminar name</string>
+    <string name="enter_seminar_code">Enter seminar code (e.g., JAVA-001)</string>
+    <string name="enter_seminar_description">Enter seminar description</string>
+    <string name="seminar_created_successfully">Seminar created successfully</string>
+    <string name="failed_to_create_seminar">Failed to create seminar</string>
+    <string name="no_seminars_found">No seminars found. Create a new seminar to get started.</string>
+    
     <!-- QR Scanner -->
     <string name="qr_scanner_title">Scan QR Code</string>
     <string name="qr_scanner_instruction">Point your camera at the QR code</string>

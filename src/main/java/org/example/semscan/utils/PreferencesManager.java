@@ -26,6 +26,7 @@ public class PreferencesManager {
     
     // User Role
     public void setUserRole(String role) {
+        Logger.prefs(KEY_USER_ROLE, role);
         prefs.edit().putString(KEY_USER_ROLE, role).apply();
     }
     
@@ -51,15 +52,17 @@ public class PreferencesManager {
     
     // User ID
     public void setUserId(String userId) {
+        Logger.prefs(KEY_USER_ID, userId);
         prefs.edit().putString(KEY_USER_ID, userId).apply();
     }
     
     public String getUserId() {
-        return prefs.getString(KEY_USER_ID, null);
+        return prefs.getString(KEY_USER_ID, "presenter-001");
     }
     
     // API Base URL
     public void setApiBaseUrl(String baseUrl) {
+        Logger.prefs(KEY_API_BASE_URL, baseUrl);
         prefs.edit().putString(KEY_API_BASE_URL, baseUrl).apply();
     }
     
@@ -69,11 +72,12 @@ public class PreferencesManager {
     
     // Presenter API Key
     public void setPresenterApiKey(String apiKey) {
+        Logger.prefs(KEY_PRESENTER_API_KEY, apiKey != null ? "[HIDDEN]" : "null");
         prefs.edit().putString(KEY_PRESENTER_API_KEY, apiKey).apply();
     }
     
     public String getPresenterApiKey() {
-        return prefs.getString(KEY_PRESENTER_API_KEY, null);
+        return prefs.getString(KEY_PRESENTER_API_KEY, "presenter-001-api-key-12345");
     }
     
     // For backward compatibility

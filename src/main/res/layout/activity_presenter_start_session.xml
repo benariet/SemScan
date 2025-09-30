@@ -61,8 +61,30 @@
                 android:id="@+id/spinner_course"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginBottom="32dp"
+                android:layout_marginBottom="16dp"
                 android:background="@drawable/spinner_background" />
+
+            <!-- Create Seminar Button -->
+            <Button
+                android:id="@+id/btn_create_seminar"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="@string/create_new_seminar"
+                android:textSize="16sp"
+                android:background="@drawable/button_secondary"
+                android:textColor="@color/gray_800"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Test API Button (for debugging) -->
+            <Button
+                android:id="@+id/btn_test_api"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="Test API Response"
+                android:textSize="14sp"
+                android:background="@drawable/button_secondary"
+                android:textColor="@color/gray_800"
+                android:layout_marginBottom="16dp" />
 
             <!-- Start Session Button -->
             <Button

@@ -26,6 +26,7 @@ import org.example.semscan.data.api.ApiService;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Session;
 import org.example.semscan.ui.teacher.ExportActivity;
+import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.utils.QRUtils;
 
@@ -57,8 +58,10 @@ public class QRDisplayActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_qr_display);
         
+        Logger.i(Logger.TAG_QR, "QRDisplayActivity created");
+        
         preferencesManager = PreferencesManager.getInstance(this);
-        apiService = ApiClient.getInstance().getApiService();
+        apiService = ApiClient.getInstance(this).getApiService();
         
         // Get session from intent
         String sessionId = getIntent().getStringExtra("sessionId");
@@ -67,13 +70,17 @@ public class QRDisplayActivity extends AppCompatActivity {
         long endTime = getIntent().getLongExtra("endTime", 0);
         String status = getIntent().getStringExtra("status");
         
+        Logger.qr("Session Data Received", "Session ID: " + sessionId + ", Seminar ID: " + seminarId + ", Status: " + status);
+        
         if (sessionId == null || seminarId == null) {
+            Logger.e(Logger.TAG_QR, "No session data provided in intent");
             Toast.makeText(this, "No session data", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
         
         currentSession = new Session(sessionId, seminarId, startTime, endTime > 0 ? endTime : null, status);
+        Logger.qr("Session Created", "Session object created for ID: " + sessionId);
         
         initializeViews();
         setupToolbar();
@@ -111,6 +118,7 @@ public class QRDisplayActivity extends AppCompatActivity {
     private void generateAndDisplayQR() {
         // Generate QR content
         String qrContent = QRUtils.generateQRContent(currentSession.getSessionId());
+        Logger.qr("QR Code Generated", "Content: " + qrContent);
         
         // Generate QR code bitmap
         try {
@@ -120,7 +128,10 @@ public class QRDisplayActivity extends AppCompatActivity {
             // Update session info
             textSessionInfo.setText("Session: " + currentSession.getSessionId());
             
+            Logger.qr("QR Display Updated", "QR code displayed for session: " + currentSession.getSessionId());
+            
         } catch (Exception e) {
+            Logger.e(Logger.TAG_QR, "Failed to generate QR code", e);
             Toast.makeText(this, "Failed to generate QR code", Toast.LENGTH_SHORT).show();
             finish();
         }
@@ -140,15 +151,22 @@ public class QRDisplayActivity extends AppCompatActivity {
     private void updateAttendanceCount() {
         String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
+            Logger.w(Logger.TAG_QR, "Cannot update attendance count - no API key");
             return;
         }
+        
+        Logger.api("GET", "api/v1/attendance", "Session ID: " + currentSession.getSessionId());
         
         Call<List<Attendance>> call = apiService.getAttendance(apiKey, currentSession.getSessionId());
         call.enqueue(new Callback<List<Attendance>>() {
             @Override
             public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    presentCount = response.body().size();
+                    int newCount = response.body().size();
+                    if (newCount != presentCount) {
+                        Logger.attendance("Attendance Count Updated", "Session: " + currentSession.getSessionId() + ", Count: " + newCount);
+                        presentCount = newCount;
+                    }
                     
                     // Update UI on main thread
                     new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -157,12 +175,14 @@ public class QRDisplayActivity extends AppCompatActivity {
                             textPresentCount.setText(getString(R.string.present_count, presentCount));
                         }
                     });
+                } else {
+                    Logger.w(Logger.TAG_QR, "Failed to get attendance count - Response code: " + response.code());
                 }
             }
             
             @Override
             public void onFailure(Call<List<Attendance>> call, Throwable t) {
-                // Silently fail - don't show error for background updates
+                Logger.e(Logger.TAG_QR, "Attendance count update failed", t);
             }
         });
     }
@@ -189,27 +209,37 @@ public class QRDisplayActivity extends AppCompatActivity {
     }
     
     private void endSession() {
+        Logger.userAction("End Session", "Presenter clicked end session for: " + currentSession.getSessionId());
+        
         String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
+            Logger.e(Logger.TAG_QR, "Cannot end session - no API key");
             Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
             return;
         }
+        
+        Logger.api("PATCH", "api/v1/sessions/" + currentSession.getSessionId() + "/close", null);
         
         Call<Session> call = apiService.closeSession(apiKey, currentSession.getSessionId());
         call.enqueue(new Callback<Session>() {
             @Override
             public void onResponse(Call<Session> call, Response<Session> response) {
                 if (response.isSuccessful()) {
+                    Logger.session("Session Ended", "Session ID: " + currentSession.getSessionId());
+                    Logger.apiResponse("PATCH", "api/v1/sessions/" + currentSession.getSessionId() + "/close", response.code(), "Session closed successfully");
+                    
                     Toast.makeText(QRDisplayActivity.this, "Session ended successfully", Toast.LENGTH_SHORT).show();
                     // Navigate to export after session ends
                     openExport();
                 } else {
+                    Logger.apiError("PATCH", "api/v1/sessions/" + currentSession.getSessionId() + "/close", response.code(), "Failed to close session");
                     Toast.makeText(QRDisplayActivity.this, "Failed to end session", Toast.LENGTH_SHORT).show();
                 }
             }
             
             @Override
             public void onFailure(Call<Session> call, Throwable t) {
+                Logger.e(Logger.TAG_QR, "Failed to end session", t);
                 Toast.makeText(QRDisplayActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });

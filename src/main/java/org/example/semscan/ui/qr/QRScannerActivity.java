@@ -24,6 +24,7 @@ import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.QRPayload;
+import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.QRUtils;
 import org.example.semscan.utils.PreferencesManager;
 
@@ -48,8 +49,10 @@ public class QRScannerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_qr_scanner);
         
+        Logger.i(Logger.TAG_QR, "QRScannerActivity created");
+        
         preferencesManager = PreferencesManager.getInstance(this);
-        apiService = ApiClient.getInstance().getApiService();
+        apiService = ApiClient.getInstance(this).getApiService();
         
         initializeViews();
         setupToolbar();
@@ -58,10 +61,12 @@ public class QRScannerActivity extends AppCompatActivity {
         // Check camera permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
                 != PackageManager.PERMISSION_GRANTED) {
+            Logger.i(Logger.TAG_QR, "Requesting camera permission");
             ActivityCompat.requestPermissions(this, 
                     new String[]{Manifest.permission.CAMERA}, 
                     CAMERA_PERMISSION_REQUEST);
         } else {
+            Logger.i(Logger.TAG_QR, "Camera permission already granted, starting scanner");
             startScanning();
         }
     }
@@ -110,10 +115,12 @@ public class QRScannerActivity extends AppCompatActivity {
     }
     
     private void startScanning() {
+        Logger.qr("Scanner Started", "QR scanner started");
         barcodeView.resume();
     }
     
     private void stopScanning() {
+        Logger.qr("Scanner Stopped", "QR scanner stopped");
         barcodeView.pause();
     }
     
@@ -122,22 +129,28 @@ public class QRScannerActivity extends AppCompatActivity {
             barcodeView.setTorchOff();
             btnFlashlight.setText("Flashlight");
             isFlashlightOn = false;
+            Logger.qr("Flashlight", "Flashlight turned off");
         } else {
             barcodeView.setTorchOn();
             btnFlashlight.setText("Flashlight Off");
             isFlashlightOn = true;
+            Logger.qr("Flashlight", "Flashlight turned on");
         }
     }
     
     private void handleQRResult(String qrContent) {
+        Logger.qr("QR Code Scanned", "Content: " + qrContent);
         stopScanning();
         
         // Parse QR content
         QRPayload payload = QRUtils.parseQRContent(qrContent);
         if (payload == null || !QRUtils.isValidQRContent(qrContent)) {
+            Logger.qr("Invalid QR Code", "Failed to parse QR content: " + qrContent);
             showError("Invalid session code");
             return;
         }
+        
+        Logger.qr("QR Code Parsed", "Session ID: " + payload.getSessionId());
         
         // Submit attendance
         submitAttendance(payload.getSessionId());
@@ -146,11 +159,15 @@ public class QRScannerActivity extends AppCompatActivity {
     private void submitAttendance(String sessionId) {
         String studentId = preferencesManager.getUserId();
         if (studentId == null) {
+            Logger.e(Logger.TAG_QR, "Cannot submit attendance - no student ID");
             showError("Student ID not found. Please check settings.");
             return;
         }
         
         long timestampMs = System.currentTimeMillis();
+        
+        Logger.attendance("Submitting Attendance", "Session ID: " + sessionId + ", Student ID: " + studentId);
+        Logger.api("POST", "api/v1/attendance", "Session ID: " + sessionId + ", Student ID: " + studentId);
         
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
                 sessionId, studentId, timestampMs);
@@ -163,20 +180,27 @@ public class QRScannerActivity extends AppCompatActivity {
                     Attendance attendance = response.body();
                     if (attendance != null) {
                         if (attendance.isAlreadyPresent()) {
+                            Logger.attendance("Attendance Already Present", "Student: " + studentId + ", Session: " + sessionId);
+                            Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Already present");
                             showSuccess("Already checked in");
                         } else {
+                            Logger.attendance("Attendance Submitted", "Student: " + studentId + ", Session: " + sessionId);
+                            Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
                             showSuccess("Checked in for this session");
                         }
                     } else {
+                        Logger.w(Logger.TAG_QR, "Invalid attendance response from server");
                         showError("Invalid response from server");
                     }
                 } else {
+                    Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
                     handleErrorResponse(response.code());
                 }
             }
             
             @Override
             public void onFailure(Call<Attendance> call, Throwable t) {
+                Logger.e(Logger.TAG_QR, "Attendance submission failed", t);
                 showError("Network error: " + t.getMessage());
             }
         });

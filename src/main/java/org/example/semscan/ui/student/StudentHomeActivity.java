@@ -16,6 +16,7 @@ import org.example.semscan.R;
 import org.example.semscan.ui.RolePickerActivity;
 import org.example.semscan.ui.SettingsActivity;
 import org.example.semscan.ui.qr.QRScannerActivity;
+import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 
 public class StudentHomeActivity extends AppCompatActivity {
@@ -30,14 +31,18 @@ public class StudentHomeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_student_home);
 
+        Logger.i(Logger.TAG_UI, "StudentHomeActivity created");
+
         preferencesManager = PreferencesManager.getInstance(this);
 
         // Check if user is actually a student
         if (!preferencesManager.isStudent()) {
+            Logger.w(Logger.TAG_UI, "User is not a student, navigating to role picker");
             navigateToRolePicker();
             return;
         }
 
+        Logger.i(Logger.TAG_UI, "Student user authenticated, setting up UI");
         initializeViews();
         setupToolbar();
         setupClickListeners();
@@ -82,16 +87,19 @@ public class StudentHomeActivity extends AppCompatActivity {
     }
 
     private void openQRScanner() {
+        Logger.userAction("Open QR Scanner", "Student clicked scan attendance");
         Intent intent = new Intent(this, QRScannerActivity.class);
         startActivity(intent);
     }
 
     private void openSettings() {
+        Logger.userAction("Open Settings", "Student clicked settings");
         Intent intent = new Intent(this, SettingsActivity.class);
         startActivity(intent);
     }
 
     private void changeRole() {
+        Logger.userAction("Change Role", "Student clicked change role");
         preferencesManager.clearUserData();
         navigateToRolePicker();
     }

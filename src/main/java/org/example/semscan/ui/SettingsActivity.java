@@ -12,7 +12,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import org.example.semscan.R;
+import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.data.api.ApiClient;
 
 public class SettingsActivity extends AppCompatActivity {
     
@@ -28,6 +30,8 @@ public class SettingsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
+        
+        Logger.i(Logger.TAG_UI, "SettingsActivity created");
         
         preferencesManager = PreferencesManager.getInstance(this);
         
@@ -71,23 +75,38 @@ public class SettingsActivity extends AppCompatActivity {
     }
     
     private void loadCurrentSettings() {
-        editUserId.setText(preferencesManager.getUserId());
-        editApiUrl.setText(preferencesManager.getApiBaseUrl());
-        editApiKey.setText(preferencesManager.getPresenterApiKey());
+        String userId = preferencesManager.getUserId();
+        String apiUrl = preferencesManager.getApiBaseUrl();
+        String apiKey = preferencesManager.getPresenterApiKey();
+        
+        Logger.i(Logger.TAG_UI, "Loading current settings");
+        Logger.d(Logger.TAG_UI, "Current User ID: " + userId);
+        Logger.d(Logger.TAG_UI, "Current API URL: " + apiUrl);
+        Logger.d(Logger.TAG_UI, "Current API Key: " + (apiKey != null ? "[HIDDEN]" : "null"));
+        
+        editUserId.setText(userId);
+        editApiUrl.setText(apiUrl);
+        editApiKey.setText(apiKey);
     }
     
     private void saveSettings() {
+        Logger.userAction("Save Settings", "User clicked save settings button");
+        
         String userId = editUserId.getText().toString().trim();
         String apiUrl = editApiUrl.getText().toString().trim();
         String apiKey = editApiKey.getText().toString().trim();
         
+        Logger.d(Logger.TAG_UI, "Attempting to save settings - User ID: " + userId + ", API URL: " + apiUrl + ", API Key: " + (apiKey.isEmpty() ? "empty" : "[HIDDEN]"));
+        
         // Validate inputs
         if (userId.isEmpty()) {
+            Logger.w(Logger.TAG_UI, "Save settings failed - User ID is empty");
             Toast.makeText(this, "User ID is required", Toast.LENGTH_SHORT).show();
             return;
         }
         
         if (apiUrl.isEmpty()) {
+            Logger.w(Logger.TAG_UI, "Save settings failed - API URL is empty");
             Toast.makeText(this, "API URL is required", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -97,10 +116,17 @@ public class SettingsActivity extends AppCompatActivity {
         preferencesManager.setApiBaseUrl(apiUrl);
         preferencesManager.setPresenterApiKey(apiKey);
         
+        // Force reset API client to use new settings
+        ApiClient.resetInstance();
+        ApiClient.getInstance(this);
+        
+        Logger.i(Logger.TAG_UI, "Settings saved successfully");
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show();
     }
     
     private void showClearDataDialog() {
+        Logger.userAction("Clear Data Dialog", "User clicked clear data button");
+        
         new AlertDialog.Builder(this)
                 .setTitle("Clear All Data")
                 .setMessage("This will clear all user data and settings. Are you sure?")
@@ -110,12 +136,22 @@ public class SettingsActivity extends AppCompatActivity {
                         clearAllData();
                     }
                 })
-                .setNegativeButton("No", null)
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Logger.i(Logger.TAG_UI, "Clear data cancelled by user");
+                    }
+                })
                 .show();
     }
     
     private void clearAllData() {
+        Logger.userAction("Clear All Data", "User confirmed clearing all data");
+        Logger.i(Logger.TAG_UI, "Clearing all user data and settings");
+        
         preferencesManager.clearAll();
+        
+        Logger.i(Logger.TAG_UI, "All data cleared successfully");
         Toast.makeText(this, "All data cleared", Toast.LENGTH_SHORT).show();
         
         // Navigate back to role picker

@@ -12,6 +12,7 @@ import androidx.cardview.widget.CardView;
 import org.example.semscan.R;
 import org.example.semscan.ui.student.StudentHomeActivity;
 import org.example.semscan.ui.teacher.PresenterHomeActivity;
+import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 
 public class RolePickerActivity extends AppCompatActivity {
@@ -26,6 +27,8 @@ public class RolePickerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_role_picker);
         
+        Logger.i(Logger.TAG_UI, "RolePickerActivity created");
+        
         preferencesManager = PreferencesManager.getInstance(this);
         
         initializeViews();
@@ -33,7 +36,11 @@ public class RolePickerActivity extends AppCompatActivity {
         
         // Check if user already has a role selected
         if (preferencesManager.hasRole()) {
+            String currentRole = preferencesManager.getUserRole();
+            Logger.i(Logger.TAG_UI, "User already has role: " + currentRole + ", navigating to home");
             navigateToHome();
+        } else {
+            Logger.i(Logger.TAG_UI, "No role selected, showing role picker");
         }
     }
     
@@ -67,21 +74,31 @@ public class RolePickerActivity extends AppCompatActivity {
     }
     
     private void selectRole(String role) {
+        Logger.userAction("Select Role", "User selected role: " + role);
+        Logger.i(Logger.TAG_UI, "Setting user role to: " + role);
+        
         preferencesManager.setUserRole(role);
         navigateToHome();
     }
     
     private void navigateToHome() {
         Intent intent;
+        String targetActivity;
+        
         if (preferencesManager.isPresenter()) {
             intent = new Intent(this, PresenterHomeActivity.class);
+            targetActivity = "PresenterHomeActivity";
         } else if (preferencesManager.isStudent()) {
             intent = new Intent(this, StudentHomeActivity.class);
+            targetActivity = "StudentHomeActivity";
         } else {
             // This shouldn't happen, but just in case
+            Logger.w(Logger.TAG_UI, "No valid role found for navigation");
             Toast.makeText(this, "Please select a role", Toast.LENGTH_SHORT).show();
             return;
         }
+        
+        Logger.i(Logger.TAG_UI, "Navigating to: " + targetActivity);
         
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
@@ -89,6 +106,7 @@ public class RolePickerActivity extends AppCompatActivity {
     }
     
     private void openSettings() {
+        Logger.userAction("Open Settings", "User clicked settings from role picker");
         Intent intent = new Intent(this, SettingsActivity.class);
         startActivity(intent);
     }

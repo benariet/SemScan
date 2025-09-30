@@ -3,6 +3,7 @@ package org.example.semscan.data.api;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Seminar;
 import org.example.semscan.data.model.Session;
+import org.example.semscan.utils.Logger;
 
 import java.util.List;
 
@@ -22,13 +23,13 @@ public interface ApiService {
     // Sessions (Presenter endpoints require X-API-Key header)
     @POST("api/v1/sessions")
     Call<Session> createSession(
-            @Header("X-API-Key") String apiKey,
+            @Header("x-api-key") String apiKey,
             @Body CreateSessionRequest request
     );
     
     @PATCH("api/v1/sessions/{sessionId}/close")
     Call<Session> closeSession(
-            @Header("X-API-Key") String apiKey,
+            @Header("x-api-key") String apiKey,
             @Path("sessionId") String sessionId
     );
     
@@ -40,37 +41,46 @@ public interface ApiService {
     
     @GET("api/v1/attendance")
     Call<List<Attendance>> getAttendance(
-            @Header("X-API-Key") String apiKey,
+            @Header("x-api-key") String apiKey,
             @Query("sessionId") String sessionId
     );
     
     
     // Seminars
     @GET("api/v1/seminars")
-    Call<List<Seminar>> getSeminars(@Header("X-API-Key") String apiKey);
+    Call<List<Seminar>> getSeminars(@Header("x-api-key") String apiKey);
+    
+    @POST("api/v1/seminars")
+    Call<Seminar> createSeminar(
+            @Header("x-api-key") String apiKey,
+            @Body CreateSeminarRequest request
+    );
     
     
     // Export
     @GET("api/v1/export/xlsx")
     Call<okhttp3.ResponseBody> exportXlsx(
-            @Header("X-API-Key") String apiKey,
+            @Header("x-api-key") String apiKey,
             @Query("sessionId") String sessionId
     );
     
     @GET("api/v1/export/csv")
     Call<okhttp3.ResponseBody> exportCsv(
-            @Header("X-API-Key") String apiKey,
+            @Header("x-api-key") String apiKey,
             @Query("sessionId") String sessionId
     );
     
     // Request/Response DTOs
     class CreateSessionRequest {
-        public String seminarId;
-        public long startTime;
+        public String seminarId;    // Required: ID of the seminar to create session for
+        public String startTime;    // Required: ISO 8601 formatted start time
+        public String status;       // Required: Session status (e.g., "OPEN")
+        // Note: sessionId is NOT included - server generates it automatically
         
-        public CreateSessionRequest(String seminarId, long startTime) {
+        public CreateSessionRequest(String seminarId, String startTime, String status) {
             this.seminarId = seminarId;
             this.startTime = startTime;
+            this.status = status;
         }
     }
     
@@ -83,6 +93,20 @@ public interface ApiService {
             this.sessionId = sessionId;
             this.studentId = studentId;
             this.timestampMs = timestampMs;
+        }
+    }
+    
+    class CreateSeminarRequest {
+        public String seminarName;
+        public String seminarCode;
+        public String description;
+        public String presenterId;
+        
+        public CreateSeminarRequest(String seminarName, String seminarCode, String description, String presenterId) {
+            this.seminarName = seminarName;
+            this.seminarCode = seminarCode;
+            this.description = description;
+            this.presenterId = presenterId;
         }
     }
     
