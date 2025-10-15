@@ -1,11 +1,14 @@
 package org.example.semscan.ui.qr;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -39,10 +42,12 @@ public class QRScannerActivity extends AppCompatActivity {
     private DecoratedBarcodeView barcodeView;
     private Button btnFlashlight;
     private Button btnCancel;
+    private Button btnManualRequest;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
     
     private boolean isFlashlightOn = false;
+    private String currentSessionId = null;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +80,7 @@ public class QRScannerActivity extends AppCompatActivity {
         barcodeView = findViewById(R.id.barcode_scanner);
         btnFlashlight = findViewById(R.id.btn_flashlight);
         btnCancel = findViewById(R.id.btn_cancel);
+        btnManualRequest = findViewById(R.id.btn_manual_request);
     }
     
     private void setupToolbar() {
@@ -98,6 +104,13 @@ public class QRScannerActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 finish();
+            }
+        });
+        
+        btnManualRequest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showManualRequestDialog();
             }
         });
         
@@ -151,6 +164,10 @@ public class QRScannerActivity extends AppCompatActivity {
         }
         
         Logger.qr("QR Code Parsed", "Session ID: " + payload.getSessionId());
+        
+        // Store current session ID and show manual request button
+        currentSessionId = payload.getSessionId();
+        btnManualRequest.setVisibility(View.VISIBLE);
         
         // Submit attendance
         submitAttendance(payload.getSessionId());
@@ -243,6 +260,103 @@ public class QRScannerActivity extends AppCompatActivity {
                 startScanning();
             }
         }, 2000);
+    }
+    
+    private void showManualRequestDialog() {
+        if (currentSessionId == null) {
+            Toast.makeText(this, "Please scan a valid QR code first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_manual_request, null);
+        
+        EditText editReason = dialogView.findViewById(R.id.edit_reason);
+        Button btnCancelRequest = dialogView.findViewById(R.id.btn_cancel_request);
+        Button btnSubmitRequest = dialogView.findViewById(R.id.btn_submit_request);
+        
+        AlertDialog dialog = builder.setView(dialogView).create();
+        
+        btnCancelRequest.setOnClickListener(v -> dialog.dismiss());
+        btnSubmitRequest.setOnClickListener(v -> {
+            String reason = editReason.getText().toString().trim();
+            if (reason.isEmpty()) {
+                Toast.makeText(this, "Please provide a reason", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            dialog.dismiss();
+            submitManualRequest(reason);
+        });
+        
+        dialog.show();
+    }
+    
+    private void submitManualRequest(String reason) {
+        String studentId = preferencesManager.getUserId();
+        if (studentId == null) {
+            Logger.e(Logger.TAG_QR, "Cannot submit manual request - no student ID");
+            showError("Student ID not found. Please check settings.");
+            return;
+        }
+        
+        String deviceId = android.provider.Settings.Secure.getString(
+            getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+        
+        Logger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
+            ", Student ID: " + studentId + ", Reason: " + reason);
+        Logger.api("POST", "api/v1/attendance/manual-request", 
+            "Session ID: " + currentSessionId + ", Student ID: " + studentId);
+        
+        ApiService.CreateManualRequestRequest request = new ApiService.CreateManualRequestRequest(
+            currentSessionId, studentId, reason, deviceId);
+        
+        Call<Attendance> call = apiService.createManualRequest(request);
+        call.enqueue(new Callback<Attendance>() {
+            @Override
+            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+                if (response.isSuccessful()) {
+                    Attendance attendance = response.body();
+                    if (attendance != null) {
+                        Logger.attendance("Manual Request Submitted", "Student: " + studentId + 
+                            ", Session: " + currentSessionId);
+                        Logger.apiResponse("POST", "api/v1/attendance/manual-request", 
+                            response.code(), "Manual request submitted successfully");
+                        showSuccess("Manual attendance request submitted. Please wait for approval.");
+                    } else {
+                        Logger.w(Logger.TAG_QR, "Invalid manual request response from server");
+                        showError("Invalid response from server");
+                    }
+                } else {
+                    Logger.apiError("POST", "api/v1/attendance/manual-request", 
+                        response.code(), "Failed to submit manual request");
+                    handleManualRequestError(response.code());
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<Attendance> call, Throwable t) {
+                Logger.e(Logger.TAG_QR, "Manual request submission failed", t);
+                showError("Network error: " + t.getMessage());
+            }
+        });
+    }
+    
+    private void handleManualRequestError(int responseCode) {
+        switch (responseCode) {
+            case 409:
+                showError("You already have a pending request for this session");
+                break;
+            case 404:
+                showError("Session not found or not accepting requests");
+                break;
+            case 400:
+                showError("Invalid request. Please try again.");
+                break;
+            default:
+                showError("Failed to submit request. Please try again.");
+                break;
+        }
     }
     
     @Override

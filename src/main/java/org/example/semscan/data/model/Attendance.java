@@ -15,10 +15,32 @@ public class Attendance {
     @SerializedName("attendance_time")
     private long attendanceTime;
     
-    private String method; // "QR_SCAN", "MANUAL", "PROXY"
+    private String method; // "QR_SCAN", "MANUAL", "MANUAL_REQUEST", "PROXY"
     
     @SerializedName("already_present")
     private boolean alreadyPresent;
+    
+    // Manual request fields
+    @SerializedName("request_status")
+    private String requestStatus; // "confirmed", "pending_approval", "rejected"
+    
+    @SerializedName("manual_reason")
+    private String manualReason;
+    
+    @SerializedName("requested_at")
+    private Long requestedAt;
+    
+    @SerializedName("approved_by")
+    private String approvedBy;
+    
+    @SerializedName("approved_at")
+    private Long approvedAt;
+    
+    @SerializedName("device_id")
+    private String deviceId;
+    
+    @SerializedName("auto_flags")
+    private String autoFlags; // JSON string for inWindow, duplicate, capExceeded flags
     
     public Attendance() {}
     
@@ -91,6 +113,80 @@ public class Attendance {
         return "PROXY".equals(method);
     }
     
+    public boolean isManualRequest() {
+        return "MANUAL_REQUEST".equals(method);
+    }
+    
+    // Manual request getters and setters
+    public String getRequestStatus() {
+        return requestStatus;
+    }
+    
+    public void setRequestStatus(String requestStatus) {
+        this.requestStatus = requestStatus;
+    }
+    
+    public String getManualReason() {
+        return manualReason;
+    }
+    
+    public void setManualReason(String manualReason) {
+        this.manualReason = manualReason;
+    }
+    
+    public Long getRequestedAt() {
+        return requestedAt;
+    }
+    
+    public void setRequestedAt(Long requestedAt) {
+        this.requestedAt = requestedAt;
+    }
+    
+    public String getApprovedBy() {
+        return approvedBy;
+    }
+    
+    public void setApprovedBy(String approvedBy) {
+        this.approvedBy = approvedBy;
+    }
+    
+    public Long getApprovedAt() {
+        return approvedAt;
+    }
+    
+    public void setApprovedAt(Long approvedAt) {
+        this.approvedAt = approvedAt;
+    }
+    
+    public String getDeviceId() {
+        return deviceId;
+    }
+    
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
+    
+    public String getAutoFlags() {
+        return autoFlags;
+    }
+    
+    public void setAutoFlags(String autoFlags) {
+        this.autoFlags = autoFlags;
+    }
+    
+    // Utility methods for manual requests
+    public boolean isPendingApproval() {
+        return "pending_approval".equals(requestStatus);
+    }
+    
+    public boolean isConfirmed() {
+        return "confirmed".equals(requestStatus);
+    }
+    
+    public boolean isRejected() {
+        return "rejected".equals(requestStatus);
+    }
+    
     @Override
     public String toString() {
         return "Attendance{" +
@@ -100,6 +196,8 @@ public class Attendance {
                 ", attendanceTime=" + attendanceTime +
                 ", method='" + method + '\'' +
                 ", alreadyPresent=" + alreadyPresent +
+                ", requestStatus='" + requestStatus + '\'' +
+                ", manualReason='" + manualReason + '\'' +
                 '}';
     }
 }

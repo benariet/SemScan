@@ -67,7 +67,7 @@ public class PreferencesManager {
     }
     
     public String getApiBaseUrl() {
-        return prefs.getString(KEY_API_BASE_URL, "http://10.0.2.2:8080/");
+        return prefs.getString(KEY_API_BASE_URL, "http://132.72.54.104:8080/");
     }
     
     // Presenter API Key

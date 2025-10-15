@@ -9,6 +9,7 @@
         <domain includeSubdomains="true">192.168.1.100</domain>
         <domain includeSubdomains="true">132.73.167.231</domain>
         <domain includeSubdomains="true">132.72.167.231</domain>
+        <domain includeSubdomains="true">132.73.157.231</domain>
     </domain-config>
     
     <!-- For production, remove cleartextTrafficPermitted="true" -->

@@ -45,6 +45,28 @@ public interface ApiService {
             @Query("sessionId") String sessionId
     );
     
+    // Manual attendance requests
+    @POST("api/v1/attendance/manual-request")
+    Call<Attendance> createManualRequest(@Body CreateManualRequestRequest request);
+    
+    @GET("api/v1/attendance/pending-requests")
+    Call<List<Attendance>> getPendingRequests(
+            @Header("x-api-key") String apiKey,
+            @Query("sessionId") String sessionId
+    );
+    
+    @POST("api/v1/attendance/{attendanceId}/approve")
+    Call<Attendance> approveManualRequest(
+            @Header("x-api-key") String apiKey,
+            @Path("attendanceId") String attendanceId
+    );
+    
+    @POST("api/v1/attendance/{attendanceId}/reject")
+    Call<Attendance> rejectManualRequest(
+            @Header("x-api-key") String apiKey,
+            @Path("attendanceId") String attendanceId
+    );
+    
     
     // Seminars
     @GET("api/v1/seminars")
@@ -107,6 +129,20 @@ public interface ApiService {
             this.seminarCode = seminarCode;
             this.description = description;
             this.presenterId = presenterId;
+        }
+    }
+    
+    class CreateManualRequestRequest {
+        public String sessionId;
+        public String studentId;
+        public String reason;
+        public String deviceId;
+        
+        public CreateManualRequestRequest(String sessionId, String studentId, String reason, String deviceId) {
+            this.sessionId = sessionId;
+            this.studentId = studentId;
+            this.reason = reason;
+            this.deviceId = deviceId;
         }
     }
     

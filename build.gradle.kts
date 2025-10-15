@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId = "org.example.semscan"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -27,8 +27,9 @@ android {
     }
     
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
     
     buildFeatures {
@@ -60,6 +61,9 @@ dependencies {
     
     // CSV export
     implementation("com.opencsv:opencsv:5.9")
+    
+    // Desugaring for Android 8+ compatibility with Java 17 features
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

@@ -1,12 +1,18 @@
 package org.example.semscan.ui.teacher;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import androidx.core.content.FileProvider;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RadioGroup;
+import android.widget.TextView;
 import android.widget.Toast;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -14,9 +20,12 @@ import androidx.appcompat.widget.Toolbar;
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
+import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Session;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+
+import java.util.List;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,11 +40,13 @@ public class ExportActivity extends AppCompatActivity {
     
     private RadioGroup radioGroupFormat;
     private Button btnExport;
+    private TextView textSessionId;
     
     private PreferencesManager preferencesManager;
     private ApiService apiService;
     
     private String currentSessionId;
+    private ManualRequestAdapter requestAdapter;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,16 +61,25 @@ public class ExportActivity extends AppCompatActivity {
         initializeViews();
         setupToolbar();
         setupClickListeners();
+        setupRequestAdapter();
     }
     
     private void initializeViews() {
         radioGroupFormat = findViewById(R.id.radio_group_format);
         btnExport = findViewById(R.id.btn_export);
+        textSessionId = findViewById(R.id.text_session_id);
         
         // Get current session ID from intent (passed from QR display)
         currentSessionId = getIntent().getStringExtra("sessionId");
         
-        Logger.d(Logger.TAG_UI, "Export activity initialized with session ID: " + currentSessionId);
+        // Display the session ID
+        if (currentSessionId != null) {
+            textSessionId.setText(currentSessionId);
+            Logger.d(Logger.TAG_UI, "Export activity initialized with session ID: " + currentSessionId);
+        } else {
+            textSessionId.setText("No session data available");
+            Logger.e(Logger.TAG_UI, "No session ID provided in intent");
+        }
     }
     
     private void setupToolbar() {
@@ -75,13 +95,192 @@ public class ExportActivity extends AppCompatActivity {
         btnExport.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                exportData();
+                checkPendingRequests();
             }
         });
     }
     
-    // Simplified MVP: No session loading needed - export current session only
+    private void setupRequestAdapter() {
+        requestAdapter = new ManualRequestAdapter(new ManualRequestAdapter.OnRequestActionListener() {
+            @Override
+            public void onApprove(Attendance request) {
+                approveRequest(request);
+            }
+            
+            @Override
+            public void onReject(Attendance request) {
+                rejectRequest(request);
+            }
+        });
+    }
     
+    private void checkPendingRequests() {
+        Logger.userAction("Check Pending Requests", "Checking for pending manual requests before export");
+        
+        String apiKey = preferencesManager.getPresenterApiKey();
+        if (apiKey == null) {
+            Logger.e(Logger.TAG_UI, "Export failed - no API key configured");
+            Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (currentSessionId == null) {
+            Logger.e(Logger.TAG_UI, "Export failed - no session ID available");
+            Toast.makeText(this, "No session data available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        Logger.api("GET", "api/v1/attendance/pending-requests", "Session ID: " + currentSessionId);
+        
+        Call<List<Attendance>> call = apiService.getPendingRequests(apiKey, currentSessionId);
+        call.enqueue(new Callback<List<Attendance>>() {
+            @Override
+            public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Attendance> pendingRequests = response.body();
+                    Logger.apiResponse("GET", "api/v1/attendance/pending-requests", 
+                        response.code(), "Found " + pendingRequests.size() + " pending requests");
+                    
+                    if (pendingRequests.isEmpty()) {
+                        // No pending requests, proceed with export
+                        exportData();
+                    } else {
+                        // Show review modal
+                        showReviewModal(pendingRequests);
+                    }
+                } else {
+                    Logger.apiError("GET", "api/v1/attendance/pending-requests", 
+                        response.code(), "Failed to get pending requests");
+                    Toast.makeText(ExportActivity.this, "Failed to check pending requests", Toast.LENGTH_SHORT).show();
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<List<Attendance>> call, Throwable t) {
+                Logger.e(Logger.TAG_UI, "Failed to check pending requests", t);
+                Toast.makeText(ExportActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private void showReviewModal(List<Attendance> pendingRequests) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_review_requests, null);
+        
+        TextView textPendingCount = dialogView.findViewById(R.id.text_pending_count);
+        RecyclerView recyclerRequests = dialogView.findViewById(R.id.recycler_requests);
+        Button btnApproveAllSafe = dialogView.findViewById(R.id.btn_approve_all_safe);
+        Button btnRejectAllDuplicates = dialogView.findViewById(R.id.btn_reject_all_duplicates);
+        Button btnCancelReview = dialogView.findViewById(R.id.btn_cancel_review);
+        Button btnContinueExport = dialogView.findViewById(R.id.btn_continue_export);
+        
+        // Set up recycler view
+        recyclerRequests.setLayoutManager(new LinearLayoutManager(this));
+        recyclerRequests.setAdapter(requestAdapter);
+        requestAdapter.updateRequests(pendingRequests);
+        
+        // Update pending count
+        textPendingCount.setText(pendingRequests.size() + " pending requests");
+        
+        AlertDialog dialog = builder.setView(dialogView).create();
+        
+        // Set up button listeners
+        btnApproveAllSafe.setOnClickListener(v -> {
+            approveAllSafe(pendingRequests);
+            dialog.dismiss();
+        });
+        
+        btnRejectAllDuplicates.setOnClickListener(v -> {
+            rejectAllDuplicates(pendingRequests);
+            dialog.dismiss();
+        });
+        
+        btnCancelReview.setOnClickListener(v -> dialog.dismiss());
+        
+        btnContinueExport.setOnClickListener(v -> {
+            dialog.dismiss();
+            exportData();
+        });
+        
+        dialog.show();
+    }
+    
+    private void approveRequest(Attendance request) {
+        String apiKey = preferencesManager.getPresenterApiKey();
+        if (apiKey == null) return;
+        
+        Logger.userAction("Approve Request", "Approving manual request for student: " + request.getStudentId());
+        Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 
+            "Attendance ID: " + request.getAttendanceId());
+        
+        Call<Attendance> call = apiService.approveManualRequest(apiKey, request.getAttendanceId());
+        call.enqueue(new Callback<Attendance>() {
+            @Override
+            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+                if (response.isSuccessful()) {
+                    Logger.apiResponse("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 
+                        response.code(), "Request approved successfully");
+                    Toast.makeText(ExportActivity.this, "Request approved", Toast.LENGTH_SHORT).show();
+                    // Refresh the list
+                    checkPendingRequests();
+                } else {
+                    Logger.apiError("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 
+                        response.code(), "Failed to approve request");
+                    Toast.makeText(ExportActivity.this, "Failed to approve request", Toast.LENGTH_SHORT).show();
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<Attendance> call, Throwable t) {
+                Logger.e(Logger.TAG_UI, "Failed to approve request", t);
+                Toast.makeText(ExportActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private void rejectRequest(Attendance request) {
+        String apiKey = preferencesManager.getPresenterApiKey();
+        if (apiKey == null) return;
+        
+        Logger.userAction("Reject Request", "Rejecting manual request for student: " + request.getStudentId());
+        Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject", 
+            "Attendance ID: " + request.getAttendanceId());
+        
+        Call<Attendance> call = apiService.rejectManualRequest(apiKey, request.getAttendanceId());
+        call.enqueue(new Callback<Attendance>() {
+            @Override
+            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+                if (response.isSuccessful()) {
+                    Logger.apiResponse("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject", 
+                        response.code(), "Request rejected successfully");
+                    Toast.makeText(ExportActivity.this, "Request rejected", Toast.LENGTH_SHORT).show();
+                    // Refresh the list
+                    checkPendingRequests();
+                } else {
+                    Logger.apiError("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject", 
+                        response.code(), "Failed to reject request");
+                    Toast.makeText(ExportActivity.this, "Failed to reject request", Toast.LENGTH_SHORT).show();
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<Attendance> call, Throwable t) {
+                Logger.e(Logger.TAG_UI, "Failed to reject request", t);
+                Toast.makeText(ExportActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private void approveAllSafe(List<Attendance> requests) {
+        // TODO: Implement bulk approve logic based on auto_flags
+        Toast.makeText(this, "Approve All Safe - Not implemented yet", Toast.LENGTH_SHORT).show();
+    }
+    
+    private void rejectAllDuplicates(List<Attendance> requests) {
+        // TODO: Implement bulk reject duplicates logic
+        Toast.makeText(this, "Reject All Duplicates - Not implemented yet", Toast.LENGTH_SHORT).show();
+    }
     
     private void exportData() {
         Logger.userAction("Export Data", "User clicked export button");
@@ -167,13 +366,24 @@ public class ExportActivity extends AppCompatActivity {
     private void shareFile(File file, String mimeType) {
         Logger.i(Logger.TAG_UI, "Sharing export file: " + file.getName() + " (" + mimeType + ")");
         
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.setType(mimeType);
-        shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Attendance Export");
-        shareIntent.putExtra(Intent.EXTRA_TEXT, "Attendance data export from SemScan");
-        
-        startActivity(Intent.createChooser(shareIntent, "Share attendance data"));
+        try {
+            // Use FileProvider for secure file sharing
+            Uri fileUri = FileProvider.getUriForFile(this, 
+                "org.example.semscan.fileprovider", file);
+            
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType(mimeType);
+            shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Attendance Export");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, "Attendance data export from SemScan");
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            
+            startActivity(Intent.createChooser(shareIntent, "Share attendance data"));
+            
+        } catch (Exception e) {
+            Logger.e(Logger.TAG_UI, "Failed to share file", e);
+            Toast.makeText(this, "Failed to share file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
     
     @Override

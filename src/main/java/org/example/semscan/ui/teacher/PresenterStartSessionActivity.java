@@ -76,6 +76,16 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         btnTestApi = findViewById(R.id.btn_test_api);
     }
     
+    private void showLongToast(String message) {
+        Toast toast = Toast.makeText(this, message, Toast.LENGTH_LONG);
+        toast.show();
+        
+        // Show it again after a delay to make it really long
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        }, 3500);
+    }
+    
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -100,7 +110,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     }
                 } catch (Exception e) {
                     selectedSeminarId = null;
-                    Toast.makeText(PresenterStartSessionActivity.this, "Error selecting seminar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    showLongToast("❌ Error selecting seminar: " + e.getMessage());
                 }
             }
 
@@ -229,7 +239,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                         if (errorBody != null) {
                             errorMsg += " - " + errorBody;
                         }
-                        Toast.makeText(PresenterStartSessionActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                        showLongToast("❌ " + errorMsg);
                     }
                 });
             }
@@ -244,7 +254,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     if (t.getMessage().contains("Failed to connect")) {
                         errorMsg += "\nPlease check if the server is running at: " + preferencesManager.getApiBaseUrl();
                     }
-                    Toast.makeText(PresenterStartSessionActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                    Toast.makeText(PresenterStartSessionActivity.this, "❌ " + errorMsg, Toast.LENGTH_LONG).show();
                 });
             }
         });
@@ -253,7 +263,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     private void updateSeminarSpinner() {
         try {
             if (spinnerSeminar == null) {
-                Toast.makeText(this, "Spinner not initialized", Toast.LENGTH_SHORT).show();
+                showLongToast("❌ Spinner not initialized");
                 return;
             }
             
@@ -278,7 +288,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
             Toast.makeText(this, "Spinner updated with " + (seminarNames.size() - 1) + " seminars", Toast.LENGTH_SHORT).show();
             
         } catch (Exception e) {
-            Toast.makeText(this, "Error updating seminar list: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            showLongToast("❌ Error updating seminar list: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -353,7 +363,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                         if (errorBody != null) {
                             errorMsg += " - " + errorBody;
                         }
-                        Toast.makeText(PresenterStartSessionActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                        showLongToast("❌ " + errorMsg);
                     }
                 });
             }
@@ -369,7 +379,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     if (t.getMessage().contains("Failed to connect")) {
                         errorMsg += "\nPlease check if the server is running at: " + preferencesManager.getApiBaseUrl();
                     }
-                    Toast.makeText(PresenterStartSessionActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                    Toast.makeText(PresenterStartSessionActivity.this, "❌ " + errorMsg, Toast.LENGTH_LONG).show();
                 });
             }
         });
@@ -467,7 +477,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                                 errorMsg += " - Error reading response body";
                             }
                         }
-                        Toast.makeText(PresenterStartSessionActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                        showLongToast("❌ " + errorMsg);
                     }
                 });
             }
@@ -480,7 +490,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     if (t.getMessage().contains("Failed to connect")) {
                         errorMsg += "\nPlease check if the server is running at: " + preferencesManager.getApiBaseUrl();
                     }
-                    Toast.makeText(PresenterStartSessionActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                    Toast.makeText(PresenterStartSessionActivity.this, "❌ " + errorMsg, Toast.LENGTH_LONG).show();
                 });
             }
         });

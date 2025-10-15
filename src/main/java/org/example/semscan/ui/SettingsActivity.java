@@ -111,17 +111,27 @@ public class SettingsActivity extends AppCompatActivity {
             return;
         }
         
-        // Save settings
-        preferencesManager.setUserId(userId);
-        preferencesManager.setApiBaseUrl(apiUrl);
-        preferencesManager.setPresenterApiKey(apiKey);
-        
-        // Force reset API client to use new settings
-        ApiClient.resetInstance();
-        ApiClient.getInstance(this);
-        
-        Logger.i(Logger.TAG_UI, "Settings saved successfully");
-        Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show();
+        try {
+            // Save settings
+            preferencesManager.setUserId(userId);
+            preferencesManager.setApiBaseUrl(apiUrl);
+            preferencesManager.setPresenterApiKey(apiKey);
+            
+            // Update API client with new base URL
+            ApiClient.getInstance(this).updateBaseUrl(this);
+            
+            Logger.i(Logger.TAG_UI, "Settings saved successfully");
+            
+            // Show success message with longer duration
+            Toast.makeText(this, "✅ Settings saved successfully!", Toast.LENGTH_LONG).show();
+            
+            // Also show in logs for debugging
+            Logger.i(Logger.TAG_UI, "Settings saved - User ID: " + userId + ", API URL: " + apiUrl);
+            
+        } catch (Exception e) {
+            Logger.e(Logger.TAG_UI, "Failed to save settings", e);
+            Toast.makeText(this, "❌ Failed to save settings: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
     
     private void showClearDataDialog() {

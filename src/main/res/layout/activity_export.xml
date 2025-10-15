@@ -30,28 +30,33 @@
             android:orientation="vertical">
 
 
-            <!-- Session Selection -->
+            <!-- Current Session Info -->
             <LinearLayout
-                android:id="@+id/layout_session_selection"
+                android:id="@+id/layout_session_info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="24dp"
+                android:background="@drawable/card_background"
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Select Session"
+                    android:text="Current Session"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/gray_800"
                     android:layout_marginBottom="8dp" />
 
-                <Spinner
-                    android:id="@+id/spinner_session"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="@drawable/spinner_background" />
+                <TextView
+                    android:id="@+id/text_session_id"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Loading session..."
+                    android:textSize="14sp"
+                    android:textColor="@color/gray_600"
+                    android:fontFamily="monospace" />
 
             </LinearLayout>
 
