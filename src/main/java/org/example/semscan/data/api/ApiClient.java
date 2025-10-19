@@ -5,6 +5,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.utils.PreferencesManager;
 
 public class ApiClient {
@@ -14,14 +15,11 @@ public class ApiClient {
     private String currentBaseUrl;
     
     private ApiClient(Context context) {
-        // Get the saved API URL from preferences
-        PreferencesManager preferencesManager = PreferencesManager.getInstance(context);
-        currentBaseUrl = preferencesManager.getApiBaseUrl();
+        // Force use of localhost for debugging
+        currentBaseUrl = "http://localhost:8080/";
         
-        // Ensure URL ends with /
-        if (!currentBaseUrl.endsWith("/")) {
-            currentBaseUrl += "/";
-        }
+        // Log the current API URL for debugging
+        android.util.Log.d("ApiClient", "Current API Base URL: " + currentBaseUrl);
         
         createApiService();
     }
@@ -32,7 +30,12 @@ public class ApiClient {
         
         OkHttpClient client = new OkHttpClient.Builder()
                 .addInterceptor(logging)
+                .connectTimeout(ApiConstants.CONNECTION_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(ApiConstants.READ_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
+                .writeTimeout(ApiConstants.WRITE_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
                 .build();
+        
+        android.util.Log.d("ApiClient", "Creating Retrofit with base URL: " + currentBaseUrl);
         
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(currentBaseUrl)
@@ -44,7 +47,13 @@ public class ApiClient {
     }
     
     public static synchronized ApiClient getInstance(Context context) {
-        if (instance == null) {
+        // Force use of localhost for debugging - ignore preferences
+        String currentUrl = "http://localhost:8080/";
+        
+        // If instance is null or URL has changed, create new instance
+        if (instance == null || !instance.currentBaseUrl.equals(currentUrl)) {
+            android.util.Log.d("ApiClient", "Creating new instance - URL changed from " + 
+                (instance != null ? instance.currentBaseUrl : "null") + " to " + currentUrl);
             instance = new ApiClient(context);
         }
         return instance;
@@ -52,6 +61,10 @@ public class ApiClient {
     
     public ApiService getApiService() {
         return apiService;
+    }
+    
+    public String getCurrentBaseUrl() {
+        return currentBaseUrl;
     }
     
     public void updateBaseUrl(Context context) {

@@ -15,13 +15,14 @@ import androidx.cardview.widget.CardView;
 import org.example.semscan.R;
 import org.example.semscan.ui.RolePickerActivity;
 import org.example.semscan.ui.SettingsActivity;
-import org.example.semscan.ui.qr.QRScannerActivity;
+import org.example.semscan.ui.qr.ModernQRScannerActivity;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 
 public class StudentHomeActivity extends AppCompatActivity {
 
     private CardView cardScanAttendance;
+    private CardView cardManualAttendance;
     private Button btnSettings;
     private Button btnChangeRole;
     private PreferencesManager preferencesManager;
@@ -50,6 +51,7 @@ public class StudentHomeActivity extends AppCompatActivity {
 
     private void initializeViews() {
         cardScanAttendance = findViewById(R.id.card_scan_attendance);
+        cardManualAttendance = findViewById(R.id.card_manual_attendance);
         btnSettings = findViewById(R.id.btn_settings);
         btnChangeRole = findViewById(R.id.btn_change_role);
     }
@@ -71,6 +73,13 @@ public class StudentHomeActivity extends AppCompatActivity {
             }
         });
 
+        cardManualAttendance.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openManualAttendanceRequest();
+            }
+        });
+
         btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -88,7 +97,13 @@ public class StudentHomeActivity extends AppCompatActivity {
 
     private void openQRScanner() {
         Logger.userAction("Open QR Scanner", "Student clicked scan attendance");
-        Intent intent = new Intent(this, QRScannerActivity.class);
+        Intent intent = new Intent(this, ModernQRScannerActivity.class);
+        startActivity(intent);
+    }
+
+    private void openManualAttendanceRequest() {
+        Logger.userAction("Open Manual Attendance Request", "Student clicked manual attendance request");
+        Intent intent = new Intent(this, ManualAttendanceRequestActivity.class);
         startActivity(intent);
     }
 

@@ -11,6 +11,7 @@
     <!-- Student Home -->
     <string name="student_home_title">Student Dashboard</string>
     <string name="scan_attendance">Scan Attendance</string>
+    <string name="manual_attendance_request">Manual Attendance Request</string>
     <string name="im_absent_reason">I\'m Absent - Reason</string>
     <string name="settings">Settings</string>
     

@@ -18,12 +18,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import org.example.semscan.R;
+import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Session;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.ToastUtils;
 
 import java.util.List;
 
@@ -120,13 +122,13 @@ public class ExportActivity extends AppCompatActivity {
         String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             Logger.e(Logger.TAG_UI, "Export failed - no API key configured");
-            Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
+            ToastUtils.showError(this, "API key not configured");
             return;
         }
         
         if (currentSessionId == null) {
             Logger.e(Logger.TAG_UI, "Export failed - no session ID available");
-            Toast.makeText(this, "No session data available", Toast.LENGTH_SHORT).show();
+            ToastUtils.showError(this, "No session data available");
             return;
         }
         
@@ -151,14 +153,14 @@ public class ExportActivity extends AppCompatActivity {
                 } else {
                     Logger.apiError("GET", "api/v1/attendance/pending-requests", 
                         response.code(), "Failed to get pending requests");
-                    Toast.makeText(ExportActivity.this, "Failed to check pending requests", Toast.LENGTH_SHORT).show();
+                    ToastUtils.showError(ExportActivity.this, "Failed to check pending requests");
                 }
             }
             
             @Override
             public void onFailure(Call<List<Attendance>> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to check pending requests", t);
-                Toast.makeText(ExportActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
             }
         });
     }
@@ -234,7 +236,7 @@ public class ExportActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<Attendance> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to approve request", t);
-                Toast.makeText(ExportActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
             }
         });
     }
@@ -267,7 +269,7 @@ public class ExportActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<Attendance> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to reject request", t);
-                Toast.makeText(ExportActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
             }
         });
     }
@@ -288,13 +290,13 @@ public class ExportActivity extends AppCompatActivity {
         String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             Logger.e(Logger.TAG_UI, "Export failed - no API key configured");
-            Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
+            ToastUtils.showError(this, "API key not configured");
             return;
         }
         
         if (currentSessionId == null) {
             Logger.e(Logger.TAG_UI, "Export failed - no session ID available");
-            Toast.makeText(this, "No session data available", Toast.LENGTH_SHORT).show();
+            ToastUtils.showError(this, "No session data available");
             return;
         }
         
@@ -358,7 +360,7 @@ public class ExportActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Export network failure", t);
-                Toast.makeText(ExportActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
             }
         });
     }

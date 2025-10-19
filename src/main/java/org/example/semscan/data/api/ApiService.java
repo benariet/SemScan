@@ -1,5 +1,6 @@
 package org.example.semscan.data.api;
 
+import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Seminar;
 import org.example.semscan.data.model.Session;
@@ -33,11 +34,14 @@ public interface ApiService {
             @Path("sessionId") String sessionId
     );
     
+    @GET("api/v1/sessions/open")
+    Call<List<Session>> getOpenSessions(@Header("x-api-key") String apiKey);
+    
     // Removed getSessions - not needed for lean MVP
     
     // Attendance
     @POST("api/v1/attendance")
-    Call<Attendance> submitAttendance(@Body SubmitAttendanceRequest request);
+    Call<Attendance> submitAttendance(@Header("x-api-key") String apiKey, @Body SubmitAttendanceRequest request);
     
     @GET("api/v1/attendance")
     Call<List<Attendance>> getAttendance(
@@ -47,7 +51,7 @@ public interface ApiService {
     
     // Manual attendance requests
     @POST("api/v1/attendance/manual-request")
-    Call<Attendance> createManualRequest(@Body CreateManualRequestRequest request);
+    Call<Attendance> createManualRequest(@Header("x-api-key") String apiKey, @Body CreateManualRequestRequest request);
     
     @GET("api/v1/attendance/pending-requests")
     Call<List<Attendance>> getPendingRequests(

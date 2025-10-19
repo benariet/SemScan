@@ -1,14 +1,10 @@
 package org.example.semscan.ui.qr;
 
 import android.Manifest;
-import android.app.AlertDialog;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -17,19 +13,20 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.google.zxing.Result;
+import com.journeyapps.barcodescanner.DecoratedBarcodeView;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
-import com.journeyapps.barcodescanner.DecoratedBarcodeView;
 
 import org.example.semscan.R;
+import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.QRPayload;
 import org.example.semscan.utils.Logger;
-import org.example.semscan.utils.QRUtils;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.QRUtils;
+import org.example.semscan.utils.ToastUtils;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -42,7 +39,6 @@ public class QRScannerActivity extends AppCompatActivity {
     private DecoratedBarcodeView barcodeView;
     private Button btnFlashlight;
     private Button btnCancel;
-    private Button btnManualRequest;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
     
@@ -54,33 +50,18 @@ public class QRScannerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_qr_scanner);
         
-        Logger.i(Logger.TAG_QR, "QRScannerActivity created");
-        
-        preferencesManager = PreferencesManager.getInstance(this);
-        apiService = ApiClient.getInstance(this).getApiService();
-        
         initializeViews();
         setupToolbar();
         setupClickListeners();
         
-        // Check camera permission
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
-                != PackageManager.PERMISSION_GRANTED) {
-            Logger.i(Logger.TAG_QR, "Requesting camera permission");
-            ActivityCompat.requestPermissions(this, 
-                    new String[]{Manifest.permission.CAMERA}, 
-                    CAMERA_PERMISSION_REQUEST);
-        } else {
-            Logger.i(Logger.TAG_QR, "Camera permission already granted, starting scanner");
-            startScanning();
-        }
+        preferencesManager = PreferencesManager.getInstance(this);
+        apiService = ApiClient.getInstance(this).getApiService();
     }
     
     private void initializeViews() {
         barcodeView = findViewById(R.id.barcode_scanner);
         btnFlashlight = findViewById(R.id.btn_flashlight);
         btnCancel = findViewById(R.id.btn_cancel);
-        btnManualRequest = findViewById(R.id.btn_manual_request);
     }
     
     private void setupToolbar() {
@@ -89,6 +70,7 @@ public class QRScannerActivity extends AppCompatActivity {
         
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("Scan QR Code");
         }
     }
     
@@ -107,12 +89,8 @@ public class QRScannerActivity extends AppCompatActivity {
             }
         });
         
-        btnManualRequest.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showManualRequestDialog();
-            }
-        });
+        // Manual attendance button should not be on QR scanner screen
+        // It should only be available from the student dashboard
         
         barcodeView.decodeContinuous(new BarcodeCallback() {
             @Override
@@ -140,78 +118,154 @@ public class QRScannerActivity extends AppCompatActivity {
     private void toggleFlashlight() {
         if (isFlashlightOn) {
             barcodeView.setTorchOff();
-            btnFlashlight.setText("Flashlight");
             isFlashlightOn = false;
             Logger.qr("Flashlight", "Flashlight turned off");
         } else {
             barcodeView.setTorchOn();
-            btnFlashlight.setText("Flashlight Off");
             isFlashlightOn = true;
             Logger.qr("Flashlight", "Flashlight turned on");
         }
     }
     
+
     private void handleQRResult(String qrContent) {
         Logger.qr("QR Code Scanned", "Content: " + qrContent);
+        Logger.d(Logger.TAG_QR, "=== QR CODE PARSING DEBUG ===");
+        Logger.d(Logger.TAG_QR, "Raw QR content: '" + qrContent + "'");
+        Logger.d(Logger.TAG_QR, "QR content length: " + qrContent.length());
+        Logger.d(Logger.TAG_QR, "QR content trimmed: '" + qrContent.trim() + "'");
+        
         stopScanning();
         
         // Parse QR content
         QRPayload payload = QRUtils.parseQRContent(qrContent);
+        Logger.d(Logger.TAG_QR, "Parsed payload: " + (payload != null ? payload.toString() : "null"));
+        
         if (payload == null || !QRUtils.isValidQRContent(qrContent)) {
             Logger.qr("Invalid QR Code", "Failed to parse QR content: " + qrContent);
-            showError("Invalid session code");
+            Logger.qr("QR Code Debug", "Expected format: {\"sessionId\":\"session-xxx\"}");
+            showError("Invalid QR code format. Expected: {\"sessionId\":\"session-xxx\"}");
             return;
         }
         
-        Logger.qr("QR Code Parsed", "Session ID: " + payload.getSessionId());
+        String sessionId = payload.getSessionId();
+        Logger.d(Logger.TAG_QR, "Extracted session ID: '" + sessionId + "'");
+        Logger.d(Logger.TAG_QR, "Session ID is null: " + (sessionId == null));
+        Logger.d(Logger.TAG_QR, "Session ID is empty: " + (sessionId != null && sessionId.trim().isEmpty()));
         
-        // Store current session ID and show manual request button
-        currentSessionId = payload.getSessionId();
-        btnManualRequest.setVisibility(View.VISIBLE);
+        if (sessionId == null || sessionId.trim().isEmpty()) {
+            Logger.qr("Invalid QR Code", "Session ID is null or empty");
+            showError("QR code missing session ID");
+            return;
+        }
+        
+        Logger.qr("QR Code Parsed", "Session ID: " + sessionId);
+        
+        // Store current session ID (manual request button removed from scanner)
+        currentSessionId = sessionId;
         
         // Submit attendance
-        submitAttendance(payload.getSessionId());
+        submitAttendance(sessionId);
     }
     
     private void submitAttendance(String sessionId) {
-        String studentId = preferencesManager.getUserId();
-        if (studentId == null) {
-            Logger.e(Logger.TAG_QR, "Cannot submit attendance - no student ID");
-            showError("Student ID not found. Please check settings.");
+        // Enhanced validation and logging
+        Logger.d(Logger.TAG_QR, "=== ATTENDANCE SUBMISSION DEBUG ===");
+        Logger.d(Logger.TAG_QR, "Session ID from QR: '" + sessionId + "'");
+        Logger.d(Logger.TAG_QR, "Session ID length: " + (sessionId != null ? sessionId.length() : "null"));
+        Logger.d(Logger.TAG_QR, "Session ID trimmed: '" + (sessionId != null ? sessionId.trim() : "null") + "'");
+        
+        // Validate session ID
+        if (sessionId == null || sessionId.trim().isEmpty()) {
+            Logger.e(Logger.TAG_QR, "Session ID validation failed: null or empty");
+            showError("Invalid session ID from QR code");
             return;
         }
         
-        long timestampMs = System.currentTimeMillis();
+        // Check user role first
+        String userRole = preferencesManager.getUserRole();
+        Logger.d(Logger.TAG_QR, "User role: '" + userRole + "'");
         
-        Logger.attendance("Submitting Attendance", "Session ID: " + sessionId + ", Student ID: " + studentId);
-        Logger.api("POST", "api/v1/attendance", "Session ID: " + sessionId + ", Student ID: " + studentId);
+        if (preferencesManager.isPresenter()) {
+            Logger.w(Logger.TAG_QR, "Presenter trying to mark attendance - this should be done by students only");
+            showError("Presenters cannot mark attendance. Please use the student app to scan QR codes.");
+            return;
+        }
         
+        String studentId = preferencesManager.getUserId();
+        Logger.d(Logger.TAG_QR, "Student ID from preferences: '" + studentId + "'");
+        
+        if (studentId == null || studentId.trim().isEmpty()) {
+            // Use a default student ID for testing
+            studentId = "student-001";
+            Logger.w(Logger.TAG_QR, "No student ID found, using default: " + studentId);
+        }
+        
+        final String finalStudentId = studentId; // Make final for inner class
+        Logger.d(Logger.TAG_QR, "Final Student ID: '" + finalStudentId + "'");
+        Logger.d(Logger.TAG_QR, "Student ID length: " + finalStudentId.length());
+        
+        // Validate student ID
+        if (finalStudentId == null || finalStudentId.trim().isEmpty()) {
+            Logger.e(Logger.TAG_QR, "Student ID validation failed: null or empty");
+            showError("Student ID not found. Please log in again.");
+            return;
+        }
+        
+        Logger.attendance("Submitting Attendance", "Session ID: '" + sessionId + "', Student ID: '" + finalStudentId + "'");
+        Logger.api("POST", "api/v1/attendance", "Session ID: " + sessionId);
+        
+        // Debug: Log the API base URL being used
+        String apiBaseUrl = ApiClient.getInstance(this).getCurrentBaseUrl();
+        Logger.d(Logger.TAG_QR, "API Base URL: " + apiBaseUrl);
+        
+        // Create request with validated data
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
-                sessionId, studentId, timestampMs);
+            sessionId.trim(), finalStudentId.trim(), System.currentTimeMillis()
+        );
         
-        Call<Attendance> call = apiService.submitAttendance(request);
+        // Log the complete request
+        Logger.d(Logger.TAG_QR, "Request object created:");
+        Logger.d(Logger.TAG_QR, "  - sessionId: '" + request.sessionId + "'");
+        Logger.d(Logger.TAG_QR, "  - studentId: '" + request.studentId + "'");
+        Logger.d(Logger.TAG_QR, "  - timestampMs: " + request.timestampMs);
+        
+        String apiKey = preferencesManager.getPresenterApiKey();
+        if (apiKey == null) {
+            apiKey = ApiConstants.PRESENTER_API_KEY; // Use default API key
+            Logger.w(Logger.TAG_QR, "No API key found, using default");
+        }
+        
+        Call<Attendance> call = apiService.submitAttendance(apiKey, request);
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+                Logger.d(Logger.TAG_QR, "=== API RESPONSE DEBUG ===");
+                Logger.d(Logger.TAG_QR, "Response code: " + response.code());
+                Logger.d(Logger.TAG_QR, "Response successful: " + response.isSuccessful());
+                
                 if (response.isSuccessful()) {
-                    Attendance attendance = response.body();
-                    if (attendance != null) {
-                        if (attendance.isAlreadyPresent()) {
-                            Logger.attendance("Attendance Already Present", "Student: " + studentId + ", Session: " + sessionId);
-                            Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Already present");
-                            showSuccess("Already checked in");
-                        } else {
-                            Logger.attendance("Attendance Submitted", "Student: " + studentId + ", Session: " + sessionId);
-                            Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
-                            showSuccess("Checked in for this session");
-                        }
+                    Attendance result = response.body();
+                    if (result != null) {
+                        Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
+                        showSuccess("Attendance recorded successfully!");
+                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + finalStudentId);
                     } else {
-                        Logger.w(Logger.TAG_QR, "Invalid attendance response from server");
                         showError("Invalid response from server");
                     }
                 } else {
+                    // Enhanced error logging
                     Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
-                    handleErrorResponse(response.code());
+                    
+                    // Log response body for debugging
+                    try {
+                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "No error body";
+                        Logger.e(Logger.TAG_QR, "Error response body: " + errorBody);
+                    } catch (Exception e) {
+                        Logger.e(Logger.TAG_QR, "Failed to read error response body", e);
+                    }
+                    
+                    handleAttendanceError(response.code());
                 }
             }
             
@@ -223,25 +277,32 @@ public class QRScannerActivity extends AppCompatActivity {
         });
     }
     
-    private void handleErrorResponse(int responseCode) {
+    private void handleAttendanceError(int responseCode) {
         switch (responseCode) {
             case 409:
-                showError("This session is not accepting new check-ins");
+                showError("You have already marked attendance for this session");
                 break;
             case 404:
-                showError("Invalid session code");
+                showError("Session not found or not active");
                 break;
             case 400:
-                showError("Invalid session code");
+                showError("Invalid request - check session and student ID");
+                break;
+            case 401:
+                showError("Authentication failed - check API key");
+                break;
+            case 403:
+                showError("Access denied - insufficient permissions");
                 break;
             default:
-                showError("Invalid session code");
+                showError("Server error (Code: " + responseCode + ")");
                 break;
         }
     }
     
     private void showSuccess(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        ToastUtils.showSuccess(this, message);
+        
         // Return to student home after a delay
         new android.os.Handler().postDelayed(new Runnable() {
             @Override
@@ -252,7 +313,8 @@ public class QRScannerActivity extends AppCompatActivity {
     }
     
     private void showError(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        ToastUtils.showError(this, message);
+        
         // Resume scanning after error
         new android.os.Handler().postDelayed(new Runnable() {
             @Override
@@ -260,103 +322,6 @@ public class QRScannerActivity extends AppCompatActivity {
                 startScanning();
             }
         }, 2000);
-    }
-    
-    private void showManualRequestDialog() {
-        if (currentSessionId == null) {
-            Toast.makeText(this, "Please scan a valid QR code first", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LayoutInflater inflater = getLayoutInflater();
-        View dialogView = inflater.inflate(R.layout.dialog_manual_request, null);
-        
-        EditText editReason = dialogView.findViewById(R.id.edit_reason);
-        Button btnCancelRequest = dialogView.findViewById(R.id.btn_cancel_request);
-        Button btnSubmitRequest = dialogView.findViewById(R.id.btn_submit_request);
-        
-        AlertDialog dialog = builder.setView(dialogView).create();
-        
-        btnCancelRequest.setOnClickListener(v -> dialog.dismiss());
-        btnSubmitRequest.setOnClickListener(v -> {
-            String reason = editReason.getText().toString().trim();
-            if (reason.isEmpty()) {
-                Toast.makeText(this, "Please provide a reason", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            dialog.dismiss();
-            submitManualRequest(reason);
-        });
-        
-        dialog.show();
-    }
-    
-    private void submitManualRequest(String reason) {
-        String studentId = preferencesManager.getUserId();
-        if (studentId == null) {
-            Logger.e(Logger.TAG_QR, "Cannot submit manual request - no student ID");
-            showError("Student ID not found. Please check settings.");
-            return;
-        }
-        
-        String deviceId = android.provider.Settings.Secure.getString(
-            getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
-        
-        Logger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
-            ", Student ID: " + studentId + ", Reason: " + reason);
-        Logger.api("POST", "api/v1/attendance/manual-request", 
-            "Session ID: " + currentSessionId + ", Student ID: " + studentId);
-        
-        ApiService.CreateManualRequestRequest request = new ApiService.CreateManualRequestRequest(
-            currentSessionId, studentId, reason, deviceId);
-        
-        Call<Attendance> call = apiService.createManualRequest(request);
-        call.enqueue(new Callback<Attendance>() {
-            @Override
-            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
-                if (response.isSuccessful()) {
-                    Attendance attendance = response.body();
-                    if (attendance != null) {
-                        Logger.attendance("Manual Request Submitted", "Student: " + studentId + 
-                            ", Session: " + currentSessionId);
-                        Logger.apiResponse("POST", "api/v1/attendance/manual-request", 
-                            response.code(), "Manual request submitted successfully");
-                        showSuccess("Manual attendance request submitted. Please wait for approval.");
-                    } else {
-                        Logger.w(Logger.TAG_QR, "Invalid manual request response from server");
-                        showError("Invalid response from server");
-                    }
-                } else {
-                    Logger.apiError("POST", "api/v1/attendance/manual-request", 
-                        response.code(), "Failed to submit manual request");
-                    handleManualRequestError(response.code());
-                }
-            }
-            
-            @Override
-            public void onFailure(Call<Attendance> call, Throwable t) {
-                Logger.e(Logger.TAG_QR, "Manual request submission failed", t);
-                showError("Network error: " + t.getMessage());
-            }
-        });
-    }
-    
-    private void handleManualRequestError(int responseCode) {
-        switch (responseCode) {
-            case 409:
-                showError("You already have a pending request for this session");
-                break;
-            case 404:
-                showError("Session not found or not accepting requests");
-                break;
-            case 400:
-                showError("Invalid request. Please try again.");
-                break;
-            default:
-                showError("Failed to submit request. Please try again.");
-                break;
-        }
     }
     
     @Override
@@ -368,8 +333,7 @@ public class QRScannerActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startScanning();
             } else {
-                Toast.makeText(this, "Camera permission is required to scan QR codes", 
-                        Toast.LENGTH_LONG).show();
+                showError("Camera permission is required to scan QR codes");
                 finish();
             }
         }
@@ -379,7 +343,7 @@ public class QRScannerActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
-                == PackageManager.PERMISSION_GRANTED) {
+            == PackageManager.PERMISSION_GRANTED) {
             startScanning();
         }
     }

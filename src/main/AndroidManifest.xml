@@ -3,7 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
         android:maxSdkVersion="28" />
@@ -16,7 +18,8 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.SemScan"
         android:networkSecurityConfig="@xml/network_security_config"
-        tools:targetApi="31">
+        android:usesCleartextTraffic="true"
+        tools:targetApi="30">
         
         <activity
             android:name=".ui.RolePickerActivity"
@@ -30,6 +33,11 @@
         
         <activity
             android:name=".ui.student.StudentHomeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.student.ManualAttendanceRequestActivity"
             android:exported="false"
             android:theme="@style/Theme.SemScan" />
             
@@ -48,6 +56,11 @@
             
         <activity
             android:name=".ui.qr.QRScannerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.qr.ModernQRScannerActivity"
             android:exported="false"
             android:theme="@style/Theme.SemScan" />
             

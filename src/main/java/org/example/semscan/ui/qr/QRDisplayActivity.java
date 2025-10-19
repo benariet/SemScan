@@ -51,6 +51,8 @@ public class QRDisplayActivity extends AppCompatActivity {
     
     private Session currentSession;
     private Timer attendanceUpdateTimer;
+    private boolean isPollingActive = false;
+    private static final long POLLING_INTERVAL = 30000; // 30 seconds instead of 5
     private int presentCount = 0;
     
     @Override
@@ -138,17 +140,37 @@ public class QRDisplayActivity extends AppCompatActivity {
     }
     
     private void startAttendanceUpdates() {
-        // Update attendance count every 5 seconds
+        if (isPollingActive) {
+            return; // Already polling
+        }
+        
+        isPollingActive = true;
+        Logger.i(Logger.TAG_QR, "Starting smart attendance polling every " + (POLLING_INTERVAL/1000) + " seconds");
+        
+        // Update attendance count every 30 seconds (reduced from 5 seconds)
         attendanceUpdateTimer = new Timer();
         attendanceUpdateTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                updateAttendanceCount();
+                if (isPollingActive && shouldContinuePolling()) {
+                    updateAttendanceCount();
+                }
             }
-        }, 0, 5000); // Update every 5 seconds
+        }, 0, POLLING_INTERVAL); // Update every 30 seconds
+    }
+    
+    private boolean shouldContinuePolling() {
+        // Only poll if the activity is still active and visible
+        return !isFinishing() && !isDestroyed();
     }
     
     private void updateAttendanceCount() {
+        // Don't make API calls if polling is not active
+        if (!isPollingActive) {
+            Logger.d(Logger.TAG_QR, "Skipping attendance update - polling not active");
+            return;
+        }
+        
         String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             Logger.w(Logger.TAG_QR, "Cannot update attendance count - no API key");
@@ -161,20 +183,30 @@ public class QRDisplayActivity extends AppCompatActivity {
         call.enqueue(new Callback<List<Attendance>>() {
             @Override
             public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
+                // Check if polling is still active before processing response
+                if (!isPollingActive) {
+                    Logger.d(Logger.TAG_QR, "Ignoring attendance response - polling stopped");
+                    return;
+                }
+                
                 if (response.isSuccessful() && response.body() != null) {
                     int newCount = response.body().size();
                     if (newCount != presentCount) {
                         Logger.attendance("Attendance Count Updated", "Session: " + currentSession.getSessionId() + ", Count: " + newCount);
                         presentCount = newCount;
+                        
+                        // Update UI on main thread
+                        new Handler(Looper.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (!isFinishing() && !isDestroyed()) {
+                                    textPresentCount.setText(getString(R.string.present_count, presentCount));
+                                }
+                            }
+                        });
+                    } else {
+                        Logger.d(Logger.TAG_QR, "Attendance count unchanged: " + newCount);
                     }
-                    
-                    // Update UI on main thread
-                    new Handler(Looper.getMainLooper()).post(new Runnable() {
-                        @Override
-                        public void run() {
-                            textPresentCount.setText(getString(R.string.present_count, presentCount));
-                        }
-                    });
                 } else {
                     Logger.w(Logger.TAG_QR, "Failed to get attendance count - Response code: " + response.code());
                 }
@@ -182,7 +214,9 @@ public class QRDisplayActivity extends AppCompatActivity {
             
             @Override
             public void onFailure(Call<List<Attendance>> call, Throwable t) {
-                Logger.e(Logger.TAG_QR, "Attendance count update failed", t);
+                if (isPollingActive) {
+                    Logger.e(Logger.TAG_QR, "Attendance count update failed", t);
+                }
             }
         });
     }
@@ -246,10 +280,40 @@ public class QRDisplayActivity extends AppCompatActivity {
     }
     
     @Override
+    protected void onPause() {
+        super.onPause();
+        stopAttendanceUpdates();
+        Logger.i(Logger.TAG_QR, "Activity paused - stopping attendance polling");
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (currentSession != null) {
+            startAttendanceUpdates();
+            Logger.i(Logger.TAG_QR, "Activity resumed - starting attendance polling");
+        }
+    }
+    
+    @Override
+    protected void onStop() {
+        super.onStop();
+        stopAttendanceUpdates();
+        Logger.i(Logger.TAG_QR, "Activity stopped - stopping attendance polling");
+    }
+    
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopAttendanceUpdates();
+        Logger.i(Logger.TAG_QR, "Activity destroyed - stopping attendance polling");
+    }
+    
+    private void stopAttendanceUpdates() {
+        isPollingActive = false;
         if (attendanceUpdateTimer != null) {
             attendanceUpdateTimer.cancel();
+            attendanceUpdateTimer = null;
         }
     }
     

@@ -2,6 +2,7 @@ package org.example.semscan.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import org.example.semscan.constants.ApiConstants;
 
 public class PreferencesManager {
     private static final String PREFS_NAME = "semscan_prefs";
@@ -67,7 +68,7 @@ public class PreferencesManager {
     }
     
     public String getApiBaseUrl() {
-        return prefs.getString(KEY_API_BASE_URL, "http://132.72.54.104:8080/");
+        return prefs.getString(KEY_API_BASE_URL, ApiConstants.SERVER_URL + "/");
     }
     
     // Presenter API Key
@@ -77,7 +78,7 @@ public class PreferencesManager {
     }
     
     public String getPresenterApiKey() {
-        return prefs.getString(KEY_PRESENTER_API_KEY, "presenter-001-api-key-12345");
+        return prefs.getString(KEY_PRESENTER_API_KEY, ApiConstants.PRESENTER_API_KEY);
     }
     
     // For backward compatibility
