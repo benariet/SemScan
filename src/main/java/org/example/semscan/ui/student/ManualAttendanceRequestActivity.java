@@ -69,12 +69,19 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
     private void checkForActiveSessions() {
         Logger.userAction("Check Active Sessions", "Checking for active sessions for manual attendance");
         
-        Call<List<Session>> call = apiService.getOpenSessions(preferencesManager.getPresenterApiKey());
+        // Use original endpoint with API key authentication
+        String apiKey = preferencesManager.getPresenterApiKey();
+        Logger.d("ManualAttendance", "Using API Key: " + (apiKey != null ? "[HIDDEN]" : "null"));
+        Logger.d("ManualAttendance", "API Key length: " + (apiKey != null ? apiKey.length() : "null"));
+        
+        Call<List<Session>> call = apiService.getOpenSessions(apiKey);
         call.enqueue(new Callback<List<Session>>() {
             @Override
             public void onResponse(Call<List<Session>> call, Response<List<Session>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     List<Session> openSessions = response.body();
+                    
+                    Logger.session("Sessions Retrieved", "Found " + openSessions.size() + " open sessions");
                     
                     // Filter to show only recent sessions (last 10) to avoid overwhelming the user
                     if (openSessions.size() > 10) {

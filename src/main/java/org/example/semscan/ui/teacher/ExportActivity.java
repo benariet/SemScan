@@ -143,6 +143,19 @@ public class ExportActivity extends AppCompatActivity {
                     Logger.apiResponse("GET", "api/v1/attendance/pending-requests", 
                         response.code(), "Found " + pendingRequests.size() + " pending requests");
                     
+                    // Debug logging for pending requests
+                    Logger.d("ExportActivity", "=== PENDING REQUESTS DEBUG ===");
+                    for (int i = 0; i < pendingRequests.size(); i++) {
+                        Attendance req = pendingRequests.get(i);
+                        Logger.d("ExportActivity", "Request " + i + ":");
+                        Logger.d("ExportActivity", "  - Attendance ID: '" + req.getAttendanceId() + "'");
+                        Logger.d("ExportActivity", "  - Session ID: '" + req.getSessionId() + "'");
+                        Logger.d("ExportActivity", "  - Student ID: '" + req.getStudentId() + "'");
+                        Logger.d("ExportActivity", "  - Request Status: '" + req.getRequestStatus() + "'");
+                        Logger.d("ExportActivity", "  - Manual Reason: '" + req.getManualReason() + "'");
+                        Logger.d("ExportActivity", "  - Full object: " + req.toString());
+                    }
+                    
                     if (pendingRequests.isEmpty()) {
                         // No pending requests, proceed with export
                         exportData();
@@ -211,6 +224,22 @@ public class ExportActivity extends AppCompatActivity {
     private void approveRequest(Attendance request) {
         String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) return;
+        
+        // Debug logging to see what's in the request object
+        Logger.d("ExportActivity", "=== ATTENDANCE REQUEST DEBUG ===");
+        Logger.d("ExportActivity", "Attendance ID: '" + request.getAttendanceId() + "'");
+        Logger.d("ExportActivity", "Session ID: '" + request.getSessionId() + "'");
+        Logger.d("ExportActivity", "Student ID: '" + request.getStudentId() + "'");
+        Logger.d("ExportActivity", "Request Status: '" + request.getRequestStatus() + "'");
+        Logger.d("ExportActivity", "Manual Reason: '" + request.getManualReason() + "'");
+        Logger.d("ExportActivity", "Attendance object: " + request.toString());
+        
+        // Check if attendanceId is null
+        if (request.getAttendanceId() == null || request.getAttendanceId().trim().isEmpty()) {
+            Logger.e("ExportActivity", "Attendance ID is null or empty - cannot approve request");
+            ToastUtils.showError(this, "Cannot approve request: Missing attendance ID");
+            return;
+        }
         
         Logger.userAction("Approve Request", "Approving manual request for student: " + request.getStudentId());
         Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 

@@ -26,6 +26,7 @@ import org.example.semscan.data.model.QRPayload;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.utils.QRUtils;
+import org.example.semscan.utils.ServerLogger;
 import org.example.semscan.utils.ToastUtils;
 
 import retrofit2.Call;
@@ -41,6 +42,7 @@ public class QRScannerActivity extends AppCompatActivity {
     private Button btnCancel;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
+    private ServerLogger serverLogger;
     
     private boolean isFlashlightOn = false;
     private String currentSessionId = null;
@@ -56,6 +58,7 @@ public class QRScannerActivity extends AppCompatActivity {
         
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
+        serverLogger = ServerLogger.getInstance(this);
     }
     
     private void initializeViews() {
@@ -95,6 +98,7 @@ public class QRScannerActivity extends AppCompatActivity {
         barcodeView.decodeContinuous(new BarcodeCallback() {
             @Override
             public void barcodeResult(BarcodeResult result) {
+                serverLogger.qr("QRScanned", "QR Code: " + result.getText());
                 handleQRResult(result.getText());
             }
             
@@ -175,6 +179,8 @@ public class QRScannerActivity extends AppCompatActivity {
         Logger.d(Logger.TAG_QR, "Session ID length: " + (sessionId != null ? sessionId.length() : "null"));
         Logger.d(Logger.TAG_QR, "Session ID trimmed: '" + (sessionId != null ? sessionId.trim() : "null") + "'");
         
+        serverLogger.attendance("AttendanceSubmission", "Session ID: " + sessionId);
+        
         // Validate session ID
         if (sessionId == null || sessionId.trim().isEmpty()) {
             Logger.e(Logger.TAG_QR, "Session ID validation failed: null or empty");
@@ -246,6 +252,8 @@ public class QRScannerActivity extends AppCompatActivity {
                 
                 if (response.isSuccessful()) {
                     Attendance result = response.body();
+                    serverLogger.attendance("AttendanceSuccess", "Attendance submitted successfully");
+                    serverLogger.flushLogs(); // Force send logs after attendance submission
                     if (result != null) {
                         Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
                         showSuccess("Attendance recorded successfully!");
@@ -257,15 +265,45 @@ public class QRScannerActivity extends AppCompatActivity {
                     // Enhanced error logging
                     Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
                     
-                    // Log response body for debugging
+                    // Parse error message from response body
+                    String errorMessage = "Unknown error occurred";
                     try {
-                        String errorBody = response.errorBody() != null ? response.errorBody().string() : "No error body";
-                        Logger.e(Logger.TAG_QR, "Error response body: " + errorBody);
+                        if (response.errorBody() != null) {
+                            String errorBody = response.errorBody().string();
+                            Logger.e(Logger.TAG_QR, "Error response body: " + errorBody);
+                            
+                            // Try to extract the actual error message from the response
+                            if (errorBody.contains("Student already attended this session")) {
+                                errorMessage = "You have already attended this session";
+                            } else if (errorBody.contains("Session not found")) {
+                                errorMessage = "Session not found or not active";
+                            } else if (errorBody.contains("Invalid session")) {
+                                errorMessage = "Invalid session ID";
+                            } else if (errorBody.contains("Authentication failed")) {
+                                errorMessage = "Authentication failed - check API key";
+                            } else if (errorBody.contains("Access denied")) {
+                                errorMessage = "Access denied - insufficient permissions";
+                            } else {
+                                // Try to extract a more specific error message
+                                if (errorBody.contains("message")) {
+                                    // Look for JSON message field
+                                    int messageStart = errorBody.indexOf("\"message\":\"") + 10;
+                                    int messageEnd = errorBody.indexOf("\"", messageStart);
+                                    if (messageStart > 9 && messageEnd > messageStart) {
+                                        errorMessage = errorBody.substring(messageStart, messageEnd);
+                                    }
+                                }
+                            }
+                        }
                     } catch (Exception e) {
                         Logger.e(Logger.TAG_QR, "Failed to read error response body", e);
+                        // Fall back to generic error handling
+                        handleAttendanceError(response.code());
+                        return;
                     }
                     
-                    handleAttendanceError(response.code());
+                    // Show the specific error message in a dialog
+                    showErrorDialog(errorMessage);
                 }
             }
             
@@ -324,6 +362,19 @@ public class QRScannerActivity extends AppCompatActivity {
         }, 2000);
     }
     
+    private void showErrorDialog(String message) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("⚠️ Error")
+                .setMessage(message)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    dialog.dismiss();
+                    // Resume scanning after user acknowledges the error
+                    startScanning();
+                })
+                .setCancelable(false) // User must press OK to dismiss
+                .show();
+    }
+    
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, 
                                          @NonNull int[] grantResults) {
@@ -358,5 +409,13 @@ public class QRScannerActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         finish();
         return true;
+    }
+    
+    @Override
+    protected void onDestroy() {
+        if (serverLogger != null) {
+            serverLogger.flushLogs();
+        }
+        super.onDestroy();
     }
 }

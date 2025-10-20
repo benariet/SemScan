@@ -4,6 +4,8 @@ import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Seminar;
 import org.example.semscan.data.model.Session;
+import org.example.semscan.data.model.StudentSessionResponse;
+import org.example.semscan.data.model.User;
 import org.example.semscan.utils.Logger;
 
 import java.util.List;
@@ -36,6 +38,13 @@ public interface ApiService {
     
     @GET("api/v1/sessions/open")
     Call<List<Session>> getOpenSessions(@Header("x-api-key") String apiKey);
+    
+    // Student-specific endpoint (no API key required)
+    @GET("api/v1/student/sessions/open")
+    Call<StudentSessionResponse> getOpenSessionsForStudent();
+    
+    @GET("api/v1/student/user/{userId}")
+    Call<User> getStudentUserById(@Path("userId") String userId);
     
     // Removed getSessions - not needed for lean MVP
     
@@ -82,19 +91,30 @@ public interface ApiService {
             @Body CreateSeminarRequest request
     );
     
+    // Users
+    @GET("api/v1/users/{userId}")
+    Call<User> getUserById(@Header("x-api-key") String apiKey, @Path("userId") String userId);
     
-    // Export
-    @GET("api/v1/export/xlsx")
-    Call<okhttp3.ResponseBody> exportXlsx(
-            @Header("x-api-key") String apiKey,
-            @Query("sessionId") String sessionId
-    );
     
-    @GET("api/v1/export/csv")
-    Call<okhttp3.ResponseBody> exportCsv(
-            @Header("x-api-key") String apiKey,
-            @Query("sessionId") String sessionId
-    );
+        // Export
+        @GET("api/v1/export/xlsx")
+        Call<okhttp3.ResponseBody> exportXlsx(
+                @Header("x-api-key") String apiKey,
+                @Query("sessionId") String sessionId
+        );
+
+        @GET("api/v1/export/csv")
+        Call<okhttp3.ResponseBody> exportCsv(
+                @Header("x-api-key") String apiKey,
+                @Query("sessionId") String sessionId
+        );
+
+        // Logging
+        @POST("api/v1/logs")
+        Call<org.example.semscan.utils.ServerLogger.LogResponse> sendLogs(
+                @Header("x-api-key") String apiKey,
+                @Body org.example.semscan.utils.ServerLogger.LogRequest request
+        );
     
     // Request/Response DTOs
     class CreateSessionRequest {

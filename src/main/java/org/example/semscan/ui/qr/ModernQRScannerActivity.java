@@ -310,7 +310,46 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                 } else {
                     Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
                     updateStatus("Request failed", R.color.error_red);
-                    handleAttendanceError(response.code());
+                    
+                    // Parse error message from response body
+                    String errorMessage = "Unknown error occurred";
+                    try {
+                        if (response.errorBody() != null) {
+                            String errorBody = response.errorBody().string();
+                            Logger.e(TAG, "Error response body: " + errorBody);
+                            
+                            // Try to extract the actual error message from the response
+                            if (errorBody.contains("Student already attended this session")) {
+                                errorMessage = "You have already attended this session";
+                            } else if (errorBody.contains("Session not found")) {
+                                errorMessage = "Session not found or not active";
+                            } else if (errorBody.contains("Invalid session")) {
+                                errorMessage = "Invalid session ID";
+                            } else if (errorBody.contains("Authentication failed")) {
+                                errorMessage = "Authentication failed - check API key";
+                            } else if (errorBody.contains("Access denied")) {
+                                errorMessage = "Access denied - insufficient permissions";
+                            } else {
+                                // Try to extract a more specific error message
+                                if (errorBody.contains("message")) {
+                                    // Look for JSON message field
+                                    int messageStart = errorBody.indexOf("\"message\":\"") + 10;
+                                    int messageEnd = errorBody.indexOf("\"", messageStart);
+                                    if (messageStart > 9 && messageEnd > messageStart) {
+                                        errorMessage = errorBody.substring(messageStart, messageEnd);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        Logger.e(TAG, "Failed to read error response body", e);
+                        // Fall back to generic error handling
+                        handleAttendanceError(response.code());
+                        return;
+                    }
+                    
+                    // Show the specific error message in a dialog
+                    showErrorDialog(errorMessage);
                 }
             }
             
@@ -412,6 +451,19 @@ public class ModernQRScannerActivity extends AppCompatActivity {
     
     private void showError(String message) {
         ToastUtils.showError(this, message);
+    }
+    
+    private void showErrorDialog(String message) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("⚠️ Error")
+                .setMessage(message)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    dialog.dismiss();
+                    // Resume scanning after user acknowledges the error
+                    resumeScanning();
+                })
+                .setCancelable(false) // User must press OK to dismiss
+                .show();
     }
     
     @Override

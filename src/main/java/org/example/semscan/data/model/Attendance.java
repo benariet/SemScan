@@ -3,17 +3,17 @@ package org.example.semscan.data.model;
 import com.google.gson.annotations.SerializedName;
 
 public class Attendance {
-    @SerializedName("attendance_id")
+    @SerializedName("attendanceId")
     private String attendanceId;
     
-    @SerializedName("session_id")
+    @SerializedName("sessionId")
     private String sessionId;
     
-    @SerializedName("student_id")
+    @SerializedName("studentId")
     private String studentId;
     
-    @SerializedName("attendance_time")
-    private long attendanceTime;
+    @SerializedName("attendanceTime")
+    private String attendanceTime;
     
     private String method; // "QR_SCAN", "MANUAL", "MANUAL_REQUEST", "PROXY"
     
@@ -21,10 +21,10 @@ public class Attendance {
     private boolean alreadyPresent;
     
     // Manual request fields
-    @SerializedName("request_status")
+    @SerializedName("requestStatus")
     private String requestStatus; // "confirmed", "pending_approval", "rejected"
     
-    @SerializedName("manual_reason")
+    @SerializedName("reason")
     private String manualReason;
     
     @SerializedName("requested_at")
@@ -44,7 +44,7 @@ public class Attendance {
     
     public Attendance() {}
     
-    public Attendance(String attendanceId, String sessionId, String studentId, long attendanceTime, String method) {
+    public Attendance(String attendanceId, String sessionId, String studentId, String attendanceTime, String method) {
         this.attendanceId = attendanceId;
         this.sessionId = sessionId;
         this.studentId = studentId;
@@ -77,11 +77,11 @@ public class Attendance {
         this.studentId = studentId;
     }
     
-    public long getAttendanceTime() {
+    public String getAttendanceTime() {
         return attendanceTime;
     }
     
-    public void setAttendanceTime(long attendanceTime) {
+    public void setAttendanceTime(String attendanceTime) {
         this.attendanceTime = attendanceTime;
     }
     

@@ -23,6 +23,7 @@ public class SettingsActivity extends AppCompatActivity {
     private EditText editApiKey;
     private Button btnSave;
     private Button btnClearData;
+    private Button btnLoggingSettings;
     
     private PreferencesManager preferencesManager;
     

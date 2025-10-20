@@ -24,6 +24,7 @@ import org.example.semscan.data.model.Session;
 import org.example.semscan.ui.qr.QRDisplayActivity;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.ServerLogger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     
     private PreferencesManager preferencesManager;
     private ApiService apiService;
+    private ServerLogger serverLogger;
     
     private List<Seminar> seminars = new ArrayList<>();
     private String selectedSeminarId;
@@ -54,6 +56,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
+        serverLogger = ServerLogger.getInstance(this);
         
         initializeViews();
         setupToolbar();
@@ -295,9 +298,11 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     
     private void startSession() {
         Logger.userAction("Start Session", "User clicked start session button");
+        serverLogger.userAction("Start Session", "User clicked start session button");
         
         if (selectedSeminarId == null) {
             Logger.w(Logger.TAG_UI, "Start session attempted without selecting seminar");
+            serverLogger.w(ServerLogger.TAG_UI, "Start session attempted without selecting seminar");
             Toast.makeText(this, "Please select a seminar", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -305,9 +310,141 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         String apiKey = preferencesManager.getPresenterApiKey();
         if (apiKey == null) {
             Logger.e(Logger.TAG_UI, "Start session attempted without API key");
+            serverLogger.e(ServerLogger.TAG_UI, "Start session attempted without API key");
             Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
             return;
         }
+        
+        // Check for existing open sessions before creating a new one
+        checkForOpenSessions(apiKey);
+    }
+    
+    private void checkForOpenSessions(String apiKey) {
+        Logger.userAction("Check Open Sessions", "Checking for existing open sessions before creating new one");
+        
+        Call<List<Session>> call = apiService.getOpenSessions(apiKey);
+        call.enqueue(new Callback<List<Session>>() {
+            @Override
+            public void onResponse(Call<List<Session>> call, Response<List<Session>> response) {
+                runOnUiThread(() -> {
+                    if (response.isSuccessful() && response.body() != null) {
+                        List<Session> openSessions = response.body();
+                        Logger.session("Open Sessions Check", "Found " + openSessions.size() + " open sessions");
+                        
+                        if (openSessions.isEmpty()) {
+                            // No open sessions, proceed with creating new session
+                            serverLogger.session("Open Sessions Check", "Found " + openSessions.size() + " open sessions");
+                            createNewSession(apiKey);
+                        } else {
+                            // Show session selection dialog
+                            serverLogger.session("Open Sessions Check", "Found " + openSessions.size() + " open sessions");
+                            showSessionSelectionDialog(openSessions, apiKey);
+                        }
+                    } else {
+                        Logger.apiError("GET", "api/v1/sessions/open", response.code(), "Failed to check open sessions");
+                        Toast.makeText(PresenterStartSessionActivity.this, 
+                                "Failed to check existing sessions", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+            
+            @Override
+            public void onFailure(Call<List<Session>> call, Throwable t) {
+                runOnUiThread(() -> {
+                    Logger.e(Logger.TAG_UI, "Failed to check open sessions", t);
+                    Toast.makeText(PresenterStartSessionActivity.this, 
+                            "Network error checking sessions: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+    
+    private void showSessionSelectionDialog(List<Session> openSessions, String apiKey) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("⚠️ Active Session Found");
+        
+        StringBuilder message = new StringBuilder();
+        message.append("You have ").append(openSessions.size()).append(" active session(s):\n\n");
+        
+        for (int i = 0; i < openSessions.size(); i++) {
+            Session session = openSessions.get(i);
+            message.append("• Session: ").append(session.getSessionId()).append("\n");
+            message.append("  Started: ").append(session.getStartTime()).append("\n");
+            message.append("  Seminar: ").append(session.getSeminarId()).append("\n\n");
+        }
+        
+        message.append("What would you like to do?");
+        
+        builder.setMessage(message.toString());
+        
+        builder.setPositiveButton("End Current & Start New", (dialog, which) -> {
+            Logger.userAction("End Current Sessions", "User chose to end current sessions and start new one");
+            endCurrentSessionsAndCreateNew(openSessions, apiKey);
+        });
+        
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            Logger.userAction("Cancel New Session", "User cancelled new session creation");
+            dialog.dismiss();
+        });
+        
+        builder.setNeutralButton("Manage Current", (dialog, which) -> {
+            Logger.userAction("Manage Current Sessions", "User chose to manage current sessions");
+            // Navigate to session management or show current session QR
+            if (!openSessions.isEmpty()) {
+                openQRDisplay(openSessions.get(0)); // Show QR for first session
+            }
+        });
+        
+        builder.setCancelable(false);
+        builder.show();
+    }
+    
+    private void endCurrentSessionsAndCreateNew(List<Session> openSessions, String apiKey) {
+        Logger.userAction("End All Sessions", "Ending " + openSessions.size() + " current sessions");
+        
+        // Close all open sessions first
+        int sessionsToClose = openSessions.size();
+        final int[] closedCount = {0};
+        
+        for (Session session : openSessions) {
+            Call<Session> closeCall = apiService.closeSession(apiKey, session.getSessionId());
+            closeCall.enqueue(new Callback<Session>() {
+                @Override
+                public void onResponse(Call<Session> call, Response<Session> response) {
+                    runOnUiThread(() -> {
+                        closedCount[0]++;
+                        if (response.isSuccessful()) {
+                            Logger.session("Session Closed", "Closed session: " + session.getSessionId());
+                        } else {
+                            Logger.apiError("PUT", "api/v1/sessions/" + session.getSessionId() + "/close", 
+                                    response.code(), "Failed to close session");
+                        }
+                        
+                        // When all sessions are processed, create new one
+                        if (closedCount[0] == sessionsToClose) {
+                            createNewSession(apiKey);
+                        }
+                    });
+                }
+                
+                @Override
+                public void onFailure(Call<Session> call, Throwable t) {
+                    runOnUiThread(() -> {
+                        closedCount[0]++;
+                        Logger.e(Logger.TAG_UI, "Failed to close session: " + session.getSessionId(), t);
+                        
+                        // When all sessions are processed, create new one
+                        if (closedCount[0] == sessionsToClose) {
+                            createNewSession(apiKey);
+                        }
+                    });
+                }
+            });
+        }
+    }
+    
+    private void createNewSession(String apiKey) {
+        Logger.userAction("Create New Session", "Creating new session for seminar: " + selectedSeminarId);
         
         // Format start time as ISO 8601 string
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault());
@@ -335,6 +472,8 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                         Logger.d(Logger.TAG_SESSION, "Session response: " + session.toString());
                         
                         // Log the server-generated session details
+                        serverLogger.session("Session Created", "Session ID: " + session.getSessionId());
+                        serverLogger.flushLogs(); // Force send logs after session creation
                         if (session.getSessionId() != null && !session.getSessionId().isEmpty()) {
                             Logger.session("Session Created", "Server-generated Session ID: " + session.getSessionId() + ", Seminar ID: " + session.getSeminarId());
                             Logger.apiResponse("POST", "api/v1/sessions", response.code(), "Session created successfully with ID: " + session.getSessionId());
@@ -544,5 +683,13 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         finish();
         return true;
+    }
+    
+    @Override
+    protected void onDestroy() {
+        if (serverLogger != null) {
+            serverLogger.flushLogs();
+        }
+        super.onDestroy();
     }
 }

@@ -44,6 +44,7 @@ public class QRDisplayActivity extends AppCompatActivity {
     private ImageView imageQRCode;
     private TextView textStatus;
     private TextView textPresentCount;
+    private Button btnCancelSession;
     private Button btnEndSession;
     
     private PreferencesManager preferencesManager;
@@ -96,6 +97,7 @@ public class QRDisplayActivity extends AppCompatActivity {
         imageQRCode = findViewById(R.id.image_qr_code);
         textStatus = findViewById(R.id.text_status);
         textPresentCount = findViewById(R.id.text_present_count);
+        btnCancelSession = findViewById(R.id.btn_cancel_session);
         btnEndSession = findViewById(R.id.btn_end_session);
     }
     
@@ -109,6 +111,13 @@ public class QRDisplayActivity extends AppCompatActivity {
     }
     
     private void setupClickListeners() {
+        btnCancelSession.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showCancelSessionDialog();
+            }
+        });
+        
         btnEndSession.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -228,6 +237,20 @@ public class QRDisplayActivity extends AppCompatActivity {
         finish();
     }
     
+    private void showCancelSessionDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("❌ Cancel Session")
+                .setMessage("Are you sure you want to cancel this session? This will immediately end the session and students will no longer be able to scan the QR code.")
+                .setPositiveButton("Yes, Cancel Session", new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        cancelSession();
+                    }
+                })
+                .setNegativeButton("Keep Session", null)
+                .show();
+    }
+    
     private void showEndSessionDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("End Session")
@@ -274,6 +297,43 @@ public class QRDisplayActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<Session> call, Throwable t) {
                 Logger.e(Logger.TAG_QR, "Failed to end session", t);
+                Toast.makeText(QRDisplayActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private void cancelSession() {
+        Logger.userAction("Cancel Session", "Presenter clicked cancel session for: " + currentSession.getSessionId());
+        
+        String apiKey = preferencesManager.getPresenterApiKey();
+        if (apiKey == null) {
+            Logger.e(Logger.TAG_QR, "Cannot cancel session - no API key");
+            Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        Logger.api("PATCH", "api/v1/sessions/" + currentSession.getSessionId() + "/close", null);
+        
+        Call<Session> call = apiService.closeSession(apiKey, currentSession.getSessionId());
+        call.enqueue(new Callback<Session>() {
+            @Override
+            public void onResponse(Call<Session> call, Response<Session> response) {
+                if (response.isSuccessful()) {
+                    Logger.session("Session Cancelled", "Session ID: " + currentSession.getSessionId());
+                    Logger.apiResponse("PATCH", "api/v1/sessions/" + currentSession.getSessionId() + "/close", response.code(), "Session cancelled successfully");
+                    
+                    Toast.makeText(QRDisplayActivity.this, "Session cancelled successfully", Toast.LENGTH_SHORT).show();
+                    // Return to session creation screen instead of export
+                    finish();
+                } else {
+                    Logger.apiError("PATCH", "api/v1/sessions/" + currentSession.getSessionId() + "/close", response.code(), "Failed to cancel session");
+                    Toast.makeText(QRDisplayActivity.this, "Failed to cancel session", Toast.LENGTH_SHORT).show();
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<Session> call, Throwable t) {
+                Logger.e(Logger.TAG_QR, "Failed to cancel session", t);
                 Toast.makeText(QRDisplayActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });

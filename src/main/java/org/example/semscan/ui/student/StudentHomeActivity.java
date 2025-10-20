@@ -6,6 +6,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,11 +14,20 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
 
 import org.example.semscan.R;
+import org.example.semscan.data.api.ApiClient;
+import org.example.semscan.data.api.ApiService;
+import org.example.semscan.data.model.User;
+import org.example.semscan.data.model.Seminar;
+import java.util.List;
 import org.example.semscan.ui.RolePickerActivity;
 import org.example.semscan.ui.SettingsActivity;
 import org.example.semscan.ui.qr.ModernQRScannerActivity;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class StudentHomeActivity extends AppCompatActivity {
 
@@ -25,7 +35,9 @@ public class StudentHomeActivity extends AppCompatActivity {
     private CardView cardManualAttendance;
     private Button btnSettings;
     private Button btnChangeRole;
+    private TextView textWelcomeMessage;
     private PreferencesManager preferencesManager;
+    private ApiService apiService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +47,7 @@ public class StudentHomeActivity extends AppCompatActivity {
         Logger.i(Logger.TAG_UI, "StudentHomeActivity created");
 
         preferencesManager = PreferencesManager.getInstance(this);
+        apiService = ApiClient.getInstance(this).getApiService();
 
         // Check if user is actually a student
         if (!preferencesManager.isStudent()) {
@@ -54,8 +67,60 @@ public class StudentHomeActivity extends AppCompatActivity {
         cardManualAttendance = findViewById(R.id.card_manual_attendance);
         btnSettings = findViewById(R.id.btn_settings);
         btnChangeRole = findViewById(R.id.btn_change_role);
+        textWelcomeMessage = findViewById(R.id.text_welcome_message);
+        
+        // Set personalized welcome message
+        updateWelcomeMessage();
     }
-
+    
+    private void updateWelcomeMessage() {
+        String userId = preferencesManager.getUserId();
+        
+        if (userId == null || userId.trim().isEmpty()) {
+            textWelcomeMessage.setText("Welcome, Student!");
+            Logger.w(Logger.TAG_UI, "No user ID found, using generic welcome message");
+            return;
+        }
+        
+        // For students, use a simple mapping approach since they don't have seminars
+        // This is more appropriate for students who don't present seminars
+        String displayName = getStudentDisplayName(userId);
+        
+        if (displayName != null && !displayName.trim().isEmpty()) {
+            textWelcomeMessage.setText("Welcome, " + displayName + "!");
+            Logger.i(Logger.TAG_UI, "Welcome message updated with student name: " + displayName);
+        } else {
+            textWelcomeMessage.setText("Welcome, Student!");
+            Logger.w(Logger.TAG_UI, "No display name found for user: " + userId);
+        }
+    }
+    
+    private String getStudentDisplayName(String userId) {
+        // Simple mapping for common student IDs
+        // This can be expanded or made configurable
+        switch (userId.toLowerCase()) {
+            case "student-001":
+                return "John Smith";
+            case "student-002":
+                return "Sarah Johnson";
+            case "student-003":
+                return "Mike Wilson";
+            case "student-004":
+                return "Emily Davis";
+            case "student-005":
+                return "Alex Brown";
+            default:
+                // Try to extract a name from the user ID
+                if (userId.contains("-")) {
+                    String[] parts = userId.split("-");
+                    if (parts.length > 1) {
+                        return "Student " + parts[1];
+                    }
+                }
+                return null;
+        }
+    }
+    
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);

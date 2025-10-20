@@ -8,6 +8,7 @@ public class PreferencesManager {
     private static final String PREFS_NAME = "semscan_prefs";
     private static final String KEY_USER_ROLE = "user_role";
     private static final String KEY_USER_ID = "user_id";
+    private static final String KEY_USER_NAME = "user_name";
     private static final String KEY_API_BASE_URL = "api_base_url";
     private static final String KEY_PRESENTER_API_KEY = "presenter_api_key";
     
@@ -61,6 +62,16 @@ public class PreferencesManager {
         return prefs.getString(KEY_USER_ID, "presenter-001");
     }
     
+    // User Name
+    public void setUserName(String userName) {
+        Logger.prefs(KEY_USER_NAME, userName);
+        prefs.edit().putString(KEY_USER_NAME, userName).apply();
+    }
+    
+    public String getUserName() {
+        return prefs.getString(KEY_USER_NAME, null);
+    }
+    
     // API Base URL
     public void setApiBaseUrl(String baseUrl) {
         Logger.prefs(KEY_API_BASE_URL, baseUrl);
@@ -78,7 +89,13 @@ public class PreferencesManager {
     }
     
     public String getPresenterApiKey() {
-        return prefs.getString(KEY_PRESENTER_API_KEY, ApiConstants.PRESENTER_API_KEY);
+        String apiKey = prefs.getString(KEY_PRESENTER_API_KEY, ApiConstants.PRESENTER_API_KEY);
+        // Ensure we always return a valid API key
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            Logger.w("PreferencesManager", "API key was null or empty, using default");
+            return ApiConstants.PRESENTER_API_KEY;
+        }
+        return apiKey;
     }
     
     // For backward compatibility
@@ -100,6 +117,7 @@ public class PreferencesManager {
         prefs.edit()
                 .remove(KEY_USER_ROLE)
                 .remove(KEY_USER_ID)
+                .remove(KEY_USER_NAME)
                 .apply();
     }
 }
