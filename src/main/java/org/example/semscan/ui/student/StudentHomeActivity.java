@@ -24,6 +24,7 @@ import org.example.semscan.ui.SettingsActivity;
 import org.example.semscan.ui.qr.ModernQRScannerActivity;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.ServerLogger;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -38,6 +39,7 @@ public class StudentHomeActivity extends AppCompatActivity {
     private TextView textWelcomeMessage;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
+    private ServerLogger serverLogger;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +50,15 @@ public class StudentHomeActivity extends AppCompatActivity {
 
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
+        serverLogger = ServerLogger.getInstance(this);
+        
+        // Update user context for student logging
+        String userId = preferencesManager.getUserId();
+        String userRole = preferencesManager.getUserRole();
+        serverLogger.updateUserContext(userId, userRole);
+        
+        // Test logging to verify student context
+        serverLogger.i(ServerLogger.TAG_UI, "StudentHomeActivity created - User: " + userId + ", Role: " + userRole);
 
         // Check if user is actually a student
         if (!preferencesManager.isStudent()) {
@@ -162,24 +173,28 @@ public class StudentHomeActivity extends AppCompatActivity {
 
     private void openQRScanner() {
         Logger.userAction("Open QR Scanner", "Student clicked scan attendance");
+        serverLogger.userAction("Open QR Scanner", "Student clicked scan attendance");
         Intent intent = new Intent(this, ModernQRScannerActivity.class);
         startActivity(intent);
     }
 
     private void openManualAttendanceRequest() {
         Logger.userAction("Open Manual Attendance Request", "Student clicked manual attendance request");
+        serverLogger.userAction("Open Manual Attendance Request", "Student clicked manual attendance request");
         Intent intent = new Intent(this, ManualAttendanceRequestActivity.class);
         startActivity(intent);
     }
 
     private void openSettings() {
         Logger.userAction("Open Settings", "Student clicked settings");
+        serverLogger.userAction("Open Settings", "Student clicked settings");
         Intent intent = new Intent(this, SettingsActivity.class);
         startActivity(intent);
     }
 
     private void changeRole() {
         Logger.userAction("Change Role", "Student clicked change role");
+        serverLogger.userAction("Change Role", "Student clicked change role");
         preferencesManager.clearUserData();
         navigateToRolePicker();
     }
@@ -216,5 +231,13 @@ public class StudentHomeActivity extends AppCompatActivity {
     public void onBackPressed() {
         // Prevent going back to role picker
         moveTaskToBack(true);
+    }
+    
+    @Override
+    protected void onDestroy() {
+        if (serverLogger != null) {
+            serverLogger.flushLogs();
+        }
+        super.onDestroy();
     }
 }

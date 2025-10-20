@@ -264,6 +264,8 @@ public class QRScannerActivity extends AppCompatActivity {
                 } else {
                     // Enhanced error logging
                     Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
+                    // Also send to server as ERROR with details
+                    serverLogger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
                     
                     // Parse error message from response body
                     String errorMessage = "Unknown error occurred";
@@ -297,6 +299,8 @@ public class QRScannerActivity extends AppCompatActivity {
                         }
                     } catch (Exception e) {
                         Logger.e(Logger.TAG_QR, "Failed to read error response body", e);
+                        // Forward exception to server logs as ERROR with stackTrace
+                        serverLogger.e(Logger.TAG_QR, "Failed to read error response body", e);
                         // Fall back to generic error handling
                         handleAttendanceError(response.code());
                         return;
@@ -304,12 +308,22 @@ public class QRScannerActivity extends AppCompatActivity {
                     
                     // Show the specific error message in a dialog
                     showErrorDialog(errorMessage);
+                    // Report the parsed error to server as ERROR (attach synthetic exception for context)
+                    if (response.code() == 409 || (errorMessage != null && errorMessage.toLowerCase().contains("already"))) {
+                        serverLogger.e(ServerLogger.TAG_ATTENDANCE, "Duplicate attendance attempt for session " + sessionId + ", student " + finalStudentId, new IllegalStateException("ALREADY_ATTENDED"));
+                    } else {
+                        serverLogger.e(Logger.TAG_QR, "Attendance submission error: " + errorMessage, new RuntimeException("HTTP " + response.code()));
+                    }
+                    serverLogger.flushLogs();
                 }
             }
             
             @Override
             public void onFailure(Call<Attendance> call, Throwable t) {
                 Logger.e(Logger.TAG_QR, "Attendance submission failed", t);
+                // Forward network failure to server as ERROR with stackTrace
+                serverLogger.e(Logger.TAG_QR, "Attendance submission failed", t);
+                serverLogger.flushLogs();
                 showError("Network error: " + t.getMessage());
             }
         });

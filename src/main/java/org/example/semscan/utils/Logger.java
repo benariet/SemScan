@@ -1,6 +1,7 @@
 package org.example.semscan.utils;
 
 import android.util.Log;
+import android.content.Context;
 
 /**
  * Centralized logging utility for the SemScan app
@@ -21,6 +22,14 @@ public class Logger {
     
     // Log levels
     public static final boolean DEBUG_ENABLED = true; // Set to false for production
+    private static Context applicationContext; // For forwarding errors to ServerLogger
+
+    /**
+     * Initialize logger with application context to enable server forwarding
+     */
+    public static void init(Context context) {
+        applicationContext = context.getApplicationContext();
+    }
     
     /**
      * Log debug messages
@@ -50,6 +59,14 @@ public class Logger {
      */
     public static void e(String tag, String message) {
         Log.e(tag, message);
+        // Forward to server as ERROR (no throwable)
+        try {
+            if (applicationContext != null) {
+                ServerLogger.getInstance(applicationContext).e(tag, message);
+            }
+        } catch (Throwable ignored) {
+            // Avoid crashing logging path
+        }
     }
     
     /**
@@ -57,6 +74,15 @@ public class Logger {
      */
     public static void e(String tag, String message, Throwable throwable) {
         Log.e(tag, message, throwable);
+        // Forward to server as ERROR with stackTrace/exceptionType
+        try {
+            if (applicationContext != null) {
+                ServerLogger.getInstance(applicationContext).e(tag, message, throwable);
+                ServerLogger.getInstance(applicationContext).flushLogs();
+            }
+        } catch (Throwable ignored) {
+            // Avoid crashing logging path
+        }
     }
     
     /**
@@ -90,6 +116,14 @@ public class Logger {
         Log.e(TAG_API, String.format("API Error %s %s: %d", method, url, statusCode));
         if (errorBody != null && !errorBody.isEmpty()) {
             Log.e(TAG_API, "Error Body: " + errorBody);
+        }
+        // Forward to server as structured API error
+        try {
+            if (applicationContext != null) {
+                ServerLogger.getInstance(applicationContext).apiError(method, url, statusCode, errorBody != null ? errorBody : "");
+                ServerLogger.getInstance(applicationContext).flushLogs();
+            }
+        } catch (Throwable ignored) {
         }
     }
     

@@ -20,6 +20,7 @@ import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Session;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.ServerLogger;
 import org.example.semscan.utils.ToastUtils;
 
 import java.util.List;
@@ -32,6 +33,7 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
 
     private PreferencesManager preferencesManager;
     private ApiService apiService;
+    private ServerLogger serverLogger;
     private String currentSessionId;
 
     @Override
@@ -44,6 +46,15 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
         preferencesManager = PreferencesManager.getInstance(this);
         ApiClient apiClient = ApiClient.getInstance(this);
         apiService = apiClient.getApiService();
+        serverLogger = ServerLogger.getInstance(this);
+        
+        // Update user context for student logging
+        String userId = preferencesManager.getUserId();
+        String userRole = preferencesManager.getUserRole();
+        serverLogger.updateUserContext(userId, userRole);
+        
+        // Test logging to verify student context
+        serverLogger.i(ServerLogger.TAG_UI, "ManualAttendanceRequestActivity created - User: " + userId + ", Role: " + userRole);
 
         // Check if user is actually a student
         if (!preferencesManager.isStudent()) {
@@ -184,7 +195,11 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
         
         Logger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
             ", Student ID: " + studentId + ", Reason: " + reason);
+        serverLogger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
+            ", Student ID: " + studentId + ", Reason: " + reason);
         Logger.api("POST", "api/v1/attendance/manual-request", 
+            "Session ID: " + currentSessionId + ", Student ID: " + studentId);
+        serverLogger.api("POST", "api/v1/attendance/manual-request", 
             "Session ID: " + currentSessionId + ", Student ID: " + studentId);
         
         ApiService.CreateManualRequestRequest request = new ApiService.CreateManualRequestRequest(
@@ -199,8 +214,13 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
                     if (attendance != null) {
                         Logger.attendance("Manual Request Submitted", "Student: " + studentId + 
                             ", Session: " + currentSessionId);
+                        serverLogger.attendance("Manual Request Submitted", "Student: " + studentId + 
+                            ", Session: " + currentSessionId);
                         Logger.apiResponse("POST", "api/v1/attendance/manual-request", 
                             response.code(), "Manual request submitted successfully");
+                        serverLogger.apiResponse("POST", "api/v1/attendance/manual-request", 
+                            response.code(), "Manual request submitted successfully");
+                        serverLogger.flushLogs(); // Force send logs after successful submission
                         showSuccess("Manual attendance request submitted. Please wait for approval.");
                     } else {
                         Logger.w(Logger.TAG_UI, "Invalid manual request response from server");
@@ -209,6 +229,8 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
                 } else {
                     Logger.apiError("POST", "api/v1/attendance/manual-request", 
                         response.code(), "Failed to submit manual request");
+                    // Send server-side error as well
+                    serverLogger.apiError("POST", "api/v1/attendance/manual-request", response.code(), "Failed to submit manual request");
                     handleManualRequestError(response.code());
                 }
             }
@@ -216,6 +238,9 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<Attendance> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Manual request submission failed", t);
+                // Forward to server error logger
+                serverLogger.e(Logger.TAG_UI, "Manual request submission failed", t);
+                serverLogger.flushLogs();
                 showError("Network error: " + t.getMessage());
             }
         });
@@ -255,5 +280,13 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         onBackPressed();
         return true;
+    }
+    
+    @Override
+    protected void onDestroy() {
+        if (serverLogger != null) {
+            serverLogger.flushLogs();
+        }
+        super.onDestroy();
     }
 }

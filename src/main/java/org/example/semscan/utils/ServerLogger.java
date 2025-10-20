@@ -2,6 +2,9 @@ package org.example.semscan.utils;
 
 import android.content.Context;
 import android.util.Log;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
+import android.content.Context;
 
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
@@ -11,8 +14,12 @@ import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -43,24 +50,36 @@ public class ServerLogger {
     private static ServerLogger instance;
     private Context context;
     private ApiService apiService;
-    private ExecutorService executorService;
+    private ScheduledExecutorService executorService;
     private boolean serverLoggingEnabled = true;
     private String userId;
     private String userRole;
     private java.util.List<LogEntry> pendingLogs = new java.util.ArrayList<>();
     private static final int BATCH_SIZE = 10;
     private static final long BATCH_TIMEOUT_MS = 30000; // 30 seconds
+    private static final int MAX_MESSAGE_LENGTH = 10000;
+    private static final int MAX_RETRY_ATTEMPTS = 5;
+    private static final long BASE_RETRY_DELAY_MS = 2000; // 2s
+    private static final long MAX_RETRY_DELAY_MS = 60000; // 60s
+    private int currentRetryAttempt = 0;
+    private final Gson gson = new Gson();
     private long lastBatchTime = System.currentTimeMillis();
     
     private ServerLogger(Context context) {
         this.context = context.getApplicationContext();
         this.apiService = ApiClient.getInstance(context).getApiService();
-        this.executorService = Executors.newSingleThreadExecutor();
+        this.executorService = Executors.newSingleThreadScheduledExecutor();
         
         // Get user info for logging context
         PreferencesManager prefs = PreferencesManager.getInstance(context);
         this.userId = prefs.getUserId();
         this.userRole = prefs.getUserRole();
+
+        // Load any persisted pending logs from previous runs
+        loadPendingLogs();
+
+        // Try to send any restored logs shortly after startup
+        executorService.schedule(this::flushLogs, 2, TimeUnit.SECONDS);
     }
     
     public static synchronized ServerLogger getInstance(Context context) {
@@ -231,7 +250,7 @@ public class ServerLogger {
         entry.timestamp = System.currentTimeMillis();
         entry.level = getLevelString(level);
         entry.tag = tag;
-        entry.message = message;
+        entry.message = truncate(message, MAX_MESSAGE_LENGTH);
         entry.userId = this.userId;
         entry.userRole = this.userRole;
         entry.deviceInfo = getDeviceInfo();
@@ -274,6 +293,7 @@ public class ServerLogger {
     private void sendToServer(LogEntry logEntry) {
         synchronized (pendingLogs) {
             pendingLogs.add(logEntry);
+            persistPendingLogs();
             
             // Send immediately for errors or when batch is full
             boolean shouldSend = logEntry.level.equals("ERROR") || 
@@ -291,6 +311,10 @@ public class ServerLogger {
      */
     private void sendBatchedLogsToServer() {
         if (pendingLogs.isEmpty()) return;
+        if (!isNetworkAvailable()) {
+            scheduleRetry();
+            return;
+        }
         
         executorService.execute(() -> {
             try {
@@ -300,6 +324,7 @@ public class ServerLogger {
                     logsToSend = new java.util.ArrayList<>(pendingLogs);
                     pendingLogs.clear();
                     lastBatchTime = System.currentTimeMillis();
+                    persistPendingLogs();
                 }
                 
                 // Debug logging
@@ -317,12 +342,15 @@ public class ServerLogger {
                     public void onResponse(Call<LogResponse> call, Response<LogResponse> response) {
                         if (response.isSuccessful()) {
                             Log.d(TAG_API, "Logs sent successfully: " + logsToSend.size() + " entries");
+                            currentRetryAttempt = 0; // reset backoff on success
                         } else {
                             Log.w(TAG_API, "Failed to send logs to server: " + response.code());
                             // Re-add logs to pending list for retry
                             synchronized (pendingLogs) {
                                 pendingLogs.addAll(0, logsToSend);
+                                persistPendingLogs();
                             }
+                            scheduleRetry();
                         }
                     }
                     
@@ -332,11 +360,14 @@ public class ServerLogger {
                         // Re-add logs to pending list for retry
                         synchronized (pendingLogs) {
                             pendingLogs.addAll(0, logsToSend);
+                            persistPendingLogs();
                         }
+                        scheduleRetry();
                     }
                 });
             } catch (Exception e) {
                 Log.e(TAG_API, "Error sending logs to server", e);
+                scheduleRetry();
             }
         });
     }
@@ -350,6 +381,96 @@ public class ServerLogger {
                 sendBatchedLogsToServer();
             }
         }
+    }
+
+    /**
+     * Exponential backoff scheduler for retries
+     */
+    private void scheduleRetry() {
+        if (pendingLogs.isEmpty()) return;
+        if (currentRetryAttempt >= MAX_RETRY_ATTEMPTS) {
+            Log.w(TAG_API, "Max retry attempts reached. Dropping " + pendingLogs.size() + " pending logs.");
+            synchronized (pendingLogs) {
+                pendingLogs.clear();
+                persistPendingLogs();
+            }
+            currentRetryAttempt = 0;
+            return;
+        }
+
+        long delay = (long) Math.min(MAX_RETRY_DELAY_MS, BASE_RETRY_DELAY_MS * Math.pow(2, currentRetryAttempt));
+        currentRetryAttempt++;
+        Log.d(TAG_API, "Scheduling retry attempt " + currentRetryAttempt + " in " + delay + "ms");
+        executorService.schedule(() -> {
+            synchronized (pendingLogs) {
+                if (!pendingLogs.isEmpty()) {
+                    sendBatchedLogsToServer();
+                }
+            }
+        }, delay, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Persist pending logs to local storage for offline durability
+     */
+    private void persistPendingLogs() {
+        try {
+            String json = gson.toJson(pendingLogs);
+            context.getSharedPreferences("semscan_logs", Context.MODE_PRIVATE)
+                    .edit()
+                    .putString("pending_logs", json)
+                    .apply();
+        } catch (Exception e) {
+            Log.w(TAG_API, "Failed to persist pending logs", e);
+        }
+    }
+
+    /**
+     * Load pending logs from local storage
+     */
+    private void loadPendingLogs() {
+        try {
+            String json = context.getSharedPreferences("semscan_logs", Context.MODE_PRIVATE)
+                    .getString("pending_logs", null);
+            if (json != null && !json.isEmpty()) {
+                java.lang.reflect.Type listType = new TypeToken<java.util.List<LogEntry>>() {}.getType();
+                java.util.List<LogEntry> restored = gson.fromJson(json, listType);
+                if (restored != null && !restored.isEmpty()) {
+                    synchronized (pendingLogs) {
+                        pendingLogs.addAll(restored);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG_API, "Failed to load persisted pending logs", e);
+        }
+    }
+
+    /**
+     * Check if network is available for sending logs
+     */
+    private boolean isNetworkAvailable() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return false;
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            return capabilities != null && (
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+            );
+        } catch (Exception e) {
+            return true; // fallback to allow attempts
+        }
+    }
+
+    /**
+     * Truncate oversized messages to server limit
+     */
+    private String truncate(String s, int max) {
+        if ( s == null ) return null;
+        if ( s.length() <= max ) return s;
+        return s.substring(0, max);
     }
     
     /**
