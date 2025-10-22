@@ -23,21 +23,15 @@ import retrofit2.http.Query;
 
 public interface ApiService {
     
-    // Sessions (Presenter endpoints require X-API-Key header)
+    // Sessions (No authentication required)
     @POST("api/v1/sessions")
-    Call<Session> createSession(
-            @Header("x-api-key") String apiKey,
-            @Body CreateSessionRequest request
-    );
+    Call<Session> createSession(@Body CreateSessionRequest request);
     
     @PATCH("api/v1/sessions/{sessionId}/close")
-    Call<Session> closeSession(
-            @Header("x-api-key") String apiKey,
-            @Path("sessionId") String sessionId
-    );
+    Call<Session> closeSession(@Path("sessionId") String sessionId);
     
     @GET("api/v1/sessions/open")
-    Call<List<Session>> getOpenSessions(@Header("x-api-key") String apiKey);
+    Call<List<Session>> getOpenSessions();
     
     // Student-specific endpoint (no API key required)
     @GET("api/v1/student/sessions/open")
@@ -48,72 +42,73 @@ public interface ApiService {
     
     // Removed getSessions - not needed for lean MVP
     
-    // Attendance
+    // Attendance (No authentication required)
     @POST("api/v1/attendance")
-    Call<Attendance> submitAttendance(@Header("x-api-key") String apiKey, @Body SubmitAttendanceRequest request);
+    Call<Attendance> submitAttendance(@Body SubmitAttendanceRequest request);
     
     @GET("api/v1/attendance")
-    Call<List<Attendance>> getAttendance(
-            @Header("x-api-key") String apiKey,
-            @Query("sessionId") String sessionId
-    );
+    Call<List<Attendance>> getAttendance(@Query("sessionId") String sessionId);
     
     // Manual attendance requests
     @POST("api/v1/attendance/manual-request")
-    Call<Attendance> createManualRequest(@Header("x-api-key") String apiKey, @Body CreateManualRequestRequest request);
+    Call<Attendance> createManualRequest(@Body CreateManualRequestRequest request);
     
     @GET("api/v1/attendance/pending-requests")
-    Call<List<Attendance>> getPendingRequests(
-            @Header("x-api-key") String apiKey,
-            @Query("sessionId") String sessionId
-    );
+    Call<List<Attendance>> getPendingRequests(@Query("sessionId") String sessionId);
     
     @POST("api/v1/attendance/{attendanceId}/approve")
-    Call<Attendance> approveManualRequest(
-            @Header("x-api-key") String apiKey,
-            @Path("attendanceId") String attendanceId
-    );
+    Call<Attendance> approveManualRequest(@Path("attendanceId") String attendanceId);
     
     @POST("api/v1/attendance/{attendanceId}/reject")
-    Call<Attendance> rejectManualRequest(
-            @Header("x-api-key") String apiKey,
-            @Path("attendanceId") String attendanceId
-    );
+    Call<Attendance> rejectManualRequest(@Path("attendanceId") String attendanceId);
     
     
-    // Seminars
+    // Seminars (No authentication required)
     @GET("api/v1/seminars")
-    Call<List<Seminar>> getSeminars(@Header("x-api-key") String apiKey);
+    Call<List<Seminar>> getSeminars();
     
     @POST("api/v1/seminars")
-    Call<Seminar> createSeminar(
-            @Header("x-api-key") String apiKey,
-            @Body CreateSeminarRequest request
-    );
+    Call<Seminar> createSeminar(@Body CreateSeminarRequest request);
     
     // Users
     @GET("api/v1/users/{userId}")
-    Call<User> getUserById(@Header("x-api-key") String apiKey, @Path("userId") String userId);
+    Call<User> getUserById(@Path("userId") String userId);
     
     
-        // Export
+        // Export (No authentication required)
         @GET("api/v1/export/xlsx")
-        Call<okhttp3.ResponseBody> exportXlsx(
-                @Header("x-api-key") String apiKey,
-                @Query("sessionId") String sessionId
-        );
+        Call<okhttp3.ResponseBody> exportXlsx(@Query("sessionId") String sessionId);
 
         @GET("api/v1/export/csv")
-        Call<okhttp3.ResponseBody> exportCsv(
-                @Header("x-api-key") String apiKey,
-                @Query("sessionId") String sessionId
-        );
+        Call<okhttp3.ResponseBody> exportCsv(@Query("sessionId") String sessionId);
 
-        // Logging
+        // Logging (No authentication required)
         @POST("api/v1/logs")
         Call<org.example.semscan.utils.ServerLogger.LogResponse> sendLogs(
-                @Header("x-api-key") String apiKey,
                 @Body org.example.semscan.utils.ServerLogger.LogRequest request
+        );
+
+        // =============================
+        // Presenter Seminars (MVP)
+        // =============================
+
+
+        // List presenter seminars (tiles) - No authentication required
+        @GET("api/v1/presenters/{presenterId}/seminars")
+        Call<java.util.List<PresenterSeminarDto>> getPresenterSeminars(@Path("presenterId") String presenterId);
+
+        // Create presenter seminar - No authentication required
+        @POST("api/v1/presenters/{presenterId}/seminars")
+        Call<PresenterSeminarDto> createPresenterSeminar(
+                @Path("presenterId") String presenterId,
+                @Body CreatePresenterSeminarRequest body
+        );
+
+        // Optional: delete presenter seminar - No authentication required
+        @DELETE("api/v1/presenters/{presenterId}/seminars/{seminarId}")
+        Call<Void> deletePresenterSeminar(
+                @Path("presenterId") String presenterId,
+                @Path("seminarId") String seminarId
         );
     
     // Request/Response DTOs
@@ -167,6 +162,35 @@ public interface ApiService {
             this.studentId = studentId;
             this.reason = reason;
             this.deviceId = deviceId;
+        }
+    }
+
+    // =============================
+    // DTOs for Presenter Seminars
+    // =============================
+
+
+    class PresenterSeminarSlotDto {
+        public int weekday;     // 0=Sun .. 6=Sat
+        public int startHour;   // 0..23
+        public int endHour;     // 1..24, > startHour
+    }
+
+    class PresenterSeminarDto {
+        public String id;
+        public String presenterId;
+        public String seminarName;
+        public java.util.List<PresenterSeminarSlotDto> slots;
+        public String createdAt;
+    }
+
+    class CreatePresenterSeminarRequest {
+        public String seminarName;
+        public java.util.List<PresenterSeminarSlotDto> slots;
+
+        public CreatePresenterSeminarRequest(String seminarName, java.util.List<PresenterSeminarSlotDto> slots) {
+            this.seminarName = seminarName;
+            this.slots = slots;
         }
     }
     

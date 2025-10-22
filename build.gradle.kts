@@ -68,6 +68,9 @@ dependencies {
     // Preferences
     implementation("androidx.preference:preference:1.2.1")
     
+    // SwipeRefreshLayout
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    
     // CSV export
     implementation("com.opencsv:opencsv:5.9")
     

@@ -5,6 +5,7 @@ import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.data.model.Attendance;
+import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.data.model.ManualAttendanceRequest;
 import org.example.semscan.data.model.ManualAttendanceResponse;
 
@@ -17,12 +18,13 @@ import retrofit2.Response;
 
 public class ManualAttendanceService {
     
-    private static final String API_KEY = ApiConstants.PRESENTER_API_KEY;
     private ApiService apiService;
     private Context context;
+    private PreferencesManager preferencesManager;
     
     public ManualAttendanceService(Context context) {
         this.context = context;
+        this.preferencesManager = PreferencesManager.getInstance(context);
         ApiClient apiClient = ApiClient.getInstance(context);
         apiService = apiClient.getApiService();
     }
@@ -50,7 +52,9 @@ public class ManualAttendanceService {
             request.getReason(),
             request.getDeviceId()
         );
-        Call<Attendance> call = apiService.createManualRequest(API_KEY, apiRequest);
+        // API key no longer required - removed authentication
+        
+        Call<Attendance> call = apiService.createManualRequest(apiRequest);
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {
@@ -70,7 +74,9 @@ public class ManualAttendanceService {
     
     // Get pending requests
     public void getPendingRequests(String sessionId, PendingRequestsCallback callback) {
-        Call<List<Attendance>> call = apiService.getPendingRequests(API_KEY, sessionId);
+        // API key no longer required - removed authentication
+        
+        Call<List<Attendance>> call = apiService.getPendingRequests(sessionId);
         call.enqueue(new Callback<List<Attendance>>() {
             @Override
             public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
@@ -90,7 +96,9 @@ public class ManualAttendanceService {
     
     // Approve request
     public void approveRequest(String attendanceId, ManualAttendanceCallback callback) {
-        Call<Attendance> call = apiService.approveManualRequest(API_KEY, attendanceId);
+        // API key no longer required - removed authentication
+        
+        Call<Attendance> call = apiService.approveManualRequest(attendanceId);
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {
@@ -110,7 +118,9 @@ public class ManualAttendanceService {
     
     // Reject request
     public void rejectRequest(String attendanceId, ManualAttendanceCallback callback) {
-        Call<Attendance> call = apiService.rejectManualRequest(API_KEY, attendanceId);
+        // API key no longer required - removed authentication
+        
+        Call<Attendance> call = apiService.rejectManualRequest(attendanceId);
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {

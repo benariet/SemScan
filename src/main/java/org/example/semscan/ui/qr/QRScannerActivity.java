@@ -236,13 +236,9 @@ public class QRScannerActivity extends AppCompatActivity {
         Logger.d(Logger.TAG_QR, "  - studentId: '" + request.studentId + "'");
         Logger.d(Logger.TAG_QR, "  - timestampMs: " + request.timestampMs);
         
-        String apiKey = preferencesManager.getPresenterApiKey();
-        if (apiKey == null) {
-            apiKey = ApiConstants.PRESENTER_API_KEY; // Use default API key
-            Logger.w(Logger.TAG_QR, "No API key found, using default");
-        }
+        // API key no longer required - removed authentication
         
-        Call<Attendance> call = apiService.submitAttendance(apiKey, request);
+        Call<Attendance> call = apiService.submitAttendance(request);
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {

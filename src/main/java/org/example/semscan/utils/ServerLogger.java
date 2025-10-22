@@ -310,7 +310,11 @@ public class ServerLogger {
      * Send batched logs to server
      */
     private void sendBatchedLogsToServer() {
-        if (pendingLogs.isEmpty()) return;
+        // Double-check to prevent sending empty requests
+        if (pendingLogs.isEmpty()) {
+            Log.d(TAG_API, "No logs to send, skipping request");
+            return;
+        }
         if (!isNetworkAvailable()) {
             scheduleRetry();
             return;
@@ -327,16 +331,21 @@ public class ServerLogger {
                     persistPendingLogs();
                 }
                 
+                // Final check to prevent sending empty requests
+                if (logsToSend.isEmpty()) {
+                    Log.d(TAG_API, "No logs to send after processing, skipping request");
+                    return;
+                }
+                
                 // Debug logging
                 Log.d(TAG_API, "Sending " + logsToSend.size() + " logs to server");
                 
                 // Create API request
                 LogRequest request = new LogRequest(logsToSend);
                 
-                // Send to server
-                String apiKey = PreferencesManager.getInstance(context).getPresenterApiKey();
-                Log.d(TAG_API, "Using API key: " + (apiKey != null ? apiKey.substring(0, Math.min(10, apiKey.length())) + "..." : "null"));
-                Call<LogResponse> call = apiService.sendLogs(apiKey, request);
+                // Send to server (no authentication required)
+                Log.d(TAG_API, "Sending logs to server (no authentication required)");
+                Call<LogResponse> call = apiService.sendLogs(request);
                 call.enqueue(new Callback<LogResponse>() {
                     @Override
                     public void onResponse(Call<LogResponse> call, Response<LogResponse> response) {

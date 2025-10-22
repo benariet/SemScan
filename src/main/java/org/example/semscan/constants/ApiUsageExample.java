@@ -43,9 +43,9 @@ public class ApiUsageExample {
         boolean isClientError = ApiConstants.isClientError(responseCode); // false
         boolean isServerError = ApiConstants.isServerError(responseCode); // false
         
-        // 8. Use API key
-        String apiKey = ApiConstants.PRESENTER_API_KEY;
-        // "presenter-001-api-key-12345"
+        // 8. Use API key (should be obtained from PreferencesManager)
+        // String apiKey = ApiConstants.PRESENTER_API_KEY; // Hardcoded keys removed
+        // API keys should be configured per user in Settings
         
         // 9. Use timeouts
         int connectionTimeout = ApiConstants.CONNECTION_TIMEOUT_SECONDS; // 30

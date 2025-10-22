@@ -56,7 +56,8 @@ public class ApiConstants {
     // =============================================
     // API KEYS
     // =============================================
-    public static final String PRESENTER_API_KEY = "presenter-001-api-key-12345";
+    // API keys should be configured per user, not hardcoded
+    // public static final String PRESENTER_API_KEY = "hardcoded-key-removed";
     public static final String STUDENT_API_KEY = "student-api-key-12345"; // If needed
     
     // =============================================

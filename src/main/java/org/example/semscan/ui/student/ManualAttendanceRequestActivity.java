@@ -80,12 +80,10 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
     private void checkForActiveSessions() {
         Logger.userAction("Check Active Sessions", "Checking for active sessions for manual attendance");
         
-        // Use original endpoint with API key authentication
-        String apiKey = preferencesManager.getPresenterApiKey();
-        Logger.d("ManualAttendance", "Using API Key: " + (apiKey != null ? "[HIDDEN]" : "null"));
-        Logger.d("ManualAttendance", "API Key length: " + (apiKey != null ? apiKey.length() : "null"));
+        // No authentication required
+        Logger.d("ManualAttendance", "Checking for active sessions (no authentication required)");
         
-        Call<List<Session>> call = apiService.getOpenSessions(apiKey);
+        Call<List<Session>> call = apiService.getOpenSessions();
         call.enqueue(new Callback<List<Session>>() {
             @Override
             public void onResponse(Call<List<Session>> call, Response<List<Session>> response) {
@@ -205,7 +203,7 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
         ApiService.CreateManualRequestRequest request = new ApiService.CreateManualRequestRequest(
             currentSessionId, studentId, reason, deviceId);
         
-        Call<Attendance> call = apiService.createManualRequest(preferencesManager.getPresenterApiKey(), request);
+        Call<Attendance> call = apiService.createManualRequest(request);
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {

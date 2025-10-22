@@ -59,7 +59,7 @@ public class PreferencesManager {
     }
     
     public String getUserId() {
-        return prefs.getString(KEY_USER_ID, "presenter-001");
+        return prefs.getString(KEY_USER_ID, "USR-1000-20241021");
     }
     
     // User Name
@@ -89,11 +89,11 @@ public class PreferencesManager {
     }
     
     public String getPresenterApiKey() {
-        String apiKey = prefs.getString(KEY_PRESENTER_API_KEY, ApiConstants.PRESENTER_API_KEY);
-        // Ensure we always return a valid API key
+        String apiKey = prefs.getString(KEY_PRESENTER_API_KEY, null);
+        // Don't use hardcoded fallback - require proper configuration
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            Logger.w("PreferencesManager", "API key was null or empty, using default");
-            return ApiConstants.PRESENTER_API_KEY;
+            Logger.w("PreferencesManager", "API key not configured - user must set it in Settings");
+            return null; // Return null to force user to configure
         }
         return apiKey;
     }

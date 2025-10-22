@@ -52,6 +52,11 @@
             android:theme="@style/Theme.SemScan"
             android:screenOrientation="portrait"
             android:keepScreenOn="true" />
+        
+        <activity
+            android:name=".ui.teacher.AddSeminarActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
             
             
         <activity

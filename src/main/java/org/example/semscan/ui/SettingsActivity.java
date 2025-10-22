@@ -20,7 +20,6 @@ public class SettingsActivity extends AppCompatActivity {
     
     private EditText editUserId;
     private EditText editApiUrl;
-    private EditText editApiKey;
     private Button btnSave;
     private Button btnClearData;
     private Button btnLoggingSettings;
@@ -45,9 +44,9 @@ public class SettingsActivity extends AppCompatActivity {
     private void initializeViews() {
         editUserId = findViewById(R.id.edit_user_id);
         editApiUrl = findViewById(R.id.edit_api_url);
-        editApiKey = findViewById(R.id.edit_api_key);
         btnSave = findViewById(R.id.btn_save);
         btnClearData = findViewById(R.id.btn_clear_data);
+        btnLoggingSettings = findViewById(R.id.btn_logging_settings);
     }
     
     private void setupToolbar() {
@@ -73,21 +72,25 @@ public class SettingsActivity extends AppCompatActivity {
                 showClearDataDialog();
             }
         });
+        
+        btnLoggingSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showLoggingSettingsDialog();
+            }
+        });
     }
     
     private void loadCurrentSettings() {
         String userId = preferencesManager.getUserId();
         String apiUrl = preferencesManager.getApiBaseUrl();
-        String apiKey = preferencesManager.getPresenterApiKey();
         
         Logger.i(Logger.TAG_UI, "Loading current settings");
         Logger.d(Logger.TAG_UI, "Current User ID: " + userId);
         Logger.d(Logger.TAG_UI, "Current API URL: " + apiUrl);
-        Logger.d(Logger.TAG_UI, "Current API Key: " + (apiKey != null ? "[HIDDEN]" : "null"));
         
         editUserId.setText(userId);
         editApiUrl.setText(apiUrl);
-        editApiKey.setText(apiKey);
     }
     
     private void saveSettings() {
@@ -95,9 +98,8 @@ public class SettingsActivity extends AppCompatActivity {
         
         String userId = editUserId.getText().toString().trim();
         String apiUrl = editApiUrl.getText().toString().trim();
-        String apiKey = editApiKey.getText().toString().trim();
         
-        Logger.d(Logger.TAG_UI, "Attempting to save settings - User ID: " + userId + ", API URL: " + apiUrl + ", API Key: " + (apiKey.isEmpty() ? "empty" : "[HIDDEN]"));
+        Logger.d(Logger.TAG_UI, "Attempting to save settings - User ID: " + userId + ", API URL: " + apiUrl);
         
         // Validate inputs
         if (userId.isEmpty()) {
@@ -116,7 +118,6 @@ public class SettingsActivity extends AppCompatActivity {
             // Save settings
             preferencesManager.setUserId(userId);
             preferencesManager.setApiBaseUrl(apiUrl);
-            preferencesManager.setPresenterApiKey(apiKey);
             
             // Update API client with new base URL
             ApiClient.getInstance(this).updateBaseUrl(this);
@@ -167,6 +168,22 @@ public class SettingsActivity extends AppCompatActivity {
         
         // Navigate back to role picker
         finish();
+    }
+    
+    private void showLoggingSettingsDialog() {
+        Logger.userAction("Logging Settings", "User clicked logging settings button");
+        
+        new AlertDialog.Builder(this)
+                .setTitle("Logging Settings")
+                .setMessage("This feature allows you to configure logging levels and settings for debugging purposes.\n\n" +
+                           "Current logging is automatically configured for optimal performance.")
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Logger.i(Logger.TAG_UI, "Logging settings dialog closed");
+                    }
+                })
+                .show();
     }
     
     @Override

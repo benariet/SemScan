@@ -119,12 +119,7 @@ public class ExportActivity extends AppCompatActivity {
     private void checkPendingRequests() {
         Logger.userAction("Check Pending Requests", "Checking for pending manual requests before export");
         
-        String apiKey = preferencesManager.getPresenterApiKey();
-        if (apiKey == null) {
-            Logger.e(Logger.TAG_UI, "Export failed - no API key configured");
-            ToastUtils.showError(this, "API key not configured");
-            return;
-        }
+        // API key no longer required - removed authentication
         
         if (currentSessionId == null) {
             Logger.e(Logger.TAG_UI, "Export failed - no session ID available");
@@ -134,7 +129,7 @@ public class ExportActivity extends AppCompatActivity {
         
         Logger.api("GET", "api/v1/attendance/pending-requests", "Session ID: " + currentSessionId);
         
-        Call<List<Attendance>> call = apiService.getPendingRequests(apiKey, currentSessionId);
+        Call<List<Attendance>> call = apiService.getPendingRequests(currentSessionId);
         call.enqueue(new Callback<List<Attendance>>() {
             @Override
             public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
@@ -222,8 +217,7 @@ public class ExportActivity extends AppCompatActivity {
     }
     
     private void approveRequest(Attendance request) {
-        String apiKey = preferencesManager.getPresenterApiKey();
-        if (apiKey == null) return;
+        // API key no longer required - removed authentication
         
         // Debug logging to see what's in the request object
         Logger.d("ExportActivity", "=== ATTENDANCE REQUEST DEBUG ===");
@@ -245,7 +239,7 @@ public class ExportActivity extends AppCompatActivity {
         Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 
             "Attendance ID: " + request.getAttendanceId());
         
-        Call<Attendance> call = apiService.approveManualRequest(apiKey, request.getAttendanceId());
+        Call<Attendance> call = apiService.approveManualRequest(request.getAttendanceId());
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {
@@ -271,14 +265,13 @@ public class ExportActivity extends AppCompatActivity {
     }
     
     private void rejectRequest(Attendance request) {
-        String apiKey = preferencesManager.getPresenterApiKey();
-        if (apiKey == null) return;
+        // API key no longer required - removed authentication
         
         Logger.userAction("Reject Request", "Rejecting manual request for student: " + request.getStudentId());
         Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject", 
             "Attendance ID: " + request.getAttendanceId());
         
-        Call<Attendance> call = apiService.rejectManualRequest(apiKey, request.getAttendanceId());
+        Call<Attendance> call = apiService.rejectManualRequest(request.getAttendanceId());
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {
@@ -316,12 +309,7 @@ public class ExportActivity extends AppCompatActivity {
     private void exportData() {
         Logger.userAction("Export Data", "User clicked export button");
         
-        String apiKey = preferencesManager.getPresenterApiKey();
-        if (apiKey == null) {
-            Logger.e(Logger.TAG_UI, "Export failed - no API key configured");
-            ToastUtils.showError(this, "API key not configured");
-            return;
-        }
+        // API key no longer required - removed authentication
         
         if (currentSessionId == null) {
             Logger.e(Logger.TAG_UI, "Export failed - no session ID available");
@@ -333,22 +321,22 @@ public class ExportActivity extends AppCompatActivity {
         String format = isExcel ? "Excel (.xlsx)" : "CSV (.csv)";
         
         Logger.i(Logger.TAG_UI, "Starting export - Session ID: " + currentSessionId + ", Format: " + format);
-        exportSessionData(apiKey, currentSessionId, isExcel);
+        exportSessionData(currentSessionId, isExcel);
     }
     
-    private void exportSessionData(String apiKey, String sessionId, boolean isExcel) {
+    private void exportSessionData(String sessionId, boolean isExcel) {
         Call<ResponseBody> call;
         String filename;
         String mimeType;
         String endpoint;
         
         if (isExcel) {
-            call = apiService.exportXlsx(apiKey, sessionId);
+            call = apiService.exportXlsx(sessionId);
             filename = "attendance_" + sessionId + ".xlsx";
             mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             endpoint = "api/v1/export/xlsx";
         } else {
-            call = apiService.exportCsv(apiKey, sessionId);
+            call = apiService.exportCsv(sessionId);
             filename = "attendance_" + sessionId + ".csv";
             mimeType = "text/csv";
             endpoint = "api/v1/export/csv";

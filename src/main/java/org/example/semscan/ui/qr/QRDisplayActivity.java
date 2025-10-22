@@ -180,15 +180,11 @@ public class QRDisplayActivity extends AppCompatActivity {
             return;
         }
         
-        String apiKey = preferencesManager.getPresenterApiKey();
-        if (apiKey == null) {
-            Logger.w(Logger.TAG_QR, "Cannot update attendance count - no API key");
-            return;
-        }
+        // API key no longer required - removed authentication
         
         Logger.api("GET", "api/v1/attendance", "Session ID: " + currentSession.getSessionId());
         
-        Call<List<Attendance>> call = apiService.getAttendance(apiKey, currentSession.getSessionId());
+        Call<List<Attendance>> call = apiService.getAttendance(currentSession.getSessionId());
         call.enqueue(new Callback<List<Attendance>>() {
             @Override
             public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
@@ -268,16 +264,11 @@ public class QRDisplayActivity extends AppCompatActivity {
     private void endSession() {
         Logger.userAction("End Session", "Presenter clicked end session for: " + currentSession.getSessionId());
         
-        String apiKey = preferencesManager.getPresenterApiKey();
-        if (apiKey == null) {
-            Logger.e(Logger.TAG_QR, "Cannot end session - no API key");
-            Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        // API key no longer required - removed authentication
         
         Logger.api("PATCH", "api/v1/sessions/" + currentSession.getSessionId() + "/close", null);
         
-        Call<Session> call = apiService.closeSession(apiKey, currentSession.getSessionId());
+        Call<Session> call = apiService.closeSession(currentSession.getSessionId());
         call.enqueue(new Callback<Session>() {
             @Override
             public void onResponse(Call<Session> call, Response<Session> response) {
@@ -305,16 +296,11 @@ public class QRDisplayActivity extends AppCompatActivity {
     private void cancelSession() {
         Logger.userAction("Cancel Session", "Presenter clicked cancel session for: " + currentSession.getSessionId());
         
-        String apiKey = preferencesManager.getPresenterApiKey();
-        if (apiKey == null) {
-            Logger.e(Logger.TAG_QR, "Cannot cancel session - no API key");
-            Toast.makeText(this, "API key not configured", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        // API key no longer required - removed authentication
         
         Logger.api("PATCH", "api/v1/sessions/" + currentSession.getSessionId() + "/close", null);
         
-        Call<Session> call = apiService.closeSession(apiKey, currentSession.getSessionId());
+        Call<Session> call = apiService.closeSession(currentSession.getSessionId());
         call.enqueue(new Callback<Session>() {
             @Override
             public void onResponse(Call<Session> call, Response<Session> response) {

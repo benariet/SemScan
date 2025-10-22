@@ -47,33 +47,25 @@
                 android:textColor="@color/gray_600"
                 android:layout_marginBottom="32dp" />
 
-            <!-- Course Selection -->
+            <!-- Your Seminars Grid -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Select Course"
+                android:text="Your Seminars"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:textColor="@color/gray_800"
                 android:layout_marginBottom="8dp" />
 
-            <Spinner
-                android:id="@+id/spinner_course"
+            <!-- Test with simple ListView instead of RecyclerView -->
+            <ListView
+                android:id="@+id/list_seminars"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/spinner_background" />
+                android:layout_height="300dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp" />
 
-            <!-- Create Seminar Button -->
-            <Button
-                android:id="@+id/btn_create_seminar"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:text="@string/create_new_seminar"
-                android:textSize="16sp"
-                android:background="@drawable/button_secondary"
-                android:textColor="@color/gray_800"
-                android:layout_marginBottom="8dp" />
+            
 
             <!-- Test API Button (for debugging) -->
             <Button
@@ -86,16 +78,36 @@
                 android:textColor="@color/gray_800"
                 android:layout_marginBottom="16dp" />
 
-            <!-- Start Session Button -->
-            <Button
-                android:id="@+id/btn_start_session"
+            <!-- Bottom Buttons -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="Start Session"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:background="@drawable/button_primary"
-                android:textColor="@color/white" />
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="8dp">
+
+                <Button
+                    android:id="@+id/btn_create_seminar"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="Add New Seminar"
+                    android:textSize="16sp"
+                    android:background="@drawable/button_secondary"
+                    android:textColor="@color/gray_800"
+                    android:layout_marginEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btn_start_session"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:text="START SESSION"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/button_primary"
+                    android:textColor="@color/white" />
+            </LinearLayout>
 
         </LinearLayout>
 
