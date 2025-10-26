@@ -82,27 +82,27 @@ public class SettingsActivity extends AppCompatActivity {
     }
     
     private void loadCurrentSettings() {
-        String userId = preferencesManager.getUserId();
+        Long userId = preferencesManager.getUserId();
         String apiUrl = preferencesManager.getApiBaseUrl();
         
         Logger.i(Logger.TAG_UI, "Loading current settings");
         Logger.d(Logger.TAG_UI, "Current User ID: " + userId);
         Logger.d(Logger.TAG_UI, "Current API URL: " + apiUrl);
         
-        editUserId.setText(userId);
+        editUserId.setText(userId != null && userId > 0 ? String.valueOf(userId) : "");
         editApiUrl.setText(apiUrl);
     }
     
     private void saveSettings() {
         Logger.userAction("Save Settings", "User clicked save settings button");
         
-        String userId = editUserId.getText().toString().trim();
+        String userIdInput = editUserId.getText().toString().trim();
         String apiUrl = editApiUrl.getText().toString().trim();
         
-        Logger.d(Logger.TAG_UI, "Attempting to save settings - User ID: " + userId + ", API URL: " + apiUrl);
+        Logger.d(Logger.TAG_UI, "Attempting to save settings - User ID: " + userIdInput + ", API URL: " + apiUrl);
         
         // Validate inputs
-        if (userId.isEmpty()) {
+        if (userIdInput.isEmpty()) {
             Logger.w(Logger.TAG_UI, "Save settings failed - User ID is empty");
             Toast.makeText(this, "User ID is required", Toast.LENGTH_SHORT).show();
             return;
@@ -116,7 +116,11 @@ public class SettingsActivity extends AppCompatActivity {
         
         try {
             // Save settings
-            preferencesManager.setUserId(userId);
+            Long parsedUserId = Long.parseLong(userIdInput);
+            if (parsedUserId <= 0) {
+                throw new NumberFormatException("User ID must be positive");
+            }
+            preferencesManager.setUserId(parsedUserId);
             preferencesManager.setApiBaseUrl(apiUrl);
             
             // Update API client with new base URL
@@ -128,7 +132,7 @@ public class SettingsActivity extends AppCompatActivity {
             Toast.makeText(this, "✅ Settings saved successfully!", Toast.LENGTH_LONG).show();
             
             // Also show in logs for debugging
-            Logger.i(Logger.TAG_UI, "Settings saved - User ID: " + userId + ", API URL: " + apiUrl);
+            Logger.i(Logger.TAG_UI, "Settings saved - User ID: " + parsedUserId + ", API URL: " + apiUrl);
             
         } catch (Exception e) {
             Logger.e(Logger.TAG_UI, "Failed to save settings", e);

@@ -1,9 +1,9 @@
 package org.example.semscan.data.model;
 
 public class ManualAttendanceResponse {
-    private String attendanceId;
-    private String sessionId;
-    private String studentId;
+    private Long attendanceId;
+    private Long sessionId;
+    private Long studentId;
     private String studentName;
     private String reason;
     private String requestStatus;
@@ -14,14 +14,14 @@ public class ManualAttendanceResponse {
     public ManualAttendanceResponse() {}
     
     // Getters and Setters
-    public String getAttendanceId() { return attendanceId; }
-    public void setAttendanceId(String attendanceId) { this.attendanceId = attendanceId; }
+    public Long getAttendanceId() { return attendanceId; }
+    public void setAttendanceId(Long attendanceId) { this.attendanceId = attendanceId; }
     
-    public String getSessionId() { return sessionId; }
-    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+    public Long getSessionId() { return sessionId; }
+    public void setSessionId(Long sessionId) { this.sessionId = sessionId; }
     
-    public String getStudentId() { return studentId; }
-    public void setStudentId(String studentId) { this.studentId = studentId; }
+    public Long getStudentId() { return studentId; }
+    public void setStudentId(Long studentId) { this.studentId = studentId; }
     
     public String getStudentName() { return studentName; }
     public void setStudentName(String studentName) { this.studentName = studentName; }

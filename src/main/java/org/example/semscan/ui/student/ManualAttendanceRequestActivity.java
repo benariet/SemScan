@@ -34,7 +34,7 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
     private PreferencesManager preferencesManager;
     private ApiService apiService;
     private ServerLogger serverLogger;
-    private String currentSessionId;
+    private Long currentSessionId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +49,7 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
         serverLogger = ServerLogger.getInstance(this);
         
         // Update user context for student logging
-        String userId = preferencesManager.getUserId();
+        Long userId = preferencesManager.getUserId();
         String userRole = preferencesManager.getUserRole();
         serverLogger.updateUserContext(userId, userRole);
         
@@ -181,8 +181,8 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
     }
 
     private void submitManualRequest(String reason) {
-        String studentId = preferencesManager.getUserId();
-        if (studentId == null) {
+        Long studentId = preferencesManager.getUserId();
+        if (studentId == null || studentId <= 0) {
             Logger.e(Logger.TAG_UI, "Cannot submit manual request - no student ID");
             showError("Student ID not found. Please check settings.");
             return;
@@ -250,7 +250,7 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
                 showError("Invalid request. Please check your information.");
                 break;
             case 401:
-                showError("Unauthorized. Please check your API key.");
+                showError("Server error. Please try again.");
                 break;
             case 409:
                 showError("You have already submitted a request for this session.");

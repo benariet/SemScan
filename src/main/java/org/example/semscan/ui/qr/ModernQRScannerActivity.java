@@ -76,7 +76,7 @@ public class ModernQRScannerActivity extends AppCompatActivity {
     // State
     private boolean isScanning = true;
     private boolean isFlashOn = false;
-    private String currentSessionId = null;
+    private Long currentSessionId = null;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -245,8 +245,8 @@ public class ModernQRScannerActivity extends AppCompatActivity {
             return;
         }
         
-        String sessionId = payload.getSessionId();
-        if (sessionId == null || sessionId.trim().isEmpty()) {
+        Long sessionId = payload.getSessionId();
+        if (sessionId == null || sessionId <= 0) {
             Logger.qr("Invalid QR Code", "Session ID is null or empty");
             updateStatus("QR code missing session ID", R.color.error_red);
             showError("QR code missing session ID");
@@ -264,22 +264,22 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         submitAttendance(sessionId);
     }
     
-    private void submitAttendance(String sessionId) {
-        String studentId = preferencesManager.getUserId();
-        if (studentId == null) {
-            studentId = "student-001";
-            Logger.w(TAG, "No student ID found, using default: " + studentId);
+    private void submitAttendance(Long sessionId) {
+        Long studentId = preferencesManager.getUserId();
+        if (studentId == null || studentId <= 0) {
+            Logger.e(TAG, "Student ID not found or invalid");
+            showError("Student ID not found. Please log in again.");
+            return;
         }
-        
-        final String finalStudentId = studentId;
-        Logger.d(TAG, "Submitting attendance - Session: " + sessionId + ", Student: " + finalStudentId);
+
+        Logger.d(TAG, "Submitting attendance - Session: " + sessionId + ", Student: " + studentId);
         
         // Debug: Log the API base URL being used
         String apiBaseUrl = ApiClient.getInstance(this).getCurrentBaseUrl();
         Logger.d(TAG, "API Base URL: " + apiBaseUrl);
         
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
-            sessionId, finalStudentId, System.currentTimeMillis()
+            sessionId, studentId, System.currentTimeMillis()
         );
         
         // API key no longer required - removed authentication
@@ -294,7 +294,7 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                         Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
                         updateStatus("Success!", R.color.success_green);
                         showSuccess("Attendance recorded successfully!");
-                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + finalStudentId);
+                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + studentId);
                         
                         // Return to previous screen after delay
                         new android.os.Handler().postDelayed(() -> finish(), 2000);
@@ -321,8 +321,8 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                                 errorMessage = "Session not found or not active";
                             } else if (errorBody.contains("Invalid session")) {
                                 errorMessage = "Invalid session ID";
-                            } else if (errorBody.contains("Authentication failed")) {
-                                errorMessage = "Authentication failed - check API key";
+                            } else if (errorBody.contains("Server error")) {
+                                errorMessage = "Server error - please try again";
                             } else if (errorBody.contains("Access denied")) {
                                 errorMessage = "Access denied - insufficient permissions";
                             } else {
@@ -371,7 +371,7 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                 showError("Invalid request - check session and student ID");
                 break;
             case 401:
-                showError("Authentication failed - check API key");
+                showError("Network error - please check your connection");
                 break;
             case 403:
                 showError("Access denied - insufficient permissions");

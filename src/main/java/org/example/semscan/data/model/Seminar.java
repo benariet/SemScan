@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class Seminar {
     @SerializedName(value = "seminar_id", alternate = {"seminarId", "id"})
-    private String seminarId;
+    private Long seminarId;
     
     @SerializedName(value = "seminar_name", alternate = {"seminarName", "name"})
     private String seminarName;
@@ -15,11 +15,11 @@ public class Seminar {
     private String description;
     
     @SerializedName(value = "presenter_id", alternate = {"presenterId"})
-    private String presenterId;
+    private Long presenterId;
     
     public Seminar() {}
     
-    public Seminar(String seminarId, String seminarName, String seminarCode, String description, String presenterId) {
+    public Seminar(Long seminarId, String seminarName, String seminarCode, String description, Long presenterId) {
         this.seminarId = seminarId;
         this.seminarName = seminarName;
         this.seminarCode = seminarCode;
@@ -28,11 +28,11 @@ public class Seminar {
     }
     
     // Getters and Setters
-    public String getSeminarId() {
+    public Long getSeminarId() {
         return seminarId;
     }
     
-    public void setSeminarId(String seminarId) {
+    public void setSeminarId(Long seminarId) {
         this.seminarId = seminarId;
     }
     
@@ -60,11 +60,11 @@ public class Seminar {
         this.description = description;
     }
     
-    public String getPresenterId() {
+    public Long getPresenterId() {
         return presenterId;
     }
     
-    public void setPresenterId(String presenterId) {
+    public void setPresenterId(Long presenterId) {
         this.presenterId = presenterId;
     }
     

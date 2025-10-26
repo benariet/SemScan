@@ -52,7 +52,7 @@ public class ServerLogger {
     private ApiService apiService;
     private ScheduledExecutorService executorService;
     private boolean serverLoggingEnabled = true;
-    private String userId;
+    private Long userId;
     private String userRole;
     private java.util.List<LogEntry> pendingLogs = new java.util.ArrayList<>();
     private static final int BATCH_SIZE = 10;
@@ -99,7 +99,7 @@ public class ServerLogger {
     /**
      * Update user context for logging
      */
-    public void updateUserContext(String userId, String userRole) {
+    public void updateUserContext(Long userId, String userRole) {
         this.userId = userId;
         this.userRole = userRole;
     }
@@ -537,7 +537,7 @@ public class ServerLogger {
         public String level;
         public String tag;
         public String message;
-        public String userId;
+        public Long userId;
         public String userRole;
         public String deviceInfo;
         public String appVersion;
@@ -549,7 +549,7 @@ public class ServerLogger {
         
         // Constructor for easy creation
         public LogEntry(Long timestamp, String level, String tag, String message, 
-                       String userId, String userRole, String deviceInfo, String appVersion) {
+                       Long userId, String userRole, String deviceInfo, String appVersion) {
             this.timestamp = timestamp;
             this.level = level;
             this.tag = tag;
@@ -573,8 +573,8 @@ public class ServerLogger {
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
         
-        public String getUserId() { return userId; }
-        public void setUserId(String userId) { this.userId = userId; }
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
         
         public String getUserRole() { return userRole; }
         public void setUserRole(String userRole) { this.userRole = userRole; }

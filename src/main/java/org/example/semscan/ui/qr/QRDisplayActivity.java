@@ -67,15 +67,15 @@ public class QRDisplayActivity extends AppCompatActivity {
         apiService = ApiClient.getInstance(this).getApiService();
         
         // Get session from intent
-        String sessionId = getIntent().getStringExtra("sessionId");
-        String seminarId = getIntent().getStringExtra("seminarId");
+        long sessionId = getIntent().getLongExtra("sessionId", -1L);
+        long seminarId = getIntent().getLongExtra("seminarId", -1L);
         long startTime = getIntent().getLongExtra("startTime", 0);
         long endTime = getIntent().getLongExtra("endTime", 0);
         String status = getIntent().getStringExtra("status");
         
         Logger.qr("Session Data Received", "Session ID: " + sessionId + ", Seminar ID: " + seminarId + ", Status: " + status);
         
-        if (sessionId == null || seminarId == null) {
+        if (sessionId <= 0 || seminarId <= 0) {
             Logger.e(Logger.TAG_QR, "No session data provided in intent");
             Toast.makeText(this, "No session data", Toast.LENGTH_SHORT).show();
             finish();
@@ -137,7 +137,7 @@ public class QRDisplayActivity extends AppCompatActivity {
             imageQRCode.setImageBitmap(qrBitmap);
             
             // Update session info
-            textSessionInfo.setText("Session: " + currentSession.getSessionId());
+        textSessionInfo.setText("Session: " + currentSession.getSessionId());
             
             Logger.qr("QR Display Updated", "QR code displayed for session: " + currentSession.getSessionId());
             

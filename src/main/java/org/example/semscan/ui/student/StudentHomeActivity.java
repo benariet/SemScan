@@ -53,7 +53,7 @@ public class StudentHomeActivity extends AppCompatActivity {
         serverLogger = ServerLogger.getInstance(this);
         
         // Update user context for student logging
-        String userId = preferencesManager.getUserId();
+        Long userId = preferencesManager.getUserId();
         String userRole = preferencesManager.getUserRole();
         serverLogger.updateUserContext(userId, userRole);
         
@@ -85,9 +85,9 @@ public class StudentHomeActivity extends AppCompatActivity {
     }
     
     private void updateWelcomeMessage() {
-        String userId = preferencesManager.getUserId();
+        Long userId = preferencesManager.getUserId();
         
-        if (userId == null || userId.trim().isEmpty()) {
+        if (userId == null || userId <= 0) {
             textWelcomeMessage.setText("Welcome, Student!");
             Logger.w(Logger.TAG_UI, "No user ID found, using generic welcome message");
             return;
@@ -106,28 +106,22 @@ public class StudentHomeActivity extends AppCompatActivity {
         }
     }
     
-    private String getStudentDisplayName(String userId) {
-        // Simple mapping for common student IDs
-        // This can be expanded or made configurable
-        switch (userId.toLowerCase()) {
-            case "student-001":
+    private String getStudentDisplayName(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        switch (userId.intValue()) {
+            case 1:
                 return "John Smith";
-            case "student-002":
+            case 2:
                 return "Sarah Johnson";
-            case "student-003":
+            case 3:
                 return "Mike Wilson";
-            case "student-004":
+            case 4:
                 return "Emily Davis";
-            case "student-005":
+            case 5:
                 return "Alex Brown";
             default:
-                // Try to extract a name from the user ID
-                if (userId.contains("-")) {
-                    String[] parts = userId.split("-");
-                    if (parts.length > 1) {
-                        return "Student " + parts[1];
-                    }
-                }
                 return null;
         }
     }

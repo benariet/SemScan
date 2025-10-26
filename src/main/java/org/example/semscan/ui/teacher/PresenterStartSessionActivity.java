@@ -11,14 +11,10 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import android.widget.Toast;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.ListView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -43,9 +39,7 @@ import retrofit2.Response;
 public class PresenterStartSessionActivity extends AppCompatActivity {
     
     // Removed spinner - using grid only
-    private RecyclerView recyclerSeminars;
     private ListView listSeminars;
-    private SwipeRefreshLayout swipeRefreshSeminars;
     private Button btnStartSession;
     private Button btnCreateSeminar;
     private Button btnTestApi;
@@ -55,8 +49,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     private ServerLogger serverLogger;
     
     private List<Seminar> seminars = new ArrayList<>();
-    private String selectedSeminarId;
-    private PresenterSeminarsAdapter seminarsAdapter;
+    private Long selectedSeminarId;
     
     private static final int REQ_ADD_SEMINAR = 2001;
     
@@ -87,47 +80,14 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     }
     
     private void initializeViews() {
-        // Test with simple ListView
+        // Initialize ListView for seminars
         listSeminars = findViewById(R.id.list_seminars);
-        // recyclerSeminars = findViewById(R.id.recycler_seminars);
-        // Temporarily removed SwipeRefreshLayout for testing
-        // swipeRefreshSeminars = findViewById(R.id.swipe_refresh_seminars);
-        // Grid layout (commented out for debugging)
-        // GridLayoutManager grid = new GridLayoutManager(this, 2);
-        // recyclerSeminars.setLayoutManager(grid);
-        
-        // Simple linear layout for easier debugging (commented out for ListView test)
-        // LinearLayoutManager linear = new LinearLayoutManager(this);
-        // recyclerSeminars.setLayoutManager(linear);
-        
-        // Ensure RecyclerView is properly initialized (commented out for ListView test)
-        // recyclerSeminars.setHasFixedSize(true);
-        // recyclerSeminars.setItemAnimator(null); // Disable animations to prevent layout issues
-        
-        // Debug: Add touch listener to RecyclerView (commented out for ListView test)
-        // recyclerSeminars.setOnTouchListener((v, event) -> {
-        //     Logger.d("PresenterSeminarsAdapter", "RecyclerView touched: " + event.getAction());
-        //     return false; // Let the event propagate
-        // });
-        
-        // Test with simple ListView - no adapter needed initially
-        // seminarsAdapter = new PresenterSeminarsAdapter(new ArrayList<>(), item -> {
-        //     selectedSeminarId = item.id;
-        //     btnStartSession.setEnabled(true);
-        //     Logger.userAction("Select Seminar Tile", item.seminarName);
-        // });
-        // recyclerSeminars.setAdapter(seminarsAdapter);
 
         btnStartSession = findViewById(R.id.btn_start_session);
         btnCreateSeminar = findViewById(R.id.btn_create_seminar);
         btnTestApi = findViewById(R.id.btn_test_api);
         
-        // Setup pull-to-refresh (temporarily removed for testing)
-        // swipeRefreshSeminars.setEnabled(false);
-        // swipeRefreshSeminars.setOnRefreshListener(() -> {
-        //     Logger.i(Logger.TAG_UI, "Pull-to-refresh triggered");
-        //     loadPresenterSeminarsGrid();
-        // });
+        // Pull-to-refresh functionality removed - using ListView instead of RecyclerView
     }
     
     private void showLongToast(String message) {
@@ -176,11 +136,11 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                 testPresenterSeminarsApi();
                 
                 // Additional debug info
-                String debugInfo = "RecyclerView Debug:\n";
-                debugInfo += "Item Count: " + (seminarsAdapter != null ? seminarsAdapter.getItemCount() : "null") + "\n";
-                debugInfo += "Visibility: " + recyclerSeminars.getVisibility() + "\n";
-                debugInfo += "Height: " + recyclerSeminars.getHeight() + "\n";
-                debugInfo += "Width: " + recyclerSeminars.getWidth();
+                String debugInfo = "ListView Debug:\n";
+                debugInfo += "Item Count: " + (listSeminars != null ? listSeminars.getCount() : "null") + "\n";
+                debugInfo += "Visibility: " + (listSeminars != null ? listSeminars.getVisibility() : "null") + "\n";
+                debugInfo += "Height: " + (listSeminars != null ? listSeminars.getHeight() : "null") + "\n";
+                debugInfo += "Width: " + (listSeminars != null ? listSeminars.getWidth() : "null");
                 
                 Toast.makeText(PresenterStartSessionActivity.this, debugInfo, Toast.LENGTH_LONG).show();
                 Logger.i(Logger.TAG_UI, "Debug Info: " + debugInfo);
@@ -189,10 +149,10 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     }
     
     private boolean checkSettings() {
-        String userId = preferencesManager.getUserId();
+        Long userId = preferencesManager.getUserId();
         String baseUrl = preferencesManager.getApiBaseUrl();
         
-        if (userId == null || userId.trim().isEmpty()) {
+        if (userId == null || userId <= 0) {
             Toast.makeText(this, "Please configure your User ID in Settings first.", Toast.LENGTH_LONG).show();
             return false;
         }
@@ -209,9 +169,9 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         Logger.i(Logger.TAG_UI, "Loading seminars");
         
         String baseUrl = preferencesManager.getApiBaseUrl();
-        String userId = preferencesManager.getUserId();
+        Long userId = preferencesManager.getUserId();
         
-        Logger.api("GET", baseUrl + "api/v1/seminars", null);
+        Logger.api("GET", baseUrl + "/api/v1/seminars", null);
         Logger.d(Logger.TAG_UI, "Loading seminars from: " + baseUrl + ", User ID: " + userId);
         
         // Removed info toast - too cluttered
@@ -285,7 +245,12 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     
     private void loadPresenterSeminarsGrid() {
         try {
-            String presenterId = preferencesManager.getUserId();
+            Long presenterId = preferencesManager.getUserId();
+            if (presenterId == null || presenterId <= 0) {
+                Logger.e(Logger.TAG_UI, "Cannot load presenter seminars - missing presenter ID");
+                Toast.makeText(PresenterStartSessionActivity.this, "Presenter ID not found. Please check settings.", Toast.LENGTH_LONG).show();
+                return;
+            }
             
             Logger.i(Logger.TAG_UI, "Loading presenter seminars for: " + presenterId);
             
@@ -293,7 +258,6 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                 @Override
                 public void onResponse(Call<java.util.List<ApiService.PresenterSeminarDto>> call, Response<java.util.List<ApiService.PresenterSeminarDto>> response) {
                     // Stop refresh indicator (temporarily removed)
-                    // swipeRefreshSeminars.setRefreshing(false);
                     
                     if (!response.isSuccessful() || response.body() == null) {
                         Logger.w(Logger.TAG_UI, "Failed to load presenter seminars for grid - Response code: " + response.code());
@@ -330,32 +294,15 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                         return;
                     }
                     
-                    // Filter out seminars with UUID IDs - only show proper PSM-* IDs
-                    java.util.List<ApiService.PresenterSeminarDto> validSeminars = new java.util.ArrayList<>();
-                    for (ApiService.PresenterSeminarDto seminar : list) {
-                        if (seminar.id.startsWith("PSM-")) {
-                            validSeminars.add(seminar);
-                            Logger.i(Logger.TAG_UI, "Valid seminar: ID=" + seminar.id + ", Name='" + seminar.seminarName + "'");
-                        } else {
-                            Logger.w(Logger.TAG_UI, "Skipping UUID seminar: ID=" + seminar.id + ", Name='" + seminar.seminarName + "'");
-                        }
-                    }
-                    
-                    if (validSeminars.isEmpty()) {
-                        Logger.w(Logger.TAG_UI, "⚠️ WARNING: No valid seminars found (all have UUIDs)!");
-                        Toast.makeText(PresenterStartSessionActivity.this, "No valid seminars found. All seminars have UUID IDs.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    
-                    // Create simple string array for ListView with only valid seminars
-                    String[] seminarNames = new String[validSeminars.size()];
-                    for (int i = 0; i < validSeminars.size(); i++) {
-                        ApiService.PresenterSeminarDto seminar = validSeminars.get(i);
+                    // Create simple string array for ListView
+                    String[] seminarNames = new String[list.size()];
+                    for (int i = 0; i < list.size(); i++) {
+                        ApiService.PresenterSeminarDto seminar = list.get(i);
                         seminarNames[i] = seminar.seminarName;
                     }
                     
                     // Set up ListView with custom adapter for better selection (using filtered list)
-                    SeminarListAdapter adapter = new SeminarListAdapter(PresenterStartSessionActivity.this, validSeminars);
+                    SeminarListAdapter adapter = new SeminarListAdapter(PresenterStartSessionActivity.this, list);
                     listSeminars.setAdapter(adapter);
                     
                     // Enable single choice mode for visual selection
@@ -363,7 +310,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     
                     // Add click listener to ListView (using filtered list)
                     listSeminars.setOnItemClickListener((parent, view, position, id) -> {
-                        ApiService.PresenterSeminarDto selectedSeminar = validSeminars.get(position);
+                        ApiService.PresenterSeminarDto selectedSeminar = list.get(position);
                         
                         // Use the actual seminar ID from the API response
                         selectedSeminarId = selectedSeminar.id;
@@ -385,14 +332,12 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                 @Override
                 public void onFailure(Call<java.util.List<ApiService.PresenterSeminarDto>> call, Throwable t) {
                     // Stop refresh indicator (temporarily removed)
-                    // swipeRefreshSeminars.setRefreshing(false);
                     Logger.e(Logger.TAG_UI, "Failed to load presenter seminars", t);
                     Toast.makeText(PresenterStartSessionActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
         } catch (Exception e) {
-            // Stop refresh indicator
-            swipeRefreshSeminars.setRefreshing(false);
+            // SwipeRefreshLayout removed - using ListView instead
             Logger.e(Logger.TAG_UI, "Error loading presenter seminars", e);
             Toast.makeText(this, "Error loading seminars", Toast.LENGTH_SHORT).show();
         }
@@ -426,7 +371,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
             public void onResponse(Call<List<Session>> call, Response<List<Session>> response) {
                 runOnUiThread(() -> {
                     if (response.isSuccessful() && response.body() != null) {
-                        List<Session> openSessions = response.body();
+            List<Session> openSessions = response.body();
                         Logger.session("Open Sessions Check", "Found " + openSessions.size() + " open sessions");
                         
                         if (openSessions.isEmpty()) {
@@ -572,7 +517,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                         // Log the server-generated session details
                         serverLogger.session("Session Created", "Session ID: " + session.getSessionId());
                         serverLogger.flushLogs(); // Force send logs after session creation
-                        if (session.getSessionId() != null && !session.getSessionId().isEmpty()) {
+                        if (session.getSessionId() != null) {
                             Logger.session("Session Created", "Server-generated Session ID: " + session.getSessionId() + ", Seminar ID: " + session.getSeminarId());
                             Logger.apiResponse("POST", "api/v1/sessions", response.code(), "Session created successfully with ID: " + session.getSessionId());
                         } else {
@@ -675,8 +620,8 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         
         // API key no longer required - removed authentication
         
-        String presenterId = preferencesManager.getUserId();
-        if (presenterId == null) {
+        Long presenterId = preferencesManager.getUserId();
+        if (presenterId == null || presenterId <= 0) {
             Logger.e(Logger.TAG_UI, "Seminar creation attempted without User ID");
             Toast.makeText(this, "User ID not configured. Please set it in Settings.", Toast.LENGTH_LONG).show();
             return;
@@ -730,8 +675,12 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     
     // Test method to debug presenter seminars API response
     private void testPresenterSeminarsApi() {
-        String presenterId = preferencesManager.getUserId();
-        
+        Long presenterId = preferencesManager.getUserId();
+        if (presenterId == null || presenterId <= 0) {
+            Toast.makeText(this, "Presenter ID not set", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Logger.i(Logger.TAG_UI, "Testing presenter seminars API for: " + presenterId);
         Toast.makeText(this, "Testing API for: " + presenterId, Toast.LENGTH_SHORT).show();
         
@@ -834,56 +783,6 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         return sb.toString();
     }
 
-    private static class PresenterSeminarsAdapter extends RecyclerView.Adapter<PresenterSeminarsAdapter.ViewHolder> {
-        interface OnItemClick { void onClick(ApiService.PresenterSeminarDto item); }
-        private java.util.List<ApiService.PresenterSeminarDto> items;
-        private final OnItemClick onItemClick;
-        PresenterSeminarsAdapter(java.util.List<ApiService.PresenterSeminarDto> items, OnItemClick onItemClick) {
-            this.items = items != null ? items : new java.util.ArrayList<>();
-            this.onItemClick = onItemClick;
-            Logger.d("PresenterSeminarsAdapter", "Created with " + this.items.size() + " items");
-        }
-        void update(java.util.List<ApiService.PresenterSeminarDto> newItems) {
-            this.items = newItems != null ? newItems : new java.util.ArrayList<>();
-            Logger.d("PresenterSeminarsAdapter", "Updated with " + this.items.size() + " items");
-            notifyDataSetChanged();
-        }
-        @Override public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            // Original tile layout (commented out for debugging)
-            // View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_presenter_seminar_tile, parent, false);
-            
-            // Simple list layout for easier debugging
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_seminar_simple, parent, false);
-            Logger.d("PresenterSeminarsAdapter", "Creating ViewHolder for position " + viewType);
-            return new ViewHolder(view);
-        }
-        @Override public void onBindViewHolder(ViewHolder h, int position) {
-            ApiService.PresenterSeminarDto item = items.get(position);
-            Logger.d("PresenterSeminarsAdapter", "Binding item " + position + ": " + item.seminarName);
-            h.subjectName.setText(item.seminarName);
-            h.compactSlots.setText(formatCompactSlots(item.slots));
-            h.itemView.setOnClickListener(v -> {
-                Logger.d("PresenterSeminarsAdapter", "Item clicked: " + item.seminarName);
-                onItemClick.onClick(item);
-            });
-        }
-        @Override public int getItemCount() { return items.size(); }
-        static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView subjectName;
-            TextView compactSlots;
-            ViewHolder(View itemView) {
-                super(itemView);
-                // Original tile layout IDs (commented out for debugging)
-                // subjectName = itemView.findViewById(R.id.text_subject_name);
-                // compactSlots = itemView.findViewById(R.id.text_compact_slots);
-                
-                // Simple list layout IDs for easier debugging
-                subjectName = itemView.findViewById(R.id.text_seminar_name);
-                compactSlots = itemView.findViewById(R.id.text_seminar_slots);
-                Logger.d("PresenterSeminarsAdapter", "ViewHolder created with views: " + (subjectName != null) + ", " + (compactSlots != null));
-            }
-        }
-    }
     
     
     // Custom adapter for seminar list with selection highlighting

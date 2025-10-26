@@ -18,7 +18,6 @@ import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
 
 import org.example.semscan.R;
-import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.data.model.Attendance;
@@ -45,7 +44,7 @@ public class QRScannerActivity extends AppCompatActivity {
     private ServerLogger serverLogger;
     
     private boolean isFlashlightOn = false;
-    private String currentSessionId = null;
+    private Long currentSessionId = null;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -152,12 +151,11 @@ public class QRScannerActivity extends AppCompatActivity {
             return;
         }
         
-        String sessionId = payload.getSessionId();
+        Long sessionId = payload.getSessionId();
         Logger.d(Logger.TAG_QR, "Extracted session ID: '" + sessionId + "'");
         Logger.d(Logger.TAG_QR, "Session ID is null: " + (sessionId == null));
-        Logger.d(Logger.TAG_QR, "Session ID is empty: " + (sessionId != null && sessionId.trim().isEmpty()));
         
-        if (sessionId == null || sessionId.trim().isEmpty()) {
+        if (sessionId == null || sessionId <= 0) {
             Logger.qr("Invalid QR Code", "Session ID is null or empty");
             showError("QR code missing session ID");
             return;
@@ -172,17 +170,15 @@ public class QRScannerActivity extends AppCompatActivity {
         submitAttendance(sessionId);
     }
     
-    private void submitAttendance(String sessionId) {
+    private void submitAttendance(Long sessionId) {
         // Enhanced validation and logging
         Logger.d(Logger.TAG_QR, "=== ATTENDANCE SUBMISSION DEBUG ===");
         Logger.d(Logger.TAG_QR, "Session ID from QR: '" + sessionId + "'");
-        Logger.d(Logger.TAG_QR, "Session ID length: " + (sessionId != null ? sessionId.length() : "null"));
-        Logger.d(Logger.TAG_QR, "Session ID trimmed: '" + (sessionId != null ? sessionId.trim() : "null") + "'");
         
         serverLogger.attendance("AttendanceSubmission", "Session ID: " + sessionId);
         
         // Validate session ID
-        if (sessionId == null || sessionId.trim().isEmpty()) {
+        if (sessionId == null || sessionId <= 0) {
             Logger.e(Logger.TAG_QR, "Session ID validation failed: null or empty");
             showError("Invalid session ID from QR code");
             return;
@@ -198,27 +194,16 @@ public class QRScannerActivity extends AppCompatActivity {
             return;
         }
         
-        String studentId = preferencesManager.getUserId();
+        Long studentId = preferencesManager.getUserId();
         Logger.d(Logger.TAG_QR, "Student ID from preferences: '" + studentId + "'");
         
-        if (studentId == null || studentId.trim().isEmpty()) {
-            // Use a default student ID for testing
-            studentId = "student-001";
-            Logger.w(Logger.TAG_QR, "No student ID found, using default: " + studentId);
-        }
-        
-        final String finalStudentId = studentId; // Make final for inner class
-        Logger.d(Logger.TAG_QR, "Final Student ID: '" + finalStudentId + "'");
-        Logger.d(Logger.TAG_QR, "Student ID length: " + finalStudentId.length());
-        
-        // Validate student ID
-        if (finalStudentId == null || finalStudentId.trim().isEmpty()) {
+        if (studentId == null || studentId <= 0) {
             Logger.e(Logger.TAG_QR, "Student ID validation failed: null or empty");
             showError("Student ID not found. Please log in again.");
             return;
         }
         
-        Logger.attendance("Submitting Attendance", "Session ID: '" + sessionId + "', Student ID: '" + finalStudentId + "'");
+        Logger.attendance("Submitting Attendance", "Session ID: '" + sessionId + "', Student ID: '" + studentId + "'");
         Logger.api("POST", "api/v1/attendance", "Session ID: " + sessionId);
         
         // Debug: Log the API base URL being used
@@ -227,7 +212,7 @@ public class QRScannerActivity extends AppCompatActivity {
         
         // Create request with validated data
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
-            sessionId.trim(), finalStudentId.trim(), System.currentTimeMillis()
+            sessionId, studentId, System.currentTimeMillis()
         );
         
         // Log the complete request
@@ -253,7 +238,7 @@ public class QRScannerActivity extends AppCompatActivity {
                     if (result != null) {
                         Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
                         showSuccess("Attendance recorded successfully!");
-                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + finalStudentId);
+                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + studentId);
                     } else {
                         showError("Invalid response from server");
                     }
@@ -277,8 +262,8 @@ public class QRScannerActivity extends AppCompatActivity {
                                 errorMessage = "Session not found or not active";
                             } else if (errorBody.contains("Invalid session")) {
                                 errorMessage = "Invalid session ID";
-                            } else if (errorBody.contains("Authentication failed")) {
-                                errorMessage = "Authentication failed - check API key";
+                            } else if (errorBody.contains("Server error")) {
+                                errorMessage = "Server error - please try again";
                             } else if (errorBody.contains("Access denied")) {
                                 errorMessage = "Access denied - insufficient permissions";
                             } else {
@@ -306,7 +291,7 @@ public class QRScannerActivity extends AppCompatActivity {
                     showErrorDialog(errorMessage);
                     // Report the parsed error to server as ERROR (attach synthetic exception for context)
                     if (response.code() == 409 || (errorMessage != null && errorMessage.toLowerCase().contains("already"))) {
-                        serverLogger.e(ServerLogger.TAG_ATTENDANCE, "Duplicate attendance attempt for session " + sessionId + ", student " + finalStudentId, new IllegalStateException("ALREADY_ATTENDED"));
+                        serverLogger.e(ServerLogger.TAG_ATTENDANCE, "Duplicate attendance attempt for session " + sessionId + ", student " + studentId, new IllegalStateException("ALREADY_ATTENDED"));
                     } else {
                         serverLogger.e(Logger.TAG_QR, "Attendance submission error: " + errorMessage, new RuntimeException("HTTP " + response.code()));
                     }
@@ -337,7 +322,7 @@ public class QRScannerActivity extends AppCompatActivity {
                 showError("Invalid request - check session and student ID");
                 break;
             case 401:
-                showError("Authentication failed - check API key");
+                showError("Network error - please check your connection");
                 break;
             case 403:
                 showError("Access denied - insufficient permissions");

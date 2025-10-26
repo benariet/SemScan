@@ -26,7 +26,7 @@ public class QRUtils {
      * @param sessionId The session ID
      * @return JSON string for QR code
      */
-    public static String generateQRContent(String sessionId) {
+    public static String generateQRContent(Long sessionId) {
         QRPayload payload = new QRPayload(sessionId);
         return gson.toJson(payload);
     }
@@ -38,6 +38,6 @@ public class QRUtils {
      */
     public static boolean isValidQRContent(String qrContent) {
         QRPayload payload = parseQRContent(qrContent);
-        return payload != null && payload.getSessionId() != null && !payload.getSessionId().isEmpty();
+        return payload != null && payload.getSessionId() != null;
     }
 }

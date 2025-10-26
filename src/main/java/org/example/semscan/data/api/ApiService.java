@@ -28,7 +28,7 @@ public interface ApiService {
     Call<Session> createSession(@Body CreateSessionRequest request);
     
     @PATCH("api/v1/sessions/{sessionId}/close")
-    Call<Session> closeSession(@Path("sessionId") String sessionId);
+    Call<Session> closeSession(@Path("sessionId") Long sessionId);
     
     @GET("api/v1/sessions/open")
     Call<List<Session>> getOpenSessions();
@@ -38,7 +38,7 @@ public interface ApiService {
     Call<StudentSessionResponse> getOpenSessionsForStudent();
     
     @GET("api/v1/student/user/{userId}")
-    Call<User> getStudentUserById(@Path("userId") String userId);
+    Call<User> getStudentUserById(@Path("userId") Long userId);
     
     // Removed getSessions - not needed for lean MVP
     
@@ -47,20 +47,20 @@ public interface ApiService {
     Call<Attendance> submitAttendance(@Body SubmitAttendanceRequest request);
     
     @GET("api/v1/attendance")
-    Call<List<Attendance>> getAttendance(@Query("sessionId") String sessionId);
+    Call<List<Attendance>> getAttendance(@Query("sessionId") Long sessionId);
     
     // Manual attendance requests
     @POST("api/v1/attendance/manual-request")
     Call<Attendance> createManualRequest(@Body CreateManualRequestRequest request);
     
     @GET("api/v1/attendance/pending-requests")
-    Call<List<Attendance>> getPendingRequests(@Query("sessionId") String sessionId);
+    Call<List<Attendance>> getPendingRequests(@Query("sessionId") Long sessionId);
     
     @POST("api/v1/attendance/{attendanceId}/approve")
-    Call<Attendance> approveManualRequest(@Path("attendanceId") String attendanceId);
+    Call<Attendance> approveManualRequest(@Path("attendanceId") Long attendanceId);
     
     @POST("api/v1/attendance/{attendanceId}/reject")
-    Call<Attendance> rejectManualRequest(@Path("attendanceId") String attendanceId);
+    Call<Attendance> rejectManualRequest(@Path("attendanceId") Long attendanceId);
     
     
     // Seminars (No authentication required)
@@ -72,15 +72,15 @@ public interface ApiService {
     
     // Users
     @GET("api/v1/users/{userId}")
-    Call<User> getUserById(@Path("userId") String userId);
+    Call<User> getUserById(@Path("userId") Long userId);
     
     
         // Export (No authentication required)
         @GET("api/v1/export/xlsx")
-        Call<okhttp3.ResponseBody> exportXlsx(@Query("sessionId") String sessionId);
+        Call<okhttp3.ResponseBody> exportXlsx(@Query("sessionId") Long sessionId);
 
         @GET("api/v1/export/csv")
-        Call<okhttp3.ResponseBody> exportCsv(@Query("sessionId") String sessionId);
+        Call<okhttp3.ResponseBody> exportCsv(@Query("sessionId") Long sessionId);
 
         // Logging (No authentication required)
         @POST("api/v1/logs")
@@ -95,30 +95,30 @@ public interface ApiService {
 
         // List presenter seminars (tiles) - No authentication required
         @GET("api/v1/presenters/{presenterId}/seminars")
-        Call<java.util.List<PresenterSeminarDto>> getPresenterSeminars(@Path("presenterId") String presenterId);
+        Call<java.util.List<PresenterSeminarDto>> getPresenterSeminars(@Path("presenterId") Long presenterId);
 
         // Create presenter seminar - No authentication required
         @POST("api/v1/presenters/{presenterId}/seminars")
         Call<PresenterSeminarDto> createPresenterSeminar(
-                @Path("presenterId") String presenterId,
+                @Path("presenterId") Long presenterId,
                 @Body CreatePresenterSeminarRequest body
         );
 
         // Optional: delete presenter seminar - No authentication required
         @DELETE("api/v1/presenters/{presenterId}/seminars/{seminarId}")
         Call<Void> deletePresenterSeminar(
-                @Path("presenterId") String presenterId,
-                @Path("seminarId") String seminarId
+                @Path("presenterId") Long presenterId,
+                @Path("seminarId") Long seminarId
         );
     
     // Request/Response DTOs
     class CreateSessionRequest {
-        public String seminarId;    // Required: ID of the seminar to create session for
+        public Long seminarId;    // Required: ID of the seminar to create session for
         public String startTime;    // Required: ISO 8601 formatted start time
         public String status;       // Required: Session status (e.g., "OPEN")
         // Note: sessionId is NOT included - server generates it automatically
         
-        public CreateSessionRequest(String seminarId, String startTime, String status) {
+        public CreateSessionRequest(Long seminarId, String startTime, String status) {
             this.seminarId = seminarId;
             this.startTime = startTime;
             this.status = status;
@@ -126,11 +126,11 @@ public interface ApiService {
     }
     
     class SubmitAttendanceRequest {
-        public String sessionId;
-        public String studentId;
+        public Long sessionId;
+        public Long studentId;
         public long timestampMs;
         
-        public SubmitAttendanceRequest(String sessionId, String studentId, long timestampMs) {
+        public SubmitAttendanceRequest(Long sessionId, Long studentId, long timestampMs) {
             this.sessionId = sessionId;
             this.studentId = studentId;
             this.timestampMs = timestampMs;
@@ -141,9 +141,9 @@ public interface ApiService {
         public String seminarName;
         public String seminarCode;
         public String description;
-        public String presenterId;
+        public Long presenterId;
         
-        public CreateSeminarRequest(String seminarName, String seminarCode, String description, String presenterId) {
+        public CreateSeminarRequest(String seminarName, String seminarCode, String description, Long presenterId) {
             this.seminarName = seminarName;
             this.seminarCode = seminarCode;
             this.description = description;
@@ -152,12 +152,12 @@ public interface ApiService {
     }
     
     class CreateManualRequestRequest {
-        public String sessionId;
-        public String studentId;
+        public Long sessionId;
+        public Long studentId;
         public String reason;
         public String deviceId;
         
-        public CreateManualRequestRequest(String sessionId, String studentId, String reason, String deviceId) {
+        public CreateManualRequestRequest(Long sessionId, Long studentId, String reason, String deviceId) {
             this.sessionId = sessionId;
             this.studentId = studentId;
             this.reason = reason;
@@ -177,8 +177,8 @@ public interface ApiService {
     }
 
     class PresenterSeminarDto {
-        public String id;
-        public String presenterId;
+        public Long id;
+        public Long presenterId;
         public String seminarName;
         public java.util.List<PresenterSeminarSlotDto> slots;
         public String createdAt;

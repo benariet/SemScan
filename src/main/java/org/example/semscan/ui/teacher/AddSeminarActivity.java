@@ -98,7 +98,13 @@ public class AddSeminarActivity extends AppCompatActivity {
             }
         }
 
-        String presenterId = preferencesManager.getUserId();
+        Long presenterId = preferencesManager.getUserId();
+        if (presenterId == null || presenterId <= 0) {
+            Logger.e(Logger.TAG_UI, "Cannot create seminar - missing presenter ID");
+            Toast.makeText(this, "Presenter ID not found. Please check settings.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         ApiService.CreatePresenterSeminarRequest body = new ApiService.CreatePresenterSeminarRequest(seminarName, slots);
         apiService.createPresenterSeminar(presenterId, body).enqueue(new Callback<ApiService.PresenterSeminarDto>() {
             @Override

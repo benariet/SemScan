@@ -10,7 +10,6 @@ public class PreferencesManager {
     private static final String KEY_USER_ID = "user_id";
     private static final String KEY_USER_NAME = "user_name";
     private static final String KEY_API_BASE_URL = "api_base_url";
-    private static final String KEY_PRESENTER_API_KEY = "presenter_api_key";
     
     private static PreferencesManager instance;
     private SharedPreferences prefs;
@@ -53,13 +52,37 @@ public class PreferencesManager {
     }
     
     // User ID
-    public void setUserId(String userId) {
-        Logger.prefs(KEY_USER_ID, userId);
-        prefs.edit().putString(KEY_USER_ID, userId).apply();
+    public void setUserId(Long userId) {
+        Logger.prefs(KEY_USER_ID, userId == null ? "null" : String.valueOf(userId));
+        if (userId == null) {
+            prefs.edit().remove(KEY_USER_ID).apply();
+        } else {
+            prefs.edit().putLong(KEY_USER_ID, userId).apply();
+        }
     }
     
-    public String getUserId() {
-        return prefs.getString(KEY_USER_ID, "USR-1000-20241021");
+    public Long getUserId() {
+        if (!prefs.contains(KEY_USER_ID)) {
+            return null;
+        }
+        try {
+            return prefs.getLong(KEY_USER_ID, -1L);
+        } catch (ClassCastException classCastException) {
+            // Handle migration from legacy string IDs
+            String stored = prefs.getString(KEY_USER_ID, null);
+            if (stored == null) {
+                return null;
+            }
+            try {
+                Long parsed = Long.parseLong(stored.replaceAll("\\D", ""));
+                setUserId(parsed);
+                return parsed;
+            } catch (NumberFormatException ignore) {
+                Logger.e(Logger.TAG_PREFS, "Failed to parse legacy user ID: " + stored, ignore);
+                prefs.edit().remove(KEY_USER_ID).apply();
+                return null;
+            }
+        }
     }
     
     // User Name
@@ -82,30 +105,6 @@ public class PreferencesManager {
         return prefs.getString(KEY_API_BASE_URL, ApiConstants.SERVER_URL + "/");
     }
     
-    // Presenter API Key
-    public void setPresenterApiKey(String apiKey) {
-        Logger.prefs(KEY_PRESENTER_API_KEY, apiKey != null ? "[HIDDEN]" : "null");
-        prefs.edit().putString(KEY_PRESENTER_API_KEY, apiKey).apply();
-    }
-    
-    public String getPresenterApiKey() {
-        String apiKey = prefs.getString(KEY_PRESENTER_API_KEY, null);
-        // Don't use hardcoded fallback - require proper configuration
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            Logger.w("PreferencesManager", "API key not configured - user must set it in Settings");
-            return null; // Return null to force user to configure
-        }
-        return apiKey;
-    }
-    
-    // For backward compatibility
-    public void setTeacherApiKey(String apiKey) {
-        setPresenterApiKey(apiKey);
-    }
-    
-    public String getTeacherApiKey() {
-        return getPresenterApiKey();
-    }
     
     // Clear all preferences
     public void clearAll() {

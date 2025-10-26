@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class User {
     @SerializedName("user_id")
-    private String userId;
+    private Long userId;
     
     @SerializedName("first_name")
     private String firstName;
@@ -16,11 +16,11 @@ public class User {
     private String role; // "STUDENT" or "PRESENTER"
     
     @SerializedName("student_id")
-    private String studentId;
+    private Long studentId;
     
     public User() {}
     
-    public User(String userId, String firstName, String lastName, String email, String role, String studentId) {
+    public User(Long userId, String firstName, String lastName, String email, String role, Long studentId) {
         this.userId = userId;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -30,11 +30,11 @@ public class User {
     }
     
     // Getters and Setters
-    public String getUserId() {
+    public Long getUserId() {
         return userId;
     }
     
-    public void setUserId(String userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
     
@@ -74,11 +74,11 @@ public class User {
         this.role = role;
     }
     
-    public String getStudentId() {
+    public Long getStudentId() {
         return studentId;
     }
     
-    public void setStudentId(String studentId) {
+    public void setStudentId(Long studentId) {
         this.studentId = studentId;
     }
     
@@ -93,12 +93,12 @@ public class User {
     @Override
     public String toString() {
         return "User{" +
-                "userId='" + userId + '\'' +
+                "userId=" + userId +
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
                 ", role='" + role + '\'' +
-                ", studentId='" + studentId + '\'' +
+                ", studentId=" + studentId +
                 '}';
     }
 }

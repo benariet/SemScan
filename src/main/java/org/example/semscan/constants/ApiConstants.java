@@ -12,8 +12,6 @@ public class ApiConstants {
     public static final String SERVER_URL = "http://localhost:8080";
     public static final String API_BASE_URL = "http://localhost:8080/api/v1";
     public static final String API_VERSION = "v1";
-    public static final String API_KEY_HEADER = "x-api-key";
-    
     // =============================================
     // API ENDPOINTS
     // =============================================
@@ -52,13 +50,6 @@ public class ApiConstants {
     // =============================================
     public static final String API_ENDPOINTS_INFO = API_BASE_URL + "/info/endpoints";
     public static final String API_CONFIG_INFO = API_BASE_URL + "/info/config";
-    
-    // =============================================
-    // API KEYS
-    // =============================================
-    // API keys should be configured per user, not hardcoded
-    // public static final String PRESENTER_API_KEY = "hardcoded-key-removed";
-    public static final String STUDENT_API_KEY = "student-api-key-12345"; // If needed
     
     // =============================================
     // MANUAL ATTENDANCE CONFIGURATION
@@ -123,49 +114,49 @@ public class ApiConstants {
     /**
      * Build URL with session ID parameter
      */
-    public static String buildSessionUrl(String sessionId) {
+    public static String buildSessionUrl(long sessionId) {
         return ATTENDANCE_BY_SESSION_ENDPOINT + "?sessionId=" + sessionId;
     }
     
     /**
      * Build URL for pending requests with session ID
      */
-    public static String buildPendingRequestsUrl(String sessionId) {
+    public static String buildPendingRequestsUrl(long sessionId) {
         return PENDING_REQUESTS_ENDPOINT + "?sessionId=" + sessionId;
     }
     
     /**
      * Build URL for approve request with attendance ID
      */
-    public static String buildApproveRequestUrl(String attendanceId) {
-        return APPROVE_REQUEST_ENDPOINT.replace("{attendanceId}", attendanceId);
+    public static String buildApproveRequestUrl(long attendanceId) {
+        return APPROVE_REQUEST_ENDPOINT.replace("{attendanceId}", String.valueOf(attendanceId));
     }
     
     /**
      * Build URL for reject request with attendance ID
      */
-    public static String buildRejectRequestUrl(String attendanceId) {
-        return REJECT_REQUEST_ENDPOINT.replace("{attendanceId}", attendanceId);
+    public static String buildRejectRequestUrl(long attendanceId) {
+        return REJECT_REQUEST_ENDPOINT.replace("{attendanceId}", String.valueOf(attendanceId));
     }
     
     /**
      * Build URL for close session with session ID
      */
-    public static String buildCloseSessionUrl(String sessionId) {
-        return CLOSE_SESSION_ENDPOINT.replace("{sessionId}", sessionId);
+    public static String buildCloseSessionUrl(long sessionId) {
+        return CLOSE_SESSION_ENDPOINT.replace("{sessionId}", String.valueOf(sessionId));
     }
     
     /**
      * Build URL for export CSV with session ID
      */
-    public static String buildExportCsvUrl(String sessionId) {
+    public static String buildExportCsvUrl(long sessionId) {
         return EXPORT_CSV_ENDPOINT + "?sessionId=" + sessionId;
     }
     
     /**
      * Build URL for export XLSX with session ID
      */
-    public static String buildExportXlsxUrl(String sessionId) {
+    public static String buildExportXlsxUrl(long sessionId) {
         return EXPORT_XLSX_ENDPOINT + "?sessionId=" + sessionId;
     }
     
@@ -200,7 +191,7 @@ public class ApiConstants {
     // =============================================
     // TOAST MESSAGE CONFIGURATION
     // =============================================
-    public static final int TOAST_DURATION_ERROR = 8000;  // 8 seconds for errors
+    public static final int TOAST_DURATION_ERROR = 10000;  // 10 seconds for errors
     public static final int TOAST_DURATION_SUCCESS = 5000;  // 5 seconds for success
     public static final int TOAST_DURATION_INFO = 6000;  // 6 seconds for info
     public static final int TOAST_DURATION_DEBUG = 7000;  // 7 seconds for debug

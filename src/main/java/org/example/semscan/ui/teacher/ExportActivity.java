@@ -47,7 +47,7 @@ public class ExportActivity extends AppCompatActivity {
     private PreferencesManager preferencesManager;
     private ApiService apiService;
     
-    private String currentSessionId;
+    private Long currentSessionId;
     private ManualRequestAdapter requestAdapter;
     
     @Override
@@ -72,11 +72,11 @@ public class ExportActivity extends AppCompatActivity {
         textSessionId = findViewById(R.id.text_session_id);
         
         // Get current session ID from intent (passed from QR display)
-        currentSessionId = getIntent().getStringExtra("sessionId");
+        currentSessionId = getIntent().getLongExtra("sessionId", -1L);
         
         // Display the session ID
-        if (currentSessionId != null) {
-            textSessionId.setText(currentSessionId);
+        if (currentSessionId != null && currentSessionId > 0) {
+            textSessionId.setText(String.valueOf(currentSessionId));
             Logger.d(Logger.TAG_UI, "Export activity initialized with session ID: " + currentSessionId);
         } else {
             textSessionId.setText("No session data available");
@@ -121,7 +121,7 @@ public class ExportActivity extends AppCompatActivity {
         
         // API key no longer required - removed authentication
         
-        if (currentSessionId == null) {
+        if (currentSessionId == null || currentSessionId <= 0) {
             Logger.e(Logger.TAG_UI, "Export failed - no session ID available");
             ToastUtils.showError(this, "No session data available");
             return;
@@ -229,7 +229,7 @@ public class ExportActivity extends AppCompatActivity {
         Logger.d("ExportActivity", "Attendance object: " + request.toString());
         
         // Check if attendanceId is null
-        if (request.getAttendanceId() == null || request.getAttendanceId().trim().isEmpty()) {
+        if (request.getAttendanceId() == null || request.getAttendanceId() <= 0) {
             Logger.e("ExportActivity", "Attendance ID is null or empty - cannot approve request");
             ToastUtils.showError(this, "Cannot approve request: Missing attendance ID");
             return;
@@ -324,7 +324,7 @@ public class ExportActivity extends AppCompatActivity {
         exportSessionData(currentSessionId, isExcel);
     }
     
-    private void exportSessionData(String sessionId, boolean isExcel) {
+    private void exportSessionData(Long sessionId, boolean isExcel) {
         Call<ResponseBody> call;
         String filename;
         String mimeType;

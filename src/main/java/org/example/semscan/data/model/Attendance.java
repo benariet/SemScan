@@ -4,13 +4,13 @@ import com.google.gson.annotations.SerializedName;
 
 public class Attendance {
     @SerializedName("attendanceId")
-    private String attendanceId;
+    private Long attendanceId;
     
     @SerializedName("sessionId")
-    private String sessionId;
+    private Long sessionId;
     
     @SerializedName("studentId")
-    private String studentId;
+    private Long studentId;
     
     @SerializedName("attendanceTime")
     private String attendanceTime;
@@ -31,7 +31,7 @@ public class Attendance {
     private Long requestedAt;
     
     @SerializedName("approved_by")
-    private String approvedBy;
+    private Long approvedBy;
     
     @SerializedName("approved_at")
     private Long approvedAt;
@@ -44,7 +44,7 @@ public class Attendance {
     
     public Attendance() {}
     
-    public Attendance(String attendanceId, String sessionId, String studentId, String attendanceTime, String method) {
+    public Attendance(Long attendanceId, Long sessionId, Long studentId, String attendanceTime, String method) {
         this.attendanceId = attendanceId;
         this.sessionId = sessionId;
         this.studentId = studentId;
@@ -53,27 +53,27 @@ public class Attendance {
     }
     
     // Getters and Setters
-    public String getAttendanceId() {
+    public Long getAttendanceId() {
         return attendanceId;
     }
     
-    public void setAttendanceId(String attendanceId) {
+    public void setAttendanceId(Long attendanceId) {
         this.attendanceId = attendanceId;
     }
     
-    public String getSessionId() {
+    public Long getSessionId() {
         return sessionId;
     }
     
-    public void setSessionId(String sessionId) {
+    public void setSessionId(Long sessionId) {
         this.sessionId = sessionId;
     }
     
-    public String getStudentId() {
+    public Long getStudentId() {
         return studentId;
     }
     
-    public void setStudentId(String studentId) {
+    public void setStudentId(Long studentId) {
         this.studentId = studentId;
     }
     
@@ -142,11 +142,11 @@ public class Attendance {
         this.requestedAt = requestedAt;
     }
     
-    public String getApprovedBy() {
+    public Long getApprovedBy() {
         return approvedBy;
     }
     
-    public void setApprovedBy(String approvedBy) {
+    public void setApprovedBy(Long approvedBy) {
         this.approvedBy = approvedBy;
     }
     
@@ -190,9 +190,9 @@ public class Attendance {
     @Override
     public String toString() {
         return "Attendance{" +
-                "attendanceId='" + attendanceId + '\'' +
-                ", sessionId='" + sessionId + '\'' +
-                ", studentId='" + studentId + '\'' +
+                "attendanceId=" + attendanceId +
+                ", sessionId=" + sessionId +
+                ", studentId=" + studentId +
                 ", attendanceTime=" + attendanceTime +
                 ", method='" + method + '\'' +
                 ", alreadyPresent=" + alreadyPresent +

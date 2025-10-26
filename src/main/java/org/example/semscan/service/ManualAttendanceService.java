@@ -73,7 +73,7 @@ public class ManualAttendanceService {
     }
     
     // Get pending requests
-    public void getPendingRequests(String sessionId, PendingRequestsCallback callback) {
+    public void getPendingRequests(Long sessionId, PendingRequestsCallback callback) {
         // API key no longer required - removed authentication
         
         Call<List<Attendance>> call = apiService.getPendingRequests(sessionId);
@@ -95,7 +95,7 @@ public class ManualAttendanceService {
     }
     
     // Approve request
-    public void approveRequest(String attendanceId, ManualAttendanceCallback callback) {
+    public void approveRequest(Long attendanceId, ManualAttendanceCallback callback) {
         // API key no longer required - removed authentication
         
         Call<Attendance> call = apiService.approveManualRequest(attendanceId);
@@ -117,7 +117,7 @@ public class ManualAttendanceService {
     }
     
     // Reject request
-    public void rejectRequest(String attendanceId, ManualAttendanceCallback callback) {
+    public void rejectRequest(Long attendanceId, ManualAttendanceCallback callback) {
         // API key no longer required - removed authentication
         
         Call<Attendance> call = apiService.rejectManualRequest(attendanceId);

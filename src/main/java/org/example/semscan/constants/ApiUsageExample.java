@@ -20,22 +20,24 @@ public class ApiUsageExample {
         // POST http://localhost:8080/api/v1/sessions
         
         // 3. Get attendance for a specific session
-        String sessionId = "session-001";
+        // Note: In real usage, sessionId would come from API response
+        long sessionId = 512L; // Example ID - use actual ID from API
         String attendanceUrl = ApiConstants.buildSessionUrl(sessionId);
-        // GET http://localhost:8080/api/v1/attendance?sessionId=session-001
+        // GET http://localhost:8080/api/v1/attendance?sessionId=512
         
         // 4. Get pending manual requests
         String pendingRequestsUrl = ApiConstants.buildPendingRequestsUrl(sessionId);
-        // GET http://localhost:8080/api/v1/attendance/pending-requests?sessionId=session-001
+        // GET http://localhost:8080/api/v1/attendance/pending-requests?sessionId=SESSIN-1-YYYYMMDD
         
         // 5. Approve a manual request
-        String attendanceId = "attendance-123";
+        // Note: In real usage, attendanceId would come from API response
+        long attendanceId = 2048L; // Example ID - use actual ID from API
         String approveUrl = ApiConstants.buildApproveRequestUrl(attendanceId);
-        // POST http://localhost:8080/api/v1/attendance/attendance-123/approve
+        // POST http://localhost:8080/api/v1/attendance/2048/approve
         
         // 6. Export CSV
         String exportCsvUrl = ApiConstants.buildExportCsvUrl(sessionId);
-        // GET http://localhost:8080/api/v1/export/csv?sessionId=session-001
+        // GET http://localhost:8080/api/v1/export/csv?sessionId=512
         
         // 7. Check response codes
         int responseCode = 200;
@@ -43,14 +45,13 @@ public class ApiUsageExample {
         boolean isClientError = ApiConstants.isClientError(responseCode); // false
         boolean isServerError = ApiConstants.isServerError(responseCode); // false
         
-        // 8. Use API key (should be obtained from PreferencesManager)
-        // String apiKey = ApiConstants.PRESENTER_API_KEY; // Hardcoded keys removed
-        // API keys should be configured per user in Settings
+        // 8. No authentication required - all endpoints are public
+        // API key authentication has been removed from the API
         
         // 9. Use timeouts
-        int connectionTimeout = ApiConstants.CONNECTION_TIMEOUT_SECONDS; // 30
-        int readTimeout = ApiConstants.READ_TIMEOUT_SECONDS; // 30
-        int writeTimeout = ApiConstants.WRITE_TIMEOUT_SECONDS; // 30
+        int connectionTimeout = ApiConstants.CONNECTION_TIMEOUT_SECONDS; // 5
+        int readTimeout = ApiConstants.READ_TIMEOUT_SECONDS; // 5
+        int writeTimeout = ApiConstants.WRITE_TIMEOUT_SECONDS; // 5
     }
     
     /**
@@ -58,15 +59,16 @@ public class ApiUsageExample {
      */
     public void exampleRetrofitUsage() {
         // In your Retrofit interface, you can use the constants like this:
+        // No authentication headers required - all endpoints are public
         
         // @GET(ApiConstants.SEMINARS_ENDPOINT)
-        // Call<List<Seminar>> getSeminars(@Header(ApiConstants.API_KEY_HEADER) String apiKey);
+        // Call<List<Seminar>> getSeminars();
         
         // @POST(ApiConstants.CREATE_SESSION_ENDPOINT)
-        // Call<Session> createSession(@Header(ApiConstants.API_KEY_HEADER) String apiKey, @Body CreateSessionRequest request);
+        // Call<Session> createSession(@Body CreateSessionRequest request);
         
         // @GET(ApiConstants.PENDING_REQUESTS_ENDPOINT)
-        // Call<List<Attendance>> getPendingRequests(@Header(ApiConstants.API_KEY_HEADER) String apiKey, @Query("sessionId") String sessionId);
+        // Call<List<Attendance>> getPendingRequests(@Query("sessionId") String sessionId);
     }
     
     /**
@@ -74,9 +76,9 @@ public class ApiUsageExample {
      */
     public void exampleHeaderUsage() {
         // When making HTTP requests, use the constants for headers:
+        // No authentication headers required - all endpoints are public
         
         // Headers headers = new Headers.Builder()
-        //     .add(ApiConstants.API_KEY_HEADER, ApiConstants.PRESENTER_API_KEY)
         //     .add("Content-Type", ApiConstants.CONTENT_TYPE_JSON)
         //     .build();
     }

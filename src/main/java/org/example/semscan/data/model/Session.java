@@ -47,10 +47,10 @@ public class Session {
         }
     }
     @SerializedName(value = "session_id", alternate = {"sessionId", "id"})
-    private String sessionId;
+    private Long sessionId;
     
     @SerializedName(value = "seminar_id", alternate = {"seminarId"})
-    private String seminarId;
+    private Long seminarId;
     
     @SerializedName(value = "start_time", alternate = {"startTime"})
     @JsonAdapter(TimestampDeserializer.class)
@@ -64,7 +64,7 @@ public class Session {
     
     public Session() {}
     
-    public Session(String sessionId, String seminarId, long startTime, Long endTime, String status) {
+    public Session(Long sessionId, Long seminarId, long startTime, Long endTime, String status) {
         this.sessionId = sessionId;
         this.seminarId = seminarId;
         this.startTime = startTime;
@@ -73,19 +73,19 @@ public class Session {
     }
     
     // Getters and Setters
-    public String getSessionId() {
+    public Long getSessionId() {
         return sessionId;
     }
     
-    public void setSessionId(String sessionId) {
+    public void setSessionId(Long sessionId) {
         this.sessionId = sessionId;
     }
     
-    public String getSeminarId() {
+    public Long getSeminarId() {
         return seminarId;
     }
     
-    public void setSeminarId(String seminarId) {
+    public void setSeminarId(Long seminarId) {
         this.seminarId = seminarId;
     }
     
@@ -130,8 +130,8 @@ public class Session {
     @Override
     public String toString() {
         return "Session{" +
-                "sessionId='" + sessionId + '\'' +
-                ", seminarId='" + seminarId + '\'' +
+                "sessionId=" + sessionId +
+                ", seminarId=" + seminarId +
                 ", startTime=" + startTime +
                 ", endTime=" + endTime +
                 ", status='" + status + '\'' +
