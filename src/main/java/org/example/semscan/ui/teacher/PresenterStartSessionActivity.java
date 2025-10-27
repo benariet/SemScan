@@ -35,23 +35,24 @@ import java.util.List;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import org.example.semscan.ui.teacher.AddSeminarActivity;
+import org.example.semscan.ui.teacher.AddAvailabilityActivity;
 
 public class PresenterStartSessionActivity extends AppCompatActivity {
     
     // Removed spinner - using grid only
     private ListView listSeminars;
     private Button btnStartSession;
-    private Button btnCreateSeminar;
-    private Button btnTestApi;
     
     private PreferencesManager preferencesManager;
     private ApiService apiService;
     private ServerLogger serverLogger;
     
-    private List<Seminar> seminars = new ArrayList<>();
-    private Long selectedSeminarId;
+    private final List<ApiService.PresenterSeminarDto> seminarTiles = new ArrayList<>();
+    private ApiService.PresenterSeminarDto selectedSeminar;
     
     private static final int REQ_ADD_SEMINAR = 2001;
+    private static final int REQ_ADD_AVAILABILITY = 2002;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,7 +77,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         }
         
         // Only load presenter seminars - not all seminars
-        loadPresenterSeminarsGrid();
+        loadPresenterSeminars();
     }
     
     private void initializeViews() {
@@ -84,8 +85,6 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         listSeminars = findViewById(R.id.list_seminars);
 
         btnStartSession = findViewById(R.id.btn_start_session);
-        btnCreateSeminar = findViewById(R.id.btn_create_seminar);
-        btnTestApi = findViewById(R.id.btn_test_api);
         
         // Pull-to-refresh functionality removed - using ListView instead of RecyclerView
     }
@@ -103,7 +102,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        
+
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
@@ -119,31 +118,6 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 startSession();
-            }
-        });
-        
-        btnCreateSeminar.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent i = new Intent(PresenterStartSessionActivity.this, AddSeminarActivity.class);
-                startActivityForResult(i, REQ_ADD_SEMINAR);
-            }
-        });
-        
-        btnTestApi.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                testPresenterSeminarsApi();
-                
-                // Additional debug info
-                String debugInfo = "ListView Debug:\n";
-                debugInfo += "Item Count: " + (listSeminars != null ? listSeminars.getCount() : "null") + "\n";
-                debugInfo += "Visibility: " + (listSeminars != null ? listSeminars.getVisibility() : "null") + "\n";
-                debugInfo += "Height: " + (listSeminars != null ? listSeminars.getHeight() : "null") + "\n";
-                debugInfo += "Width: " + (listSeminars != null ? listSeminars.getWidth() : "null");
-                
-                Toast.makeText(PresenterStartSessionActivity.this, debugInfo, Toast.LENGTH_LONG).show();
-                Logger.i(Logger.TAG_UI, "Debug Info: " + debugInfo);
             }
         });
     }
@@ -165,85 +139,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         return true;
     }
     
-    private void loadSeminars() {
-        Logger.i(Logger.TAG_UI, "Loading seminars");
-        
-        String baseUrl = preferencesManager.getApiBaseUrl();
-        Long userId = preferencesManager.getUserId();
-        
-        Logger.api("GET", baseUrl + "/api/v1/seminars", null);
-        Logger.d(Logger.TAG_UI, "Loading seminars from: " + baseUrl + ", User ID: " + userId);
-        
-        // Removed info toast - too cluttered
-        
-        Call<List<Seminar>> call = apiService.getSeminars();
-        call.enqueue(new Callback<List<Seminar>>() {
-            @Override
-            public void onResponse(Call<List<Seminar>> call, Response<List<Seminar>> response) {
-                // Run UI updates on main thread
-                runOnUiThread(() -> {
-                    if (response.isSuccessful() && response.body() != null) {
-                        Logger.apiResponse("GET", "api/v1/seminars", response.code(), "Success - " + response.body().size() + " seminars");
-                        
-                        seminars.clear();
-                        seminars.addAll(response.body());
-                        
-                        // Log seminar data
-                        for (Seminar seminar : seminars) {
-                            Logger.d(Logger.TAG_UI, "Seminar loaded: " + seminar.toString());
-                        }
-                        
-                        // Removed debug toast - too cluttered
-                        
-                        // Removed spinner update - using grid only
-                        
-                        // Debug: Show how many seminars were loaded
-                        if (seminars.isEmpty()) {
-                            Logger.i(Logger.TAG_UI, "No seminars found");
-                            Toast.makeText(PresenterStartSessionActivity.this, 
-                                    getString(R.string.no_seminars_found), Toast.LENGTH_LONG).show();
-                        } else {
-                            Logger.i(Logger.TAG_UI, "Loaded " + seminars.size() + " seminars successfully");
-                            // Removed seminar count toast - too cluttered
-                        }
-                    } else {
-                        String errorBody = null;
-                        if (response.errorBody() != null) {
-                            try {
-                                errorBody = response.errorBody().string();
-                            } catch (Exception e) {
-                                Logger.e(Logger.TAG_UI, "Error reading response body", e);
-                            }
-                        }
-                        
-                        Logger.apiError("GET", "api/v1/seminars", response.code(), errorBody);
-                        
-                        String errorMsg = "Failed to load seminars. Response code: " + response.code();
-                        if (errorBody != null) {
-                            errorMsg += " - " + errorBody;
-                        }
-                        showLongToast("❌ " + errorMsg);
-                    }
-                });
-            }
-            
-            @Override
-            public void onFailure(Call<List<Seminar>> call, Throwable t) {
-                // Run UI updates on main thread
-                runOnUiThread(() -> {
-                    Logger.e(Logger.TAG_UI, "Failed to load seminars", t);
-                    
-                    String errorMsg = "Network error: " + t.getMessage();
-                    if (t.getMessage().contains("Failed to connect")) {
-                        errorMsg += "\nPlease check if the server is running at: " + preferencesManager.getApiBaseUrl();
-                    }
-                    Toast.makeText(PresenterStartSessionActivity.this, "❌ " + errorMsg, Toast.LENGTH_LONG).show();
-                });
-            }
-        });
-    }
-    
-    private void loadPresenterSeminarsGrid() {
+    private void loadPresenterSeminars() {
         try {
             Long presenterId = preferencesManager.getUserId();
             if (presenterId == null || presenterId <= 0) {
@@ -274,35 +170,26 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     }
                     
                     java.util.List<ApiService.PresenterSeminarDto> list = response.body();
-                    Logger.i(Logger.TAG_UI, "Loaded " + list.size() + " presenter seminars");
-                    
-                    // Debug: Log each seminar
-                    for (int i = 0; i < list.size(); i++) {
-                        ApiService.PresenterSeminarDto seminar = list.get(i);
-                        Logger.d(Logger.TAG_UI, "Seminar " + i + ": ID=" + seminar.id + ", Name=" + seminar.seminarName + ", Slots=" + (seminar.slots != null ? seminar.slots.size() : 0));
+                    if (list == null) list = new ArrayList<>();
+
+                    Logger.i(Logger.TAG_UI, "Loaded " + list.size() + " presenter seminar tiles");
+                    seminarTiles.clear();
+                    seminarTiles.addAll(sortSeminarsByNewest(list));
+
+                    for (int i = 0; i < seminarTiles.size(); i++) {
+                        ApiService.PresenterSeminarDto seminar = seminarTiles.get(i);
+                        Logger.d(Logger.TAG_UI, "Seminar tile " + i + ": presenterSeminarId=" + seminar.presenterSeminarId + ", seminarId=" + seminar.seminarId + ", title=" + seminar.getDisplayTitle() + ", slots=" + (seminar.slots != null ? seminar.slots.size() : 0));
                     }
-                    
-                    // Removed debug toast - too cluttered
-                    
-                    // Test with simple ListView
-                    Logger.i(Logger.TAG_UI, "Loading " + list.size() + " seminars into ListView");
-                    
-                    // Debug: Check if list is empty
-                    if (list.isEmpty()) {
+
+                    if (seminarTiles.isEmpty()) {
                         Logger.w(Logger.TAG_UI, "⚠️ WARNING: Presenter seminars list is EMPTY!");
                         Toast.makeText(PresenterStartSessionActivity.this, "No seminars found for this presenter", Toast.LENGTH_LONG).show();
+                        listSeminars.setAdapter(null);
+                        selectedSeminar = null;
                         return;
                     }
                     
-                    // Create simple string array for ListView
-                    String[] seminarNames = new String[list.size()];
-                    for (int i = 0; i < list.size(); i++) {
-                        ApiService.PresenterSeminarDto seminar = list.get(i);
-                        seminarNames[i] = seminar.seminarName;
-                    }
-                    
-                    // Set up ListView with custom adapter for better selection (using filtered list)
-                    SeminarListAdapter adapter = new SeminarListAdapter(PresenterStartSessionActivity.this, list);
+                    SeminarListAdapter adapter = new SeminarListAdapter(PresenterStartSessionActivity.this, seminarTiles);
                     listSeminars.setAdapter(adapter);
                     
                     // Enable single choice mode for visual selection
@@ -310,14 +197,17 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     
                     // Add click listener to ListView (using filtered list)
                     listSeminars.setOnItemClickListener((parent, view, position, id) -> {
-                        ApiService.PresenterSeminarDto selectedSeminar = list.get(position);
+                        selectedSeminar = seminarTiles.get(position);
                         
-                        // Use the actual seminar ID from the API response
-                        selectedSeminarId = selectedSeminar.id;
+                        if (selectedSeminar == null) {
+                            Logger.w(Logger.TAG_UI, "Selected seminar tile is null at position " + position);
+                            Toast.makeText(PresenterStartSessionActivity.this, "Failed to select seminar", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        
                         btnStartSession.setEnabled(true);
-                        
-                        // Debug: Log the actual seminar ID being used
-                        Logger.d("ListView", "Using seminar ID: " + selectedSeminarId);
+
+                        Logger.d("ListView", "Using seminarId=" + selectedSeminar.seminarId + ", presenterSeminarId=" + selectedSeminar.presenterSeminarId);
                         Logger.d("ListView", "Selected seminar name: " + selectedSeminar.seminarName);
                         
                         // Update adapter selection
@@ -325,8 +215,9 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                         
                         Logger.d("ListView", "Item clicked: " + selectedSeminar.seminarName);
                         Logger.userAction("Select Seminar", selectedSeminar.seminarName);
-                        Toast.makeText(PresenterStartSessionActivity.this, "Selected: " + selectedSeminar.seminarName, Toast.LENGTH_SHORT).show();
                     });
+
+                    restoreSelectionIfPossible();
                 }
 
                 @Override
@@ -349,7 +240,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
         Logger.userAction("Start Session", "User clicked start session button");
         serverLogger.userAction("Start Session", "User clicked start session button");
         
-        if (selectedSeminarId == null) {
+        if (selectedSeminar == null) {
             Logger.w(Logger.TAG_UI, "Start session attempted without selecting seminar");
             serverLogger.w(ServerLogger.TAG_UI, "Start session attempted without selecting seminar");
             Toast.makeText(this, "Please select a seminar", Toast.LENGTH_SHORT).show();
@@ -487,21 +378,34 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     }
     
     private void createNewSession() {
-        Logger.userAction("Create New Session", "Creating new session for seminar: " + selectedSeminarId);
-        
-        // Format start time as ISO 8601 string
+        if (selectedSeminar == null) {
+            Logger.e(Logger.TAG_UI, "createNewSession invoked with null selectedSeminar");
+            Toast.makeText(this, "Please select a seminar", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Long seminarId = selectedSeminar.seminarId;
+        if (seminarId == null || seminarId <= 0) {
+            Logger.e(Logger.TAG_UI, "Selected seminar missing seminarId. presenterSeminarId=" + selectedSeminar.presenterSeminarId);
+            serverLogger.e(ServerLogger.TAG_UI, "Selected seminar missing seminarId. presenterSeminarId=" + selectedSeminar.presenterSeminarId);
+            Toast.makeText(this, "Selected seminar lacks a valid ID", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Logger.userAction("Create New Session", "seminarId=" + seminarId + ", presenterSeminarId=" + selectedSeminar.presenterSeminarId);
+
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault());
         String startTime = sdf.format(new java.util.Date());
-        
+
         ApiService.CreateSessionRequest request = new ApiService.CreateSessionRequest(
-                selectedSeminarId, startTime, "OPEN");
-        
-        // Log the request details (server will generate session ID)
-        Logger.session("Creating Session", "Seminar ID: " + selectedSeminarId + ", Start Time: " + startTime + " (Server will generate session ID)");
-        Logger.api("POST", "api/v1/sessions", "Seminar ID: " + selectedSeminarId + ", Start Time: " + startTime + ", Status: OPEN");
-        
-        Toast.makeText(this, "Creating session for seminar ID: " + selectedSeminarId, Toast.LENGTH_SHORT).show();
-        
+                seminarId, startTime, "OPEN");
+
+        Logger.session("Creating Session", "Seminar ID=" + seminarId + ", presenterSeminarId=" + selectedSeminar.presenterSeminarId + ", Start Time=" + startTime + " (server generates session ID)");
+        Logger.api("POST", "api/v1/sessions", "Seminar ID=" + seminarId + ", presenterSeminarId=" + selectedSeminar.presenterSeminarId + ", Start Time=" + startTime + ", Status=OPEN");
+        serverLogger.api("POST", "api/v1/sessions", "Seminar ID=" + seminarId + ", presenterSeminarId=" + selectedSeminar.presenterSeminarId + ", Start Time=" + startTime + ", Status=OPEN");
+
+        Toast.makeText(this, "Creating session for seminar ID: " + seminarId, Toast.LENGTH_SHORT).show();
+
         Call<Session> call = apiService.createSession(request);
         call.enqueue(new Callback<Session>() {
             @Override
@@ -568,179 +472,20 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     }
     
     private void openQRDisplay(Session session) {
-        Intent intent = new Intent(this, QRDisplayActivity.class);
-        intent.putExtra("sessionId", session.getSessionId());
-        intent.putExtra("seminarId", session.getSeminarId());
-        intent.putExtra("startTime", session.getStartTime());
-        intent.putExtra("endTime", session.getEndTime() != null ? session.getEndTime() : 0L);
-        intent.putExtra("status", session.getStatus());
-        startActivity(intent);
-        finish();
-    }
-    
-    private void showCreateSeminarDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_create_seminar, null);
-        builder.setView(dialogView);
-        
-        EditText etSeminarName = dialogView.findViewById(R.id.et_seminar_name);
-        EditText etSeminarCode = dialogView.findViewById(R.id.et_seminar_code);
-        EditText etDescription = dialogView.findViewById(R.id.et_description);
-        Button btnCancel = dialogView.findViewById(R.id.btn_cancel);
-        Button btnCreate = dialogView.findViewById(R.id.btn_create);
-        
-        AlertDialog dialog = builder.create();
-        
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
-        
-        btnCreate.setOnClickListener(v -> {
-            String seminarName = etSeminarName.getText().toString().trim();
-            String seminarCode = etSeminarCode.getText().toString().trim();
-            String description = etDescription.getText().toString().trim();
-            
-            if (TextUtils.isEmpty(seminarName)) {
-                etSeminarName.setError("Seminar name is required");
-                return;
-            }
-            
-            if (TextUtils.isEmpty(seminarCode)) {
-                etSeminarCode.setError("Seminar code is required");
-                return;
-            }
-            
-            createSeminar(seminarName, seminarCode, description);
-            dialog.dismiss();
-        });
-        
-        dialog.show();
-    }
-    
-    private void createSeminar(String seminarName, String seminarCode, String description) {
-        Logger.userAction("Create Seminar", "Name: " + seminarName + ", Code: " + seminarCode);
-        
-        // API key no longer required - removed authentication
-        
-        Long presenterId = preferencesManager.getUserId();
-        if (presenterId == null || presenterId <= 0) {
-            Logger.e(Logger.TAG_UI, "Seminar creation attempted without User ID");
-            Toast.makeText(this, "User ID not configured. Please set it in Settings.", Toast.LENGTH_LONG).show();
-            return;
-        }
-        
-        ApiService.CreateSeminarRequest request = new ApiService.CreateSeminarRequest(
-                seminarName, seminarCode, description, presenterId);
-        
-        Logger.api("POST", "api/v1/seminars", "Name: " + seminarName + ", Code: " + seminarCode + ", Presenter: " + presenterId);
-        
-        Toast.makeText(this, "Creating seminar...", Toast.LENGTH_SHORT).show();
-        
-        Call<Seminar> call = apiService.createSeminar(request);
-        call.enqueue(new Callback<Seminar>() {
-            @Override
-            public void onResponse(Call<Seminar> call, Response<Seminar> response) {
-                // Run UI updates on main thread
-                runOnUiThread(() -> {
-                    if (response.isSuccessful() && response.body() != null) {
-                        Toast.makeText(PresenterStartSessionActivity.this, 
-                                getString(R.string.seminar_created_successfully), Toast.LENGTH_SHORT).show();
-                        // Reload seminars to include the new one
-                        loadSeminars();
-                    } else {
-                        String errorMsg = "Failed to create seminar. Response code: " + response.code();
-                        if (response.errorBody() != null) {
-                            try {
-                                errorMsg += " - " + response.errorBody().string();
-                            } catch (Exception e) {
-                                errorMsg += " - Error reading response body";
-                            }
-                        }
-                        showLongToast("❌ " + errorMsg);
-                    }
-                });
-            }
-            
-            @Override
-            public void onFailure(Call<Seminar> call, Throwable t) {
-                // Run UI updates on main thread
-                runOnUiThread(() -> {
-                    String errorMsg = "Network error: " + t.getMessage();
-                    if (t.getMessage().contains("Failed to connect")) {
-                        errorMsg += "\nPlease check if the server is running at: " + preferencesManager.getApiBaseUrl();
-                    }
-                    Toast.makeText(PresenterStartSessionActivity.this, "❌ " + errorMsg, Toast.LENGTH_LONG).show();
-                });
-            }
-        });
-    }
-    
-    // Test method to debug presenter seminars API response
-    private void testPresenterSeminarsApi() {
-        Long presenterId = preferencesManager.getUserId();
-        if (presenterId == null || presenterId <= 0) {
-            Toast.makeText(this, "Presenter ID not set", Toast.LENGTH_SHORT).show();
+        if (session == null || session.getSessionId() == null) {
+            Logger.w(Logger.TAG_UI, "openQRDisplay called with invalid session");
             return;
         }
 
-        Logger.i(Logger.TAG_UI, "Testing presenter seminars API for: " + presenterId);
-        Toast.makeText(this, "Testing API for: " + presenterId, Toast.LENGTH_SHORT).show();
-        
-        apiService.getPresenterSeminars(presenterId).enqueue(new Callback<java.util.List<ApiService.PresenterSeminarDto>>() {
-            @Override
-            public void onResponse(Call<java.util.List<ApiService.PresenterSeminarDto>> call, Response<java.util.List<ApiService.PresenterSeminarDto>> response) {
-                runOnUiThread(() -> {
-                    if (response.isSuccessful() && response.body() != null) {
-                        java.util.List<ApiService.PresenterSeminarDto> list = response.body();
-                        String result = "API Test Success!\nCount: " + list.size() + "\n";
-                        for (int i = 0; i < list.size(); i++) {
-                            ApiService.PresenterSeminarDto item = list.get(i);
-                            result += "Item " + i + ": " + item.seminarName + "\n";
-                        }
-                        Toast.makeText(PresenterStartSessionActivity.this, result, Toast.LENGTH_LONG).show();
-                        Logger.i(Logger.TAG_UI, "API Test Result: " + result);
-                    } else {
-                        String error = "API Test Failed!\nCode: " + response.code() + "\nMessage: " + response.message();
-                        Toast.makeText(PresenterStartSessionActivity.this, error, Toast.LENGTH_LONG).show();
-                        Logger.e(Logger.TAG_UI, "API Test Failed: " + error);
-                    }
-                });
-            }
-            
-            @Override
-            public void onFailure(Call<java.util.List<ApiService.PresenterSeminarDto>> call, Throwable t) {
-                runOnUiThread(() -> {
-                    String error = "API Test Network Error: " + t.getMessage();
-                    Toast.makeText(PresenterStartSessionActivity.this, error, Toast.LENGTH_LONG).show();
-                    Logger.e(Logger.TAG_UI, "API Test Network Error: " + error);
-                });
-            }
-        });
+        Intent intent = new Intent(PresenterStartSessionActivity.this, QRDisplayActivity.class);
+        intent.putExtra("sessionId", session.getSessionId());
+        intent.putExtra("seminarId", session.getSeminarId());
+        intent.putExtra("seminarName", selectedSeminar != null ? selectedSeminar.seminarName : null);
+        intent.putExtra("presenterSeminarId", selectedSeminar != null ? selectedSeminar.presenterSeminarId : null);
+        startActivity(intent);
     }
     
-    // Test method to debug API response
-    private void testApiResponse() {
-        // API key no longer required - removed authentication
-        
-        Call<List<Seminar>> call = apiService.getSeminars();
-        call.enqueue(new Callback<List<Seminar>>() {
-            @Override
-            public void onResponse(Call<List<Seminar>> call, Response<List<Seminar>> response) {
-                runOnUiThread(() -> {
-                    if (response.isSuccessful() && response.body() != null) {
-                        // Removed debug toast - too cluttered
-                    } else {
-                        Toast.makeText(PresenterStartSessionActivity.this, "API Error: " + response.code(), Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-            
-            @Override
-            public void onFailure(Call<List<Seminar>> call, Throwable t) {
-                runOnUiThread(() -> {
-                    Toast.makeText(PresenterStartSessionActivity.this, "API Failure: " + t.getMessage(), Toast.LENGTH_LONG).show();
-                });
-            }
-        });
-    }
+    // Removed legacy code for inline seminar creation and API debug calls
     
     @Override
     public boolean onSupportNavigateUp() {
@@ -759,94 +504,123 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQ_ADD_SEMINAR && resultCode == RESULT_OK) {
-            loadPresenterSeminarsGrid();
+        if ((requestCode == REQ_ADD_SEMINAR || requestCode == REQ_ADD_AVAILABILITY) && resultCode == RESULT_OK) {
+            loadPresenterSeminars();
         }
     }
 
-    private static String formatCompactSlots(java.util.List<ApiService.PresenterSeminarSlotDto> slots) {
-        if (slots == null || slots.isEmpty()) return "";
-        String[] days = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-        java.util.Map<String, java.util.List<String>> dayToRanges = new java.util.LinkedHashMap<>();
-        for (ApiService.PresenterSeminarSlotDto s : slots) {
-            String day = (s.weekday >=0 && s.weekday < 7) ? days[s.weekday] : String.valueOf(s.weekday);
-            String range = String.format("%02d–%02d", s.startHour, s.endHour);
-            dayToRanges.computeIfAbsent(day, k -> new java.util.ArrayList<>()).add(range);
+    private void restoreSelectionIfPossible() {
+        if (selectedSeminar == null) {
+            return;
         }
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (java.util.Map.Entry<String, java.util.List<String>> e : dayToRanges.entrySet()) {
-            if (!first) sb.append("; ");
-            first = false;
-            sb.append(e.getKey()).append(' ').append(String.join(", ", e.getValue()));
+        if (seminarTiles.isEmpty()) {
+            selectedSeminar = null;
+            btnStartSession.setEnabled(false);
+            return;
         }
-        return sb.toString();
+        for (int i = 0; i < seminarTiles.size(); i++) {
+            ApiService.PresenterSeminarDto tile = seminarTiles.get(i);
+            if (tile == null) continue;
+            if (tile.presenterSeminarId != null && selectedSeminar.presenterSeminarId != null &&
+                    tile.presenterSeminarId.equals(selectedSeminar.presenterSeminarId)) {
+                selectedSeminar = tile;
+                listSeminars.setItemChecked(i, true);
+                btnStartSession.setEnabled(true);
+                return;
+            }
+        }
+        selectedSeminar = null;
+        btnStartSession.setEnabled(false);
     }
 
-    
-    
-    // Custom adapter for seminar list with selection highlighting
+    private java.util.List<ApiService.PresenterSeminarDto> sortSeminarsByNewest(
+        java.util.List<ApiService.PresenterSeminarDto> list) {
+        list.sort((a, b) -> {
+            long tsA = a.createdAtEpoch != null ? a.createdAtEpoch : 0L;
+            long tsB = b.createdAtEpoch != null ? b.createdAtEpoch : 0L;
+            if (tsA == tsB) {
+                long idA = a.presenterSeminarId != null ? a.presenterSeminarId : 0L;
+                long idB = b.presenterSeminarId != null ? b.presenterSeminarId : 0L;
+                return Long.compare(idB, idA);
+            }
+            return Long.compare(tsB, tsA);
+        });
+        return list;
+    }
+
     private static class SeminarListAdapter extends ArrayAdapter<ApiService.PresenterSeminarDto> {
         private final java.util.List<ApiService.PresenterSeminarDto> seminars;
-        
+
         public SeminarListAdapter(android.content.Context context, java.util.List<ApiService.PresenterSeminarDto> seminars) {
             super(context, R.layout.item_list_seminar, seminars);
             this.seminars = seminars;
         }
-        
+
         @Override
         public android.view.View getView(int position, android.view.View convertView, android.view.ViewGroup parent) {
             if (convertView == null) {
                 convertView = android.view.LayoutInflater.from(getContext()).inflate(R.layout.item_list_seminar, parent, false);
             }
-            
+
             ApiService.PresenterSeminarDto seminar = seminars.get(position);
-            
-            TextView nameView = convertView.findViewById(R.id.text_seminar_name);
-            TextView slotsView = convertView.findViewById(R.id.text_seminar_slots);
-            
-            nameView.setText(seminar.seminarName);
-            slotsView.setText(formatCompactSlots(seminar.slots));
-            
-            // Highlight selected item
-            if (position == getSelectedPosition()) {
-                convertView.setBackgroundColor(0xFFE3F2FD); // Light blue background
-                nameView.setTextColor(0xFF1976D2); // Blue text
-            } else {
-                convertView.setBackgroundColor(0xFFFFFFFF); // White background
-                nameView.setTextColor(0xFF333333); // Dark text
+
+            TextView headerView = convertView.findViewById(R.id.text_seminar_header);
+            TextView subtitleView = convertView.findViewById(R.id.text_seminar_subtitle);
+            TextView metaView = convertView.findViewById(R.id.text_seminar_meta);
+            TextView descriptionView = convertView.findViewById(R.id.text_seminar_description);
+
+            String header = safeTrim(seminar.seminarInstanceName);
+            if (TextUtils.isEmpty(header)) {
+                header = safeTrim(seminar.seminarDescription);
             }
-            
+            if (TextUtils.isEmpty(header)) {
+                header = safeTrim(seminar.seminarDisplayName);
+            }
+            if (TextUtils.isEmpty(header)) {
+                header = safeTrim(seminar.seminarName);
+            }
+            headerView.setText(header);
+
+            subtitleView.setVisibility(View.GONE);
+
+            metaView.setText(seminar.getNormalizedSlots());
+
+            String description = safeTrim(seminar.tileDescription);
+            if (TextUtils.isEmpty(description)) {
+                description = safeTrim(seminar.seminarDescription);
+            }
+
+            if (!TextUtils.isEmpty(description)) {
+                descriptionView.setVisibility(View.VISIBLE);
+                descriptionView.setText(description);
+            } else {
+                descriptionView.setVisibility(View.GONE);
+            }
+
+            if (position == getSelectedPosition()) {
+                convertView.setBackgroundColor(0xFFE3F2FD);
+                headerView.setTextColor(0xFF1976D2);
+            } else {
+                convertView.setBackgroundColor(0xFFFFFFFF);
+                headerView.setTextColor(0xFF333333);
+            }
+
             return convertView;
         }
-        
+
         private int selectedPosition = -1;
-        
+
+        private String safeTrim(String value) {
+            return TextUtils.isEmpty(value) ? "" : value.trim();
+        }
+
         public void setSelectedPosition(int position) {
             selectedPosition = position;
             notifyDataSetChanged();
         }
-        
+
         public int getSelectedPosition() {
             return selectedPosition;
-        }
-        
-        private String formatCompactSlots(java.util.List<ApiService.PresenterSeminarSlotDto> slots) {
-            if (slots == null || slots.isEmpty()) return "No time slots";
-            
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < slots.size(); i++) {
-                if (i > 0) sb.append(", ");
-                ApiService.PresenterSeminarSlotDto slot = slots.get(i);
-                String dayName = getDayName(slot.weekday);
-                sb.append(dayName).append(" ").append(slot.startHour).append("-").append(slot.endHour);
-            }
-            return sb.toString();
-        }
-        
-        private String getDayName(int weekday) {
-            String[] days = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-            return days[weekday];
         }
     }
 }

@@ -23,53 +23,70 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Seminar Name"
+                android:text="Select Seminar"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <Spinner
+                android:id="@+id/spinner_seminars"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Availability Title"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
 
             <EditText
-                android:id="@+id/et_seminar_name"
+                android:id="@+id/et_tile_name"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginBottom="16dp"
-                android:hint="Enter seminar name"
+                android:hint="Enter availability name"
                 android:background="@drawable/edittext_background"
                 android:padding="12dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Seminar Code (optional)"
+                android:text="Availability Description"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
 
             <EditText
-                android:id="@+id/et_seminar_code"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginBottom="16dp"
-                android:hint="Enter seminar code"
-                android:background="@drawable/edittext_background"
-                android:padding="12dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Description"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
-
-            <EditText
-                android:id="@+id/et_seminar_description"
+                android:id="@+id/et_tile_description"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="120dp"
+                android:minHeight="80dp"
                 android:gravity="top"
                 android:layout_marginBottom="16dp"
-                android:hint="Describe the seminar"
+                android:hint="Optional description"
                 android:background="@drawable/edittext_background"
                 android:padding="12dp"
                 android:inputType="textMultiLine" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Weekly time slots"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_slots"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+
+            <Button
+                android:id="@+id/btn_add_slot"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+ Add Day/Time"
+                android:layout_marginTop="12dp" />
 
         </LinearLayout>
     </ScrollView>
@@ -98,5 +115,3 @@
     </LinearLayout>
 
 </LinearLayout>
-
-

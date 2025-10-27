@@ -34,7 +34,7 @@ public class ApiConstants {
     // =============================================
     // MANUAL ATTENDANCE ENDPOINTS
     // =============================================
-    public static final String MANUAL_ATTENDANCE_ENDPOINT = API_BASE_URL + "/attendance/manual-request";
+    public static final String MANUAL_ATTENDANCE_ENDPOINT = API_BASE_URL + "/attendance/manual";
     public static final String PENDING_REQUESTS_ENDPOINT = API_BASE_URL + "/attendance/pending-requests";
     public static final String APPROVE_REQUEST_ENDPOINT = API_BASE_URL + "/attendance/{attendanceId}/approve";
     public static final String REJECT_REQUEST_ENDPOINT = API_BASE_URL + "/attendance/{attendanceId}/reject";

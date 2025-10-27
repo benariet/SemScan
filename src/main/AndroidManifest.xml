@@ -56,6 +56,13 @@
         <activity
             android:name=".ui.teacher.AddSeminarActivity"
             android:exported="false"
+            android:label="Create Seminar"
+            android:theme="@style/Theme.SemScan" />
+
+        <activity
+            android:name=".ui.teacher.AddAvailabilityActivity"
+            android:exported="false"
+            android:label="Add Availability"
             android:theme="@style/Theme.SemScan" />
             
             

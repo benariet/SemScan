@@ -47,6 +47,7 @@ public class StudentHomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_student_home);
 
         Logger.i(Logger.TAG_UI, "StudentHomeActivity created");
+        Logger.userAction("Open Student Home", "Student home screen opened");
 
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
@@ -68,6 +69,9 @@ public class StudentHomeActivity extends AppCompatActivity {
         }
 
         Logger.i(Logger.TAG_UI, "Student user authenticated, setting up UI");
+        if (serverLogger != null) {
+            serverLogger.userAction("Student Authenticated", "Student home setup initialized");
+        }
         initializeViews();
         setupToolbar();
         setupClickListeners();
@@ -93,37 +97,39 @@ public class StudentHomeActivity extends AppCompatActivity {
             return;
         }
         
-        // For students, use a simple mapping approach since they don't have seminars
-        // This is more appropriate for students who don't present seminars
-        String displayName = getStudentDisplayName(userId);
-        
-        if (displayName != null && !displayName.trim().isEmpty()) {
-            textWelcomeMessage.setText("Welcome, " + displayName + "!");
-            Logger.i(Logger.TAG_UI, "Welcome message updated with student name: " + displayName);
-        } else {
-            textWelcomeMessage.setText("Welcome, Student!");
-            Logger.w(Logger.TAG_UI, "No display name found for user: " + userId);
-        }
-    }
-    
-    private String getStudentDisplayName(Long userId) {
-        if (userId == null) {
-            return null;
-        }
-        switch (userId.intValue()) {
-            case 1:
-                return "John Smith";
-            case 2:
-                return "Sarah Johnson";
-            case 3:
-                return "Mike Wilson";
-            case 4:
-                return "Emily Davis";
-            case 5:
-                return "Alex Brown";
-            default:
-                return null;
-        }
+        textWelcomeMessage.setText("Welcome, Student!");
+
+        apiService.getStudentUserById(userId).enqueue(new retrofit2.Callback<org.example.semscan.data.model.User>() {
+            @Override
+            public void onResponse(Call<org.example.semscan.data.model.User> call, Response<org.example.semscan.data.model.User> response) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    Logger.w(Logger.TAG_UI, "Failed to fetch student name. Code: " + response.code());
+                    return;
+                }
+
+                org.example.semscan.data.model.User user = response.body();
+                String fullName = user.getFullName();
+                if (fullName != null) {
+                    fullName = fullName.trim();
+                }
+
+                if (fullName != null && !fullName.isEmpty()) {
+                    textWelcomeMessage.setText("Welcome, " + fullName + "!");
+                    Logger.i(Logger.TAG_UI, "Welcome message updated with student name: " + fullName);
+                    if (serverLogger != null) {
+                        serverLogger.i(ServerLogger.TAG_UI, "Student resolved to: " + fullName);
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<org.example.semscan.data.model.User> call, Throwable t) {
+                Logger.e(Logger.TAG_UI, "Failed to load student profile", t);
+                if (serverLogger != null) {
+                    serverLogger.e(ServerLogger.TAG_UI, "Failed to load student profile", t);
+                }
+            }
+        });
     }
     
     private void setupToolbar() {
@@ -139,6 +145,10 @@ public class StudentHomeActivity extends AppCompatActivity {
         cardScanAttendance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Logger.userAction("Open QR Scanner", "Student tapped scan attendance card");
+                if (serverLogger != null) {
+                    serverLogger.userAction("Open QR Scanner", "Student tapped scan attendance card");
+                }
                 openQRScanner();
             }
         });
@@ -146,6 +156,10 @@ public class StudentHomeActivity extends AppCompatActivity {
         cardManualAttendance.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Logger.userAction("Open Manual Attendance", "Student tapped manual attendance card");
+                if (serverLogger != null) {
+                    serverLogger.userAction("Open Manual Attendance", "Student tapped manual attendance card");
+                }
                 openManualAttendanceRequest();
             }
         });
@@ -153,6 +167,10 @@ public class StudentHomeActivity extends AppCompatActivity {
         btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Logger.userAction("Open Settings", "Student tapped settings button");
+                if (serverLogger != null) {
+                    serverLogger.userAction("Open Settings", "Student tapped settings button");
+                }
                 openSettings();
             }
         });
@@ -160,28 +178,38 @@ public class StudentHomeActivity extends AppCompatActivity {
         btnChangeRole.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Logger.userAction("Change Role", "Student tapped change role button");
+                if (serverLogger != null) {
+                    serverLogger.userAction("Change Role", "Student tapped change role button");
+                }
                 changeRole();
             }
         });
     }
 
     private void openQRScanner() {
-        Logger.userAction("Open QR Scanner", "Student clicked scan attendance");
-        serverLogger.userAction("Open QR Scanner", "Student clicked scan attendance");
+        Logger.userAction("Navigate", "Launching ModernQRScannerActivity");
+        if (serverLogger != null) {
+            serverLogger.userAction("Navigate", "Launching ModernQRScannerActivity");
+        }
         Intent intent = new Intent(this, ModernQRScannerActivity.class);
         startActivity(intent);
     }
 
     private void openManualAttendanceRequest() {
-        Logger.userAction("Open Manual Attendance Request", "Student clicked manual attendance request");
-        serverLogger.userAction("Open Manual Attendance Request", "Student clicked manual attendance request");
+        Logger.userAction("Navigate", "Launching ManualAttendanceRequestActivity");
+        if (serverLogger != null) {
+            serverLogger.userAction("Navigate", "Launching ManualAttendanceRequestActivity");
+        }
         Intent intent = new Intent(this, ManualAttendanceRequestActivity.class);
         startActivity(intent);
     }
 
     private void openSettings() {
-        Logger.userAction("Open Settings", "Student clicked settings");
-        serverLogger.userAction("Open Settings", "Student clicked settings");
+        Logger.userAction("Navigate", "Launching SettingsActivity from student home");
+        if (serverLogger != null) {
+            serverLogger.userAction("Navigate", "Launching SettingsActivity from student home");
+        }
         Intent intent = new Intent(this, SettingsActivity.class);
         startActivity(intent);
     }

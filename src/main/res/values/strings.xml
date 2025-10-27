@@ -18,6 +18,10 @@
     <!-- Presenter Home -->
     <string name="presenter_home_title">Presenter Dashboard</string>
     <string name="start_session_show_qr">Start Session (Show QR)</string>
+    <string name="create_seminar_instance">Create Seminar Instance</string>
+    <string name="create_seminar_instance_description">Create a new instance for this semester (dates &amp; time slots).</string>
+    <string name="create_seminar_card_title">Create Seminar</string>
+    <string name="create_seminar_card_description">Add a new seminar to the catalog (name, code, description).</string>
     <string name="attendance_approvals">Attendance / Approvals</string>
     <string name="export_to_excel">Export to Excel (CSV)</string>
     <string name="manage_courses">Manage Courses</string>

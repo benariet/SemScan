@@ -195,9 +195,9 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
             ", Student ID: " + studentId + ", Reason: " + reason);
         serverLogger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
             ", Student ID: " + studentId + ", Reason: " + reason);
-        Logger.api("POST", "api/v1/attendance/manual-request", 
+        Logger.api("POST", "api/v1/attendance/manual", 
             "Session ID: " + currentSessionId + ", Student ID: " + studentId);
-        serverLogger.api("POST", "api/v1/attendance/manual-request", 
+        serverLogger.api("POST", "api/v1/attendance/manual", 
             "Session ID: " + currentSessionId + ", Student ID: " + studentId);
         
         ApiService.CreateManualRequestRequest request = new ApiService.CreateManualRequestRequest(
@@ -214,9 +214,9 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
                             ", Session: " + currentSessionId);
                         serverLogger.attendance("Manual Request Submitted", "Student: " + studentId + 
                             ", Session: " + currentSessionId);
-                        Logger.apiResponse("POST", "api/v1/attendance/manual-request", 
+                        Logger.apiResponse("POST", "api/v1/attendance/manual", 
                             response.code(), "Manual request submitted successfully");
-                        serverLogger.apiResponse("POST", "api/v1/attendance/manual-request", 
+                        serverLogger.apiResponse("POST", "api/v1/attendance/manual", 
                             response.code(), "Manual request submitted successfully");
                         serverLogger.flushLogs(); // Force send logs after successful submission
                         showSuccess("Manual attendance request submitted. Please wait for approval.");
@@ -225,10 +225,10 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
                         showError("Invalid response from server");
                     }
                 } else {
-                    Logger.apiError("POST", "api/v1/attendance/manual-request", 
+                    Logger.apiError("POST", "api/v1/attendance/manual", 
                         response.code(), "Failed to submit manual request");
                     // Send server-side error as well
-                    serverLogger.apiError("POST", "api/v1/attendance/manual-request", response.code(), "Failed to submit manual request");
+                    serverLogger.apiError("POST", "api/v1/attendance/manual", response.code(), "Failed to submit manual request");
                     handleManualRequestError(response.code());
                 }
             }

@@ -9,6 +9,9 @@ import android.view.animation.Animation;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -39,6 +42,7 @@ import org.example.semscan.data.model.QRPayload;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.utils.QRUtils;
+import org.example.semscan.utils.ServerLogger;
 import org.example.semscan.utils.ToastUtils;
 
 import java.util.concurrent.ExecutionException;
@@ -72,6 +76,7 @@ public class ModernQRScannerActivity extends AppCompatActivity {
     // App Components
     private PreferencesManager preferencesManager;
     private ApiService apiService;
+    private ServerLogger serverLogger;
     
     // State
     private boolean isScanning = true;
@@ -109,9 +114,21 @@ public class ModernQRScannerActivity extends AppCompatActivity {
     }
     
     private void setupClickListeners() {
-        backButton.setOnClickListener(v -> finish());
+        backButton.setOnClickListener(v -> {
+            Logger.userAction("QR Back", "Student tapped back from QR scanner");
+            if (serverLogger != null) {
+                serverLogger.userAction("QR Back", "Student tapped back from QR scanner");
+                serverLogger.flushLogs();
+            }
+            finish();
+        });
         
-        flashButton.setOnClickListener(v -> toggleFlash());
+        flashButton.setOnClickListener(v -> {
+            toggleFlash();
+            if (serverLogger != null) {
+                serverLogger.userAction("Toggle Flash", "Student toggled flashlight");
+            }
+        });
         
         // Add smooth animations
         backButton.setOnTouchListener((v, event) -> {
@@ -128,6 +145,11 @@ public class ModernQRScannerActivity extends AppCompatActivity {
     private void initializeComponents() {
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
+        serverLogger = ServerLogger.getInstance(this);
+        Long userId = preferencesManager.getUserId();
+        String userRole = preferencesManager.getUserRole();
+        serverLogger.updateUserContext(userId, userRole);
+        serverLogger.userAction("Open QR Scanner", "ModernQRScannerActivity opened");
         cameraExecutor = Executors.newSingleThreadExecutor();
         
         // Initialize ML Kit Barcode Scanner
@@ -234,11 +256,17 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         
         isScanning = false;
         Logger.qr("QR Code Scanned", "Content: " + qrContent);
+        if (serverLogger != null) {
+            serverLogger.qr("QR Code Scanned", "Content: " + qrContent);
+        }
         
         // Parse QR content
         QRPayload payload = QRUtils.parseQRContent(qrContent);
         if (payload == null || !QRUtils.isValidQRContent(qrContent)) {
             Logger.qr("Invalid QR Code", "Failed to parse QR content: " + qrContent);
+            if (serverLogger != null) {
+                serverLogger.qr("Invalid QR Code", "Failed to parse QR content: " + qrContent);
+            }
             updateStatus("Invalid QR code format", R.color.error_red);
             showError("Invalid QR code format. Expected: {\"sessionId\":\"session-xxx\"}");
             resumeScanning();
@@ -248,6 +276,9 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         Long sessionId = payload.getSessionId();
         if (sessionId == null || sessionId <= 0) {
             Logger.qr("Invalid QR Code", "Session ID is null or empty");
+            if (serverLogger != null) {
+                serverLogger.qr("Invalid QR Code", "Session ID is null or empty");
+            }
             updateStatus("QR code missing session ID", R.color.error_red);
             showError("QR code missing session ID");
             resumeScanning();
@@ -255,6 +286,9 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         }
         
         Logger.qr("QR Code Parsed", "Session ID: " + sessionId);
+        if (serverLogger != null) {
+            serverLogger.qr("QR Code Parsed", "Session ID: " + sessionId);
+        }
         currentSessionId = sessionId;
         
         updateStatus("Processing...", R.color.warning_orange);
@@ -268,15 +302,24 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         Long studentId = preferencesManager.getUserId();
         if (studentId == null || studentId <= 0) {
             Logger.e(TAG, "Student ID not found or invalid");
+            if (serverLogger != null) {
+                serverLogger.e(ServerLogger.TAG_QR, "Student ID not found or invalid");
+            }
             showError("Student ID not found. Please log in again.");
             return;
         }
 
         Logger.d(TAG, "Submitting attendance - Session: " + sessionId + ", Student: " + studentId);
+        if (serverLogger != null) {
+            serverLogger.attendance("Submit Attendance", "Session: " + sessionId + ", Student: " + studentId);
+        }
         
         // Debug: Log the API base URL being used
         String apiBaseUrl = ApiClient.getInstance(this).getCurrentBaseUrl();
         Logger.d(TAG, "API Base URL: " + apiBaseUrl);
+        if (serverLogger != null) {
+            serverLogger.api("POST", "api/v1/attendance", "Base URL: " + apiBaseUrl + ", Session: " + sessionId + ", Student: " + studentId);
+        }
         
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
             sessionId, studentId, System.currentTimeMillis()
@@ -292,6 +335,12 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                     Attendance result = response.body();
                     if (result != null) {
                         Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
+                        if (serverLogger != null) {
+                            serverLogger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
+                            serverLogger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + studentId);
+                            serverLogger.flushLogs();
+                        }
+                        vibrateSuccess();
                         updateStatus("Success!", R.color.success_green);
                         showSuccess("Attendance recorded successfully!");
                         Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + studentId);
@@ -305,6 +354,9 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                     }
                 } else {
                     Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
+                    if (serverLogger != null) {
+                        serverLogger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
+                    }
                     updateStatus("Request failed", R.color.error_red);
                     
                     // Parse error message from response body
@@ -346,12 +398,18 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                     
                     // Show the specific error message in a dialog
                     showErrorDialog(errorMessage);
+                    if (serverLogger != null) {
+                        serverLogger.attendance("Attendance Failed", "Session: " + sessionId + ", Student: " + studentId + ", Reason: " + errorMessage);
+                    }
                 }
             }
             
             @Override
             public void onFailure(Call<Attendance> call, Throwable t) {
                 Logger.e(TAG, "Attendance submission failed", t);
+                if (serverLogger != null) {
+                    serverLogger.e(ServerLogger.TAG_QR, "Attendance submission failed", t);
+                }
                 updateStatus("Network error", R.color.error_red);
                 showError("Network error: " + t.getMessage());
                 resumeScanning();
@@ -460,6 +518,20 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                 })
                 .setCancelable(false) // User must press OK to dismiss
                 .show();
+    }
+
+    private void vibrateSuccess() {
+        Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+        if (vibrator == null || !vibrator.hasVibrator()) {
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            VibrationEffect effect = VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE);
+            vibrator.vibrate(effect);
+        } else {
+            vibrator.vibrate(80);
+        }
     }
     
     @Override

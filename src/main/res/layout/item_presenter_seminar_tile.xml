@@ -28,6 +28,17 @@
             android:ellipsize="end" />
 
         <TextView
+            android:id="@+id/text_tile_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tile description"
+            android:textSize="13sp"
+            android:textColor="@color/gray_700"
+            android:layout_marginTop="4dp"
+            android:maxLines="2"
+            android:ellipsize="end" />
+
+        <TextView
             android:id="@+id/text_compact_slots"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

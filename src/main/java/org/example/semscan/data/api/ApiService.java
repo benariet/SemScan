@@ -1,5 +1,7 @@
 package org.example.semscan.data.api;
 
+import com.google.gson.annotations.SerializedName;
+
 import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.model.Attendance;
 import org.example.semscan.data.model.Seminar;
@@ -20,6 +22,7 @@ import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+import android.text.TextUtils;
 
 public interface ApiService {
     
@@ -50,7 +53,7 @@ public interface ApiService {
     Call<List<Attendance>> getAttendance(@Query("sessionId") Long sessionId);
     
     // Manual attendance requests
-    @POST("api/v1/attendance/manual-request")
+    @POST("api/v1/attendance/manual")
     Call<Attendance> createManualRequest(@Body CreateManualRequestRequest request);
     
     @GET("api/v1/attendance/pending-requests")
@@ -66,7 +69,7 @@ public interface ApiService {
     // Seminars (No authentication required)
     @GET("api/v1/seminars")
     Call<List<Seminar>> getSeminars();
-    
+
     @POST("api/v1/seminars")
     Call<Seminar> createSeminar(@Body CreateSeminarRequest request);
     
@@ -105,10 +108,10 @@ public interface ApiService {
         );
 
         // Optional: delete presenter seminar - No authentication required
-        @DELETE("api/v1/presenters/{presenterId}/seminars/{seminarId}")
+        @DELETE("api/v1/presenters/{presenterId}/seminars/{presenterSeminarId}")
         Call<Void> deletePresenterSeminar(
                 @Path("presenterId") Long presenterId,
-                @Path("seminarId") Long seminarId
+                @Path("presenterSeminarId") Long presenterSeminarId
         );
     
     // Request/Response DTOs
@@ -140,17 +143,20 @@ public interface ApiService {
     class CreateSeminarRequest {
         public String seminarName;
         public String seminarCode;
-        public String description;
+        public String seminarDescription;
         public Long presenterId;
-        
-        public CreateSeminarRequest(String seminarName, String seminarCode, String description, Long presenterId) {
+
+        public CreateSeminarRequest(String seminarName,
+                                    String seminarCode,
+                                    String seminarDescription,
+                                    Long presenterId) {
             this.seminarName = seminarName;
             this.seminarCode = seminarCode;
-            this.description = description;
+            this.seminarDescription = seminarDescription;
             this.presenterId = presenterId;
         }
     }
-    
+
     class CreateManualRequestRequest {
         public Long sessionId;
         public Long studentId;
@@ -171,26 +177,137 @@ public interface ApiService {
 
 
     class PresenterSeminarSlotDto {
+        @SerializedName(value = "presenterSeminarSlotId", alternate = {"id", "slotId"})
+        public Long presenterSeminarSlotId;
+
         public int weekday;     // 0=Sun .. 6=Sat
         public int startHour;   // 0..23
         public int endHour;     // 1..24, > startHour
     }
 
     class PresenterSeminarDto {
-        public Long id;
+        @SerializedName(value = "presenterSeminarId", alternate = {"id", "presenter_seminar_id"})
+        public Long presenterSeminarId;
+
+        @SerializedName(value = "seminarId", alternate = {"seminar_id"})
+        public Long seminarId;
+
+        @SerializedName(value = "presenterId", alternate = {"presenter_id"})
         public Long presenterId;
+
+        @SerializedName(value = "seminarName", alternate = {"seminar_name", "title"})
         public String seminarName;
+
+        @SerializedName(value = "seminarDescription", alternate = {"seminar_description", "availabilityDescription"})
+        public String seminarDescription;
+
+        @SerializedName(value = "seminarDisplayName", alternate = {"seminar_display_name", "semName"})
+        public String seminarDisplayName;
+
+        @SerializedName(value = "customTitle", alternate = {"custom_title", "availabilityTitle"})
+        public String seminarInstanceName;
+
+        @SerializedName(value = "tileDescription", alternate = {"tile_description", "displayDescription"})
+        public String tileDescription;
+
+        @SerializedName(value = "presenterDisplayName", alternate = {"presenter_display_name", "displayName"})
+        public String presenterDisplayName;
+
         public java.util.List<PresenterSeminarSlotDto> slots;
+
+        @SerializedName(value = "createdAt", alternate = {"created_at"})
         public String createdAt;
+
+        @SerializedName(value = "updatedAt", alternate = {"updated_at"})
+        public String updatedAt;
+
+        @SerializedName(value = "createdAtEpoch", alternate = {"created_at_epoch"})
+        public Long createdAtEpoch;
+
+        public String getDisplayTitle() {
+            if (!TextUtils.isEmpty(seminarInstanceName)) {
+                return seminarInstanceName.trim();
+            }
+            if (!TextUtils.isEmpty(seminarName)) {
+                return seminarName.trim();
+            }
+            if (!TextUtils.isEmpty(seminarDisplayName)) {
+                return seminarDisplayName.trim();
+            }
+            return "";
+        }
+
+        public String getSeminarDisplayNameOrFallback() {
+            if (!TextUtils.isEmpty(seminarDisplayName)) {
+                return seminarDisplayName.trim();
+            }
+            if (!TextUtils.isEmpty(seminarName)) {
+                return seminarName.trim();
+            }
+            return "";
+        }
+
+        public String getDescriptionLine() {
+            if (!TextUtils.isEmpty(tileDescription)) {
+                return tileDescription.trim();
+            }
+            if (!TextUtils.isEmpty(seminarDescription)) {
+                return seminarDescription.trim();
+            }
+            return "";
+        }
+
+        public String getNormalizedSlots() {
+            if (slots == null || slots.isEmpty()) {
+                return "TBD";
+            }
+            String[] days = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+            java.util.Map<String, java.util.List<String>> grouped = new java.util.LinkedHashMap<>();
+            for (PresenterSeminarSlotDto slot : slots) {
+                String dayLabel = (slot.weekday >= 0 && slot.weekday < days.length) ? days[slot.weekday] : String.valueOf(slot.weekday);
+                String range = String.format("%02d:%02d–%02d:%02d",
+                        slot.startHour, 0,
+                        slot.endHour, 0);
+                grouped.computeIfAbsent(dayLabel, k -> new java.util.ArrayList<>()).add(range);
+            }
+            StringBuilder builder = new StringBuilder();
+            boolean firstDay = true;
+            for (java.util.Map.Entry<String, java.util.List<String>> entry : grouped.entrySet()) {
+                if (!firstDay) {
+                    builder.append(", ");
+                }
+                firstDay = false;
+                builder.append(entry.getKey()).append(" • ").append(TextUtils.join("; ", entry.getValue()));
+            }
+            return builder.toString();
+        }
     }
 
     class CreatePresenterSeminarRequest {
+        public Long seminarId;
         public String seminarName;
+        public String seminarDescription;
+        public String tileDescription;
+        public String seminarInstanceName;
+        public String seminarDisplayName;
         public java.util.List<PresenterSeminarSlotDto> slots;
 
-        public CreatePresenterSeminarRequest(String seminarName, java.util.List<PresenterSeminarSlotDto> slots) {
+        public CreatePresenterSeminarRequest() {}
+
+        public CreatePresenterSeminarRequest(Long seminarId,
+                                             String seminarName,
+                                             String seminarDescription,
+                                             String tileDescription,
+                                             java.util.List<PresenterSeminarSlotDto> slots) {
+            this.seminarId = seminarId;
             this.seminarName = seminarName;
+            this.seminarDescription = seminarDescription;
+            this.tileDescription = tileDescription;
             this.slots = slots;
+        }
+
+        public CreatePresenterSeminarRequest(String seminarName, java.util.List<PresenterSeminarSlotDto> slots) {
+            this(null, seminarName, null, null, slots);
         }
     }
     
