@@ -26,73 +26,86 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:paddingBottom="24dp">
 
-            <!-- Info Card -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progress_loading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:visibility="visible" />
+
+            <TextView
+                android:id="@+id/text_status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="6dp">
+                android:text="Loading active sessions..."
+                android:textColor="@color/gray_600"
+                android:gravity="center_horizontal"
+                android:layout_marginTop="12dp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+        <LinearLayout
+            android:id="@+id/container_form"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@android:color/transparent">
 
-                    <ImageView
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
-                        android:src="@drawable/ic_edit"
-                        android:contentDescription="Manual Request"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginBottom="16dp"
-                        android:background="@drawable/circle_background_accent"
-                        android:padding="16dp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Manual Attendance Request"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/primary_blue"
-                        android:gravity="center"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="If you're unable to scan the QR code, you can request manual attendance. Your request will be reviewed by the presenter."
-                        android:textSize="14sp"
-                        android:textColor="@color/gray_600"
-                        android:gravity="center"
-                        android:lineSpacingExtra="4dp" />
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- Instructions -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Instructions:"
-                android:textSize="16sp"
+                android:text="Choose an active session"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/gray_700"
+                android:layout_marginBottom="12dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_sessions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:layout_marginBottom="24dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reason"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 android:textColor="@color/gray_700"
                 android:layout_marginBottom="8dp" />
 
-            <TextView
+            <EditText
+                android:id="@+id/edit_reason"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="1. Select the session you want to request attendance for\n2. Provide a clear reason for your request\n3. Submit your request and wait for presenter approval\n4. You will be notified once your request is processed"
-                android:textSize="14sp"
-                android:textColor="@color/gray_600"
-                android:lineSpacingExtra="4dp"
+                android:layout_height="144dp"
+                android:gravity="top|start"
+                android:background="@drawable/edittext_background"
+                android:hint="Explain why you need manual attendance"
+                android:padding="12dp"
+                android:inputType="textMultiLine"
+                android:maxLines="6"
+                android:textColor="@color/gray_900"
+                android:overScrollMode="never"
                 android:layout_marginBottom="24dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_submit_request"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Submit Request"
+                android:textAllCaps="false"
+                android:textStyle="bold"
+                android:backgroundTint="@color/primary_blue"
+                android:textColor="@color/white" />
+
+        </LinearLayout>
 
         </LinearLayout>
 

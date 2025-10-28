@@ -5,9 +5,10 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
+import android.widget.EditText;
 import android.widget.Toast;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -34,8 +35,6 @@ public class StudentHomeActivity extends AppCompatActivity {
 
     private CardView cardScanAttendance;
     private CardView cardManualAttendance;
-    private Button btnSettings;
-    private Button btnChangeRole;
     private TextView textWelcomeMessage;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
@@ -80,12 +79,12 @@ public class StudentHomeActivity extends AppCompatActivity {
     private void initializeViews() {
         cardScanAttendance = findViewById(R.id.card_scan_attendance);
         cardManualAttendance = findViewById(R.id.card_manual_attendance);
-        btnSettings = findViewById(R.id.btn_settings);
-        btnChangeRole = findViewById(R.id.btn_change_role);
         textWelcomeMessage = findViewById(R.id.text_welcome_message);
         
         // Set personalized welcome message
         updateWelcomeMessage();
+        cardScanAttendance.setBackgroundResource(R.drawable.card_dashboard_background);
+        cardManualAttendance.setBackgroundResource(R.drawable.card_dashboard_background);
     }
     
     private void updateWelcomeMessage() {
@@ -163,28 +162,6 @@ public class StudentHomeActivity extends AppCompatActivity {
                 openManualAttendanceRequest();
             }
         });
-
-        btnSettings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Logger.userAction("Open Settings", "Student tapped settings button");
-                if (serverLogger != null) {
-                    serverLogger.userAction("Open Settings", "Student tapped settings button");
-                }
-                openSettings();
-            }
-        });
-
-        btnChangeRole.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Logger.userAction("Change Role", "Student tapped change role button");
-                if (serverLogger != null) {
-                    serverLogger.userAction("Change Role", "Student tapped change role button");
-                }
-                changeRole();
-            }
-        });
     }
 
     private void openQRScanner() {
@@ -237,15 +214,21 @@ public class StudentHomeActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-
         if (id == R.id.action_settings) {
+            Logger.userAction("Open Settings", "Student selected settings from menu");
+            if (serverLogger != null) {
+                serverLogger.userAction("Open Settings", "Student selected settings from menu");
+            }
             openSettings();
             return true;
         } else if (id == R.id.action_change_role) {
+            Logger.userAction("Change Role", "Student selected change role from menu");
+            if (serverLogger != null) {
+                serverLogger.userAction("Change Role", "Student selected change role from menu");
+            }
             changeRole();
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 

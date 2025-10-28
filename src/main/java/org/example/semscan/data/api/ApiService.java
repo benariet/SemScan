@@ -70,6 +70,9 @@ public interface ApiService {
     @GET("api/v1/seminars")
     Call<List<Seminar>> getSeminars();
 
+    @GET("api/v1/seminars/presenter/{presenterId}")
+    Call<List<Seminar>> getSeminarsForPresenter(@Path("presenterId") Long presenterId);
+
     @POST("api/v1/seminars")
     Call<Seminar> createSeminar(@Body CreateSeminarRequest request);
     
@@ -204,11 +207,11 @@ public interface ApiService {
         @SerializedName(value = "seminarDisplayName", alternate = {"seminar_display_name", "semName"})
         public String seminarDisplayName;
 
-        @SerializedName(value = "customTitle", alternate = {"custom_title", "availabilityTitle"})
-        public String seminarInstanceName;
+        @SerializedName(value = "instanceName", alternate = {"instance_name", "customTitle", "availabilityTitle"})
+        public String instanceName;
 
-        @SerializedName(value = "tileDescription", alternate = {"tile_description", "displayDescription"})
-        public String tileDescription;
+        @SerializedName(value = "instanceDescription", alternate = {"instance_description", "tileDescription", "displayDescription"})
+        public String instanceDescription;
 
         @SerializedName(value = "presenterDisplayName", alternate = {"presenter_display_name", "displayName"})
         public String presenterDisplayName;
@@ -225,8 +228,8 @@ public interface ApiService {
         public Long createdAtEpoch;
 
         public String getDisplayTitle() {
-            if (!TextUtils.isEmpty(seminarInstanceName)) {
-                return seminarInstanceName.trim();
+            if (!TextUtils.isEmpty(instanceName)) {
+                return instanceName.trim();
             }
             if (!TextUtils.isEmpty(seminarName)) {
                 return seminarName.trim();
@@ -248,8 +251,8 @@ public interface ApiService {
         }
 
         public String getDescriptionLine() {
-            if (!TextUtils.isEmpty(tileDescription)) {
-                return tileDescription.trim();
+            if (!TextUtils.isEmpty(instanceDescription)) {
+                return instanceDescription.trim();
             }
             if (!TextUtils.isEmpty(seminarDescription)) {
                 return seminarDescription.trim();
@@ -287,9 +290,8 @@ public interface ApiService {
         public Long seminarId;
         public String seminarName;
         public String seminarDescription;
-        public String tileDescription;
-        public String seminarInstanceName;
-        public String seminarDisplayName;
+        public String instanceName;
+        public String instanceDescription;
         public java.util.List<PresenterSeminarSlotDto> slots;
 
         public CreatePresenterSeminarRequest() {}
@@ -297,17 +299,19 @@ public interface ApiService {
         public CreatePresenterSeminarRequest(Long seminarId,
                                              String seminarName,
                                              String seminarDescription,
-                                             String tileDescription,
+                                             String instanceName,
+                                             String instanceDescription,
                                              java.util.List<PresenterSeminarSlotDto> slots) {
             this.seminarId = seminarId;
             this.seminarName = seminarName;
             this.seminarDescription = seminarDescription;
-            this.tileDescription = tileDescription;
+            this.instanceName = instanceName;
+            this.instanceDescription = instanceDescription;
             this.slots = slots;
         }
 
         public CreatePresenterSeminarRequest(String seminarName, java.util.List<PresenterSeminarSlotDto> slots) {
-            this(null, seminarName, null, null, slots);
+            this(null, seminarName, null, null, null, slots);
         }
     }
     

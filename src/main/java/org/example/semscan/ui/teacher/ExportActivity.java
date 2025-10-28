@@ -133,6 +133,11 @@ public class ExportActivity extends AppCompatActivity {
         call.enqueue(new Callback<List<Attendance>>() {
             @Override
             public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
+                Logger.d("ExportActivity", "=== API RESPONSE DEBUG ===");
+                Logger.d("ExportActivity", "Response successful: " + response.isSuccessful());
+                Logger.d("ExportActivity", "Response code: " + response.code());
+                Logger.d("ExportActivity", "Response body null: " + (response.body() == null));
+                
                 if (response.isSuccessful() && response.body() != null) {
                     List<Attendance> pendingRequests = response.body();
                     Logger.apiResponse("GET", "api/v1/attendance/pending-requests", 
@@ -140,6 +145,7 @@ public class ExportActivity extends AppCompatActivity {
                     
                     // Debug logging for pending requests
                     Logger.d("ExportActivity", "=== PENDING REQUESTS DEBUG ===");
+                    Logger.d("ExportActivity", "Total pending requests: " + pendingRequests.size());
                     for (int i = 0; i < pendingRequests.size(); i++) {
                         Attendance req = pendingRequests.get(i);
                         Logger.d("ExportActivity", "Request " + i + ":");
@@ -153,14 +159,27 @@ public class ExportActivity extends AppCompatActivity {
                     
                     if (pendingRequests.isEmpty()) {
                         // No pending requests, proceed with export
+                        Logger.d("ExportActivity", "No pending requests found, proceeding with export");
                         exportData();
                     } else {
                         // Show review modal
+                        Logger.d("ExportActivity", "Found " + pendingRequests.size() + " pending requests, showing review modal");
                         showReviewModal(pendingRequests);
                     }
                 } else {
+                    // Log detailed error information
+                    String errorBody = null;
+                    if (response.errorBody() != null) {
+                        try {
+                            errorBody = response.errorBody().string();
+                        } catch (Exception e) {
+                            Logger.e(Logger.TAG_UI, "Error reading pending requests response body", e);
+                        }
+                    }
+                    
                     Logger.apiError("GET", "api/v1/attendance/pending-requests", 
-                        response.code(), "Failed to get pending requests");
+                        response.code(), errorBody != null ? errorBody : "Failed to get pending requests");
+                    Logger.d("ExportActivity", "API Error - Code: " + response.code() + ", Body: " + errorBody);
                     ToastUtils.showError(ExportActivity.this, "Failed to check pending requests");
                 }
             }
@@ -174,6 +193,9 @@ public class ExportActivity extends AppCompatActivity {
     }
     
     private void showReviewModal(List<Attendance> pendingRequests) {
+        Logger.d("ExportActivity", "=== SHOW REVIEW MODAL DEBUG ===");
+        Logger.d("ExportActivity", "Creating review modal for " + pendingRequests.size() + " requests");
+        
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_review_requests, null);
@@ -185,6 +207,14 @@ public class ExportActivity extends AppCompatActivity {
         Button btnCancelReview = dialogView.findViewById(R.id.btn_cancel_review);
         Button btnContinueExport = dialogView.findViewById(R.id.btn_continue_export);
         
+        Logger.d("ExportActivity", "Dialog view components found:");
+        Logger.d("ExportActivity", "  - textPendingCount: " + (textPendingCount != null));
+        Logger.d("ExportActivity", "  - recyclerRequests: " + (recyclerRequests != null));
+        Logger.d("ExportActivity", "  - btnApproveAllSafe: " + (btnApproveAllSafe != null));
+        Logger.d("ExportActivity", "  - btnRejectAllDuplicates: " + (btnRejectAllDuplicates != null));
+        Logger.d("ExportActivity", "  - btnCancelReview: " + (btnCancelReview != null));
+        Logger.d("ExportActivity", "  - btnContinueExport: " + (btnContinueExport != null));
+        
         // Set up recycler view
         recyclerRequests.setLayoutManager(new LinearLayoutManager(this));
         recyclerRequests.setAdapter(requestAdapter);
@@ -194,6 +224,7 @@ public class ExportActivity extends AppCompatActivity {
         textPendingCount.setText(pendingRequests.size() + " pending requests");
         
         AlertDialog dialog = builder.setView(dialogView).create();
+        Logger.d("ExportActivity", "Dialog created successfully");
         
         // Set up button listeners
         btnApproveAllSafe.setOnClickListener(v -> {
@@ -213,7 +244,15 @@ public class ExportActivity extends AppCompatActivity {
             exportData();
         });
         
-        dialog.show();
+        Logger.d("ExportActivity", "About to show dialog");
+        try {
+            dialog.show();
+            Logger.d("ExportActivity", "Dialog show() called successfully");
+        } catch (Exception e) {
+            Logger.e("ExportActivity", "Failed to show dialog", e);
+            // Fallback: handle pending requests directly
+            handlePendingRequestsDirectly(pendingRequests);
+        }
     }
     
     private void approveRequest(Attendance request) {
@@ -369,8 +408,21 @@ public class ExportActivity extends AppCompatActivity {
                         Toast.makeText(ExportActivity.this, "Failed to save file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 } else {
-                    Logger.apiError("GET", endpoint, response.code(), "Export request failed");
-                    Toast.makeText(ExportActivity.this, "Export failed", Toast.LENGTH_SHORT).show();
+                    // Parse error response body for detailed error message
+                    String errorBody = null;
+                    if (response.errorBody() != null) {
+                        try {
+                            errorBody = response.errorBody().string();
+                        } catch (Exception e) {
+                            Logger.e(Logger.TAG_UI, "Error reading export response body", e);
+                        }
+                    }
+                    
+                    Logger.apiError("GET", endpoint, response.code(), errorBody != null ? errorBody : "Export request failed");
+                    
+                    // Show specific error message based on response code
+                    String errorMessage = getExportErrorMessage(response.code(), errorBody);
+                    ToastUtils.showError(ExportActivity.this, errorMessage);
                 }
             }
             
@@ -402,6 +454,52 @@ public class ExportActivity extends AppCompatActivity {
         } catch (Exception e) {
             Logger.e(Logger.TAG_UI, "Failed to share file", e);
             Toast.makeText(this, "Failed to share file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Provide a simple way to handle pending requests without dialog
+     * This can be called as a fallback if the dialog fails
+     */
+    private void handlePendingRequestsDirectly(List<Attendance> pendingRequests) {
+        Logger.d("ExportActivity", "Handling pending requests directly - count: " + pendingRequests.size());
+        
+        // For now, just show a message and allow user to continue
+        // In a real implementation, you might want to show a simpler dialog or list
+        String message = "Found " + pendingRequests.size() + " pending manual attendance requests. " +
+                        "You can either:\n" +
+                        "1. Approve/reject them individually, or\n" +
+                        "2. Continue with export (requests will remain pending)";
+        
+        ToastUtils.showError(this, message);
+        
+        // For debugging, let's also log the details
+        for (Attendance req : pendingRequests) {
+            Logger.d("ExportActivity", "Pending request - ID: " + req.getAttendanceId() + 
+                      ", Student: " + req.getStudentId() + ", Reason: " + req.getManualReason());
+        }
+    }
+    
+    /**
+     * Get user-friendly error message for export failures
+     */
+    private String getExportErrorMessage(int responseCode, String errorBody) {
+        switch (responseCode) {
+            case 409:
+                // Parse the specific error message from the server
+                if (errorBody != null && errorBody.contains("manual attendance requests are pending approval")) {
+                    return "Cannot export while manual attendance requests are pending approval. Please review and resolve all pending requests before exporting.";
+                }
+                return "Export conflict: " + (errorBody != null ? errorBody : "Please resolve pending requests");
+            case 404:
+                return "Session not found or no data available for export";
+            case 400:
+                return "Invalid export request: " + (errorBody != null ? errorBody : "Please check session data");
+            case 500:
+                return "Server error during export: " + (errorBody != null ? errorBody : "Please try again later");
+            default:
+                return "Export failed (Code: " + responseCode + ")" + 
+                       (errorBody != null ? " - " + errorBody : "");
         }
     }
     

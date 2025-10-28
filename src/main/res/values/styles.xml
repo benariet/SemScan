@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="SemScanToolbarPopup" parent="@style/ThemeOverlay.AppCompat.Light">
+        <item name="android:popupBackground">@color/white_900</item>
+        <item name="android:textColorPrimary">@color/gray_900</item>
+        <item name="android:textColor">@color/gray_900</item>
+        <item name="android:colorForeground">@color/gray_900</item>
+        <item name="colorControlNormal">@color/gray_900</item>
+        <item name="android:itemTextAppearance">@style/SemScanPopupMenuItem</item>
+    </style>
+
+    <style name="SemScanPopupMenuItem" parent="@style/TextAppearance.AppCompat.Body1">
+        <item name="android:textColor">@color/gray_900</item>
+    </style>
+
+</resources>

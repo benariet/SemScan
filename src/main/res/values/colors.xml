@@ -37,6 +37,7 @@
     <color name="background_light">#FFF5F5F5</color>
     <color name="background_white">#FFFFFFFF</color>
     <color name="surface_light">#FFFFFFFF</color>
+    <color name="white_900">#FFFFFFFF</color>
     
     <!-- QR Scanner colors -->
     <color name="result_view">#FF00FF00</color>

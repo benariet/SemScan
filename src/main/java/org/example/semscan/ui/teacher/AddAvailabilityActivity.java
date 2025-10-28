@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
+import android.widget.RadioGroup;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -30,9 +31,14 @@ import retrofit2.Response;
 
 public class AddAvailabilityActivity extends AppCompatActivity {
 
-    private EditText etTileName;
-    private EditText etTileDescription;
+    private EditText etInstanceName;
+    private EditText etInstanceDescription;
     private Spinner spinnerSeminars;
+    private EditText etNewSeminarName;
+    private EditText etNewSeminarDescription;
+    private View containerExisting;
+    private View containerCreate;
+    private RadioGroup modeGroup;
     private RecyclerView recyclerSlots;
     private final List<Seminar> seminarCatalog = new ArrayList<>();
     private ArrayAdapter<String> seminarAdapter;
@@ -45,6 +51,7 @@ public class AddAvailabilityActivity extends AppCompatActivity {
     private Long selectedSeminarId;
     private String seminarNameFromSeminarsTable;
     private String seminarDescriptionFromSeminarsTable;
+    private boolean createNewSeminar = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,14 +64,19 @@ public class AddAvailabilityActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Add Availability");
+            getSupportActionBar().setTitle("Create Seminar & Availability");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
-        etTileName = findViewById(R.id.et_tile_name);
-        etTileDescription = findViewById(R.id.et_tile_description);
         spinnerSeminars = findViewById(R.id.spinner_seminars);
+        etNewSeminarName = findViewById(R.id.et_new_seminar_name);
+        etNewSeminarDescription = findViewById(R.id.et_new_seminar_description);
+        etInstanceName = findViewById(R.id.et_instance_name);
+        etInstanceDescription = findViewById(R.id.et_instance_description);
+        containerExisting = findViewById(R.id.container_existing_seminar);
+        containerCreate = findViewById(R.id.container_new_seminar);
+        modeGroup = findViewById(R.id.radio_group_mode);
         recyclerSlots = findViewById(R.id.recycler_slots);
         recyclerSlots.setLayoutManager(new LinearLayoutManager(this));
         slotsAdapter = new SlotsAdapter();
@@ -83,6 +95,11 @@ public class AddAvailabilityActivity extends AppCompatActivity {
                     selectedSeminarId = seminar.getSeminarId();
                     seminarNameFromSeminarsTable = seminar.getSeminarName();
                     seminarDescriptionFromSeminarsTable = seminar.getDescription();
+                    if (!createNewSeminar && TextUtils.isEmpty(etInstanceDescription.getText().toString())) {
+                        if (!TextUtils.isEmpty(seminarDescriptionFromSeminarsTable)) {
+                            etInstanceDescription.setText(seminarDescriptionFromSeminarsTable);
+                        }
+                    }
                 } else {
                     selectedSeminarId = null;
                     seminarNameFromSeminarsTable = null;
@@ -106,6 +123,21 @@ public class AddAvailabilityActivity extends AppCompatActivity {
         seminarNameFromSeminarsTable = getIntent().getStringExtra("seminarName");
         seminarDescriptionFromSeminarsTable = getIntent().getStringExtra("seminarDescription");
         loadSeminarCatalog();
+
+        modeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.radio_create_new) {
+                createNewSeminar = true;
+                containerCreate.setVisibility(View.VISIBLE);
+                containerExisting.setVisibility(View.GONE);
+            } else {
+                createNewSeminar = false;
+                containerCreate.setVisibility(View.GONE);
+                containerExisting.setVisibility(View.VISIBLE);
+                if (!TextUtils.isEmpty(seminarDescriptionFromSeminarsTable) && TextUtils.isEmpty(etInstanceDescription.getText().toString())) {
+                    etInstanceDescription.setText(seminarDescriptionFromSeminarsTable);
+                }
+            }
+        });
     }
 
     @Override
@@ -115,17 +147,27 @@ public class AddAvailabilityActivity extends AppCompatActivity {
     }
 
     private void save() {
-        String tileName = etTileName.getText().toString().trim();
-        String tileDescription = etTileDescription.getText().toString().trim();
+        String instanceName = etInstanceName.getText().toString().trim();
+        String instanceDescription = etInstanceDescription.getText().toString().trim();
 
-        if (TextUtils.isEmpty(tileName)) {
-            etTileName.setError("Availability title is required");
+        if (TextUtils.isEmpty(instanceName)) {
+            etInstanceName.setError("Tile label is required");
             return;
         }
 
-        if (selectedSeminarId == null || selectedSeminarId <= 0) {
-            Toast.makeText(this, "Please choose a seminar", Toast.LENGTH_LONG).show();
-            return;
+        String newSeminarName = etNewSeminarName.getText().toString().trim();
+        String newSeminarDescription = etNewSeminarDescription.getText().toString().trim();
+
+        if (createNewSeminar) {
+            if (TextUtils.isEmpty(newSeminarName)) {
+                etNewSeminarName.setError("Seminar name is required");
+                return;
+            }
+        } else {
+            if (selectedSeminarId == null || selectedSeminarId <= 0) {
+                Toast.makeText(this, "Please choose a seminar", Toast.LENGTH_LONG).show();
+                return;
+            }
         }
 
         List<ApiService.PresenterSeminarSlotDto> slots = slotsAdapter.getSlots();
@@ -148,19 +190,20 @@ public class AddAvailabilityActivity extends AppCompatActivity {
         }
 
         ApiService.CreatePresenterSeminarRequest body = new ApiService.CreatePresenterSeminarRequest();
-        body.seminarId = selectedSeminarId;
-        body.seminarName = seminarNameFromSeminarsTable; // official seminar name from catalog
-        body.seminarDisplayName = seminarNameFromSeminarsTable;
-        body.seminarInstanceName = tileName; // presenter-provided instance name
-
-        String resolvedDescription = !TextUtils.isEmpty(tileDescription)
-                ? tileDescription
-                : seminarDescriptionFromSeminarsTable;
-        body.seminarDescription = TextUtils.isEmpty(resolvedDescription) ? null : resolvedDescription; // instance description (fallback to catalog)
-        body.tileDescription = TextUtils.isEmpty(tileDescription) ? null : tileDescription; // keep legacy description for older payloads
+        if (createNewSeminar) {
+            body.seminarId = null;
+            body.seminarName = newSeminarName;
+            body.seminarDescription = TextUtils.isEmpty(newSeminarDescription) ? null : newSeminarDescription;
+        } else {
+            body.seminarId = selectedSeminarId;
+            body.seminarName = seminarNameFromSeminarsTable;
+            body.seminarDescription = TextUtils.isEmpty(seminarDescriptionFromSeminarsTable) ? null : seminarDescriptionFromSeminarsTable;
+        }
+        body.instanceName = instanceName;
+        body.instanceDescription = TextUtils.isEmpty(instanceDescription) ? null : instanceDescription;
         body.slots = slots;
 
-        Logger.userAction("Create Availability", "name=" + tileName + ", slots=" + slots.size());
+        Logger.userAction("Create Availability", "name=" + instanceName + ", slots=" + slots.size());
         Logger.api("POST", "api/v1/presenters/" + presenterId + "/seminars", "creating presenter availability");
 
         apiService.createPresenterSeminar(presenterId, body).enqueue(new Callback<ApiService.PresenterSeminarDto>() {
@@ -186,7 +229,13 @@ public class AddAvailabilityActivity extends AppCompatActivity {
     }
 
     private void loadSeminarCatalog() {
-        apiService.getSeminars().enqueue(new Callback<List<Seminar>>() {
+        Long presenterId = preferencesManager.getUserId();
+        if (presenterId == null || presenterId <= 0) {
+            Toast.makeText(this, "Presenter ID not found. Please check settings.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        apiService.getSeminarsForPresenter(presenterId).enqueue(new Callback<List<Seminar>>() {
             @Override
             public void onResponse(Call<List<Seminar>> call, Response<List<Seminar>> response) {
                 if (response.isSuccessful() && response.body() != null) {

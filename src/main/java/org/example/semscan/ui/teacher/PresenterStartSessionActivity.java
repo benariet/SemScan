@@ -569,15 +569,17 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
             TextView metaView = convertView.findViewById(R.id.text_seminar_meta);
             TextView descriptionView = convertView.findViewById(R.id.text_seminar_description);
 
-            String header = safeTrim(seminar.seminarInstanceName);
-            if (TextUtils.isEmpty(header)) {
-                header = safeTrim(seminar.seminarDescription);
-            }
-            if (TextUtils.isEmpty(header)) {
-                header = safeTrim(seminar.seminarDisplayName);
-            }
-            if (TextUtils.isEmpty(header)) {
-                header = safeTrim(seminar.seminarName);
+            String instanceTitle = safeTrim(seminar.instanceName);
+            String catalogTitle = safeTrim(seminar.getSeminarDisplayNameOrFallback());
+            String fallbackTitle = safeTrim(seminar.seminarName);
+
+            String header;
+            if (!TextUtils.isEmpty(instanceTitle)) {
+                header = instanceTitle;
+            } else if (!TextUtils.isEmpty(catalogTitle)) {
+                header = catalogTitle;
+            } else {
+                header = fallbackTitle;
             }
             headerView.setText(header);
 
@@ -585,7 +587,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
 
             metaView.setText(seminar.getNormalizedSlots());
 
-            String description = safeTrim(seminar.tileDescription);
+            String description = safeTrim(seminar.instanceDescription);
             if (TextUtils.isEmpty(description)) {
                 description = safeTrim(seminar.seminarDescription);
             }

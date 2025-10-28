@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
-    
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/action_settings"
         android:title="@string/settings"
         android:icon="@drawable/ic_settings"
-        app:showAsAction="never" />
-        
+        android:showAsAction="never" />
     <item
         android:id="@+id/action_change_role"
         android:title="@string/change_role"
         android:icon="@drawable/ic_swap_horiz"
-        app:showAsAction="never" />
-        
+        android:showAsAction="never" />
 </menu>
