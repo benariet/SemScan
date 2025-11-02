@@ -1,6 +1,7 @@
 package org.example.semscan.ui;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -23,6 +24,7 @@ public class SettingsActivity extends AppCompatActivity {
     private Button btnSave;
     private Button btnClearData;
     private Button btnLoggingSettings;
+    private Button btnLoginTest;
     
     private PreferencesManager preferencesManager;
     
@@ -47,6 +49,7 @@ public class SettingsActivity extends AppCompatActivity {
         btnSave = findViewById(R.id.btn_save);
         btnClearData = findViewById(R.id.btn_clear_data);
         btnLoggingSettings = findViewById(R.id.btn_logging_settings);
+        btnLoginTest = findViewById(R.id.btn_login_test);
     }
     
     private void setupToolbar() {
@@ -77,6 +80,13 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 showLoggingSettingsDialog();
+            }
+        });
+        
+        btnLoginTest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openLoginTest();
             }
         });
     }
@@ -188,6 +198,13 @@ public class SettingsActivity extends AppCompatActivity {
                     }
                 })
                 .show();
+    }
+    
+    private void openLoginTest() {
+        Logger.userAction("Login Test", "User clicked login test button");
+        
+        Intent intent = new Intent(this, org.example.semscan.ui.auth.LoginActivity.class);
+        startActivity(intent);
     }
     
     @Override

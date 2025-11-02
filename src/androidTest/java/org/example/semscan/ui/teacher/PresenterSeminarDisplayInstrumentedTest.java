@@ -17,9 +17,9 @@ public class PresenterSeminarDisplayInstrumentedTest {
     @Test
     public void displayMethods_respectInstanceNameAndDescriptionPriority() {
         ApiService.PresenterSeminarDto dto = new ApiService.PresenterSeminarDto();
-        dto.seminarInstanceName = "Custom Instance";
+        dto .instanceName = "Custom Instance";
         dto.seminarDisplayName = "Catalog Seminar";
-        dto.tileDescription = "Presenter description";
+        dto.instanceDescription = "Presenter description";
         dto.seminarDescription = "Catalog description";
         dto.slots = buildSlots(new int[]{0, 3}, new int[]{7, 21}, new int[]{8, 22});
 
@@ -32,10 +32,10 @@ public class PresenterSeminarDisplayInstrumentedTest {
     @Test
     public void displayMethods_fallbackWhenInstanceNameMissing() {
         ApiService.PresenterSeminarDto dto = new ApiService.PresenterSeminarDto();
-        dto.seminarInstanceName = null;
+        dto.instanceName = null;
         dto.seminarDisplayName = "Catalog Seminar";
         dto.seminarDescription = "Catalog description";
-        dto.tileDescription = null;
+        dto.instanceDescription = null;
         dto.slots = buildSlots(new int[]{1}, new int[]{10}, new int[]{12});
 
         assertEquals("Catalog Seminar", dto.getDisplayTitle());
@@ -47,9 +47,9 @@ public class PresenterSeminarDisplayInstrumentedTest {
     @Test
     public void description_prefersPresenterTextOverCatalog() {
         ApiService.PresenterSeminarDto dto = new ApiService.PresenterSeminarDto();
-        dto.seminarInstanceName = "Instance";
+        dto.instanceName = "Instance";
         dto.seminarDisplayName = "Catalog";
-        dto.tileDescription = "Presenter overrides";
+        dto.instanceDescription = "Presenter overrides";
         dto.seminarDescription = "Catalog source";
         dto.slots = buildSlots(new int[]{2}, new int[]{9}, new int[]{11});
 
