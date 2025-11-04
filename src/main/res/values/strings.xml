@@ -4,9 +4,41 @@
     
     <!-- Role Selection -->
     <string name="select_role">Select Your Role</string>
-    <string name="presenter">Presenter</string>
-    <string name="student">Student</string>
+    <string name="presenter">I\'m presenting today</string>
+    <string name="student">I\'m a participant</string>
+    <string name="im_presenting">I\'m presenting today</string>
+    <string name="im_presenting_semester">I\'m presenting this semester</string>
+    <string name="im_participant">I\'m a participant</string>
     <string name="role_description">Choose your role to access the appropriate features</string>
+    <string name="role_selection_instruction_semester">Select your role for this semester</string>
+    <string name="role_selection_info_semester">Select your role for this semester. You can change your role later in settings.</string>
+    <string name="presenter_description_semester">I\'ll present one time this semester - Start sessions and display QR codes</string>
+    <string name="confirm_selection">Continue</string>
+    <string name="save_and_continue">Save and Continue</string>
+    <string name="please_select_role">Please select a role</string>
+    <string name="both_roles">Both</string>
+    <string name="degree_hint">Choose the degree you belong to. This controls which roles are available after login.</string>
+    <string name="first_setup_title">Initial Setup</string>
+    <string name="first_setup_subtitle">Select your degree and the role you play this semester.</string>
+    <string name="select_role_title">Select Role</string>
+    <string name="confirm_setup_title">Confirm Setup</string>
+    <string name="confirm_setup_message">Degree: %1$s
+Role: %2$s
+
+Continue?</string>
+    <string name="context_picker_title">Choose Active Role</string>
+    <string name="context_picker_subtitle">Pick how you want to use the app right now. You can change it later.</string>
+    <string name="continue_label">Continue</string>
+    <string name="setup_select_options_warning">Please select your degree and role</string>
+    <string name="setup_select_context_warning">Please choose how you want to continue</string>
+    
+    <!-- Degree Selection -->
+    <string name="select_degree">Select Your Degree</string>
+    <string name="msc">MSc</string>
+    <string name="phd">PhD</string>
+    <string name="msc_description">I\'m a participant or presenting today</string>
+    <string name="phd_description">Presenter only</string>
+    <string name="degree_description">Choose your degree to access the appropriate features</string>
     
     <!-- Student Home -->
     <string name="student_home_title">Student Dashboard</string>
@@ -121,12 +153,25 @@
     <string name="settings_title">Settings</string>
     <string name="change_role">Change Role</string>
     <string name="user_id">User ID</string>
+    <string name="user_id_email">User ID (Email)</string>
     <string name="api_base_url">API Base URL</string>
     <string name="about">About</string>
     <string name="version">Version %s</string>
+    <string name="degree">Degree</string>
+    <string name="configure_logging">Configure Logging</string>
+    <string name="clear_data">Clear Data</string>
     
     <!-- Permissions -->
     <string name="camera_permission_required">Camera permission is required to scan QR codes</string>
     <string name="permission_denied">Permission denied</string>
     <string name="go_to_settings">Go to Settings</string>
+    <string name="degree_option_msc">MSc
+Participant or presenter</string>
+    <string name="degree_option_phd">PhD
+Presenter only</string>
+    <string name="login_subtitle">Sign in to continue</string>
+    <string name="login_email_hint">Email or User ID</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_button">Log In</string>
+    <string name="login_error_register">Could not register your account. Please try again.</string>
 </resources>

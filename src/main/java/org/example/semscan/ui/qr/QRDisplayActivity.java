@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -88,8 +89,15 @@ public class QRDisplayActivity extends AppCompatActivity {
         initializeViews();
         setupToolbar();
         setupClickListeners();
+        keepScreenOn();
         generateAndDisplayQR();
         startAttendanceUpdates();
+    }
+    
+    private void keepScreenOn() {
+        // Keep screen on - both in layout and programmatically for reliability
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        Logger.i(Logger.TAG_QR, "Screen keep-on enabled for QR display");
     }
     
     private void initializeViews() {

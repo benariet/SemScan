@@ -10,6 +10,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 
 import org.example.semscan.R;
+import org.example.semscan.ui.auth.FirstTimeSetupActivity;
+import org.example.semscan.ui.auth.RoleContextActivity;
 import org.example.semscan.ui.student.StudentHomeActivity;
 import org.example.semscan.ui.teacher.PresenterHomeActivity;
 import org.example.semscan.utils.Logger;
@@ -30,6 +32,27 @@ public class RolePickerActivity extends AppCompatActivity {
         Logger.i(Logger.TAG_UI, "RolePickerActivity created");
         
         preferencesManager = PreferencesManager.getInstance(this);
+        
+        boolean hasDegree = preferencesManager.hasDegree();
+        if (!hasDegree) {
+            Logger.w(Logger.TAG_UI, "No degree stored for user, redirecting to first time setup");
+            Intent intent = new Intent(this, FirstTimeSetupActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
+        if (preferencesManager.isPhD()) {
+            Logger.i(Logger.TAG_UI, "PhD users bypass role picker and navigate to presenter home");
+            Intent intent = new Intent(this, PresenterHomeActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
+        // Continue with MSc role selection UI
         
         initializeViews();
         setupClickListeners();
@@ -78,14 +101,32 @@ public class RolePickerActivity extends AppCompatActivity {
         Logger.i(Logger.TAG_UI, "Setting user role to: " + role);
         
         preferencesManager.setUserRole(role);
-        navigateToHome();
+        if ("BOTH".equals(role)) {
+            preferencesManager.setActiveRole("STUDENT");
+            Intent intent = new Intent(this, RoleContextActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        } else {
+            preferencesManager.setActiveRole(role);
+            navigateToHome();
+        }
     }
     
     private void navigateToHome() {
         Intent intent;
         String targetActivity;
         
-        if (preferencesManager.isPresenter()) {
+        if (preferencesManager.hasBothRoles()) {
+            String activeRole = preferencesManager.getActiveRole();
+            if ("PRESENTER".equals(activeRole)) {
+                intent = new Intent(this, PresenterHomeActivity.class);
+                targetActivity = "PresenterHomeActivity";
+            } else {
+                intent = new Intent(this, StudentHomeActivity.class);
+                targetActivity = "StudentHomeActivity";
+            }
+        } else if (preferencesManager.isPresenter()) {
             intent = new Intent(this, PresenterHomeActivity.class);
             targetActivity = "PresenterHomeActivity";
         } else if (preferencesManager.isStudent()) {

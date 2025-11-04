@@ -22,7 +22,7 @@
         tools:targetApi="30">
         
         <activity
-            android:name=".ui.RolePickerActivity"
+            android:name=".ui.auth.LoginActivity"
             android:exported="true"
             android:theme="@style/Theme.SemScan">
             <intent-filter>
@@ -30,6 +30,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <activity
+            android:name=".ui.RolePickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+
+        <activity
+            android:name=".ui.auth.FirstTimeSetupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan.Light" />
+
+        <activity
+            android:name=".ui.auth.RoleContextActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan.Light" />
         
         <activity
             android:name=".ui.student.StudentHomeActivity"

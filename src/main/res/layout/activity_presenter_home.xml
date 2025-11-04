@@ -65,27 +65,23 @@
         android:padding="16dp"
         android:elevation="4dp">
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_settings"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:text="@string/settings"
-            android:textSize="16sp"
-            android:background="@drawable/button_secondary"
-            android:textColor="@color/gray_700"
-            android:layout_marginEnd="8dp" />
+            style="@style/SemScanButtonOutlinedPrimary" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_change_role"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="8dp"
             android:text="@string/change_role"
-            android:textSize="16sp"
-            android:background="@drawable/button_secondary"
-            android:textColor="@color/gray_700"
-            android:layout_marginStart="8dp" />
+            style="@style/SemScanButtonOutlinedPrimary" />
 
     </LinearLayout>
 

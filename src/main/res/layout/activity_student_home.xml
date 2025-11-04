@@ -178,4 +178,33 @@
 
     </ScrollView>
 
+    <!-- Bottom Actions -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/surface_light"
+        android:padding="16dp"
+        android:elevation="4dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_settings"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="@string/settings"
+            style="@style/SemScanButtonOutlinedPrimary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_change_role"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/change_role"
+            style="@style/SemScanButtonOutlinedPrimary" />
+
+    </LinearLayout>
+
 </LinearLayout>

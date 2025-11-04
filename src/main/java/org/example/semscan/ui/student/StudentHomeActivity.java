@@ -2,17 +2,14 @@ package org.example.semscan.ui.student;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.Toast;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
+
+import com.google.android.material.button.MaterialButton;
 
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
@@ -35,6 +32,8 @@ public class StudentHomeActivity extends AppCompatActivity {
 
     private CardView cardScanAttendance;
     private CardView cardManualAttendance;
+    private MaterialButton btnSettings;
+    private MaterialButton btnChangeRole;
     private TextView textWelcomeMessage;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
@@ -67,6 +66,8 @@ public class StudentHomeActivity extends AppCompatActivity {
             return;
         }
 
+        preferencesManager.setActiveRole("STUDENT");
+
         Logger.i(Logger.TAG_UI, "Student user authenticated, setting up UI");
         if (serverLogger != null) {
             serverLogger.userAction("Student Authenticated", "Student home setup initialized");
@@ -80,6 +81,8 @@ public class StudentHomeActivity extends AppCompatActivity {
         cardScanAttendance = findViewById(R.id.card_scan_attendance);
         cardManualAttendance = findViewById(R.id.card_manual_attendance);
         textWelcomeMessage = findViewById(R.id.text_welcome_message);
+        btnSettings = findViewById(R.id.btn_settings);
+        btnChangeRole = findViewById(R.id.btn_change_role);
         
         // Set personalized welcome message
         updateWelcomeMessage();
@@ -162,6 +165,20 @@ public class StudentHomeActivity extends AppCompatActivity {
                 openManualAttendanceRequest();
             }
         });
+
+        btnSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openSettings();
+            }
+        });
+
+        btnChangeRole.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                changeRole();
+            }
+        });
     }
 
     private void openQRScanner() {
@@ -203,33 +220,6 @@ public class StudentHomeActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_student_home, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            Logger.userAction("Open Settings", "Student selected settings from menu");
-            if (serverLogger != null) {
-                serverLogger.userAction("Open Settings", "Student selected settings from menu");
-            }
-            openSettings();
-            return true;
-        } else if (id == R.id.action_change_role) {
-            Logger.userAction("Change Role", "Student selected change role from menu");
-            if (serverLogger != null) {
-                serverLogger.userAction("Change Role", "Student selected change role from menu");
-            }
-            changeRole();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     @Override

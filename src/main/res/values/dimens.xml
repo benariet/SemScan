@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="role_card_stroke_default">2dp</dimen>
+    <dimen name="role_card_stroke_selected">3dp</dimen>
+</resources>
+

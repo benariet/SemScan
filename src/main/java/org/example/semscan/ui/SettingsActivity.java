@@ -2,27 +2,34 @@ package org.example.semscan.ui;
 
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.google.android.material.button.MaterialButton;
+
 import org.example.semscan.R;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.ServerLogger;
 import org.example.semscan.data.api.ApiClient;
 
 public class SettingsActivity extends AppCompatActivity {
     
     private EditText editUserId;
     private EditText editApiUrl;
-    private Button btnSave;
-    private Button btnClearData;
-    private Button btnLoggingSettings;
+    private MaterialButton btnSave;
+    private MaterialButton btnClearData;
+    private RadioGroup radioDegree;
+    private RadioButton radioDegreeMsc;
+    private RadioButton radioDegreePhd;
     
     private PreferencesManager preferencesManager;
     
@@ -46,7 +53,9 @@ public class SettingsActivity extends AppCompatActivity {
         editApiUrl = findViewById(R.id.edit_api_url);
         btnSave = findViewById(R.id.btn_save);
         btnClearData = findViewById(R.id.btn_clear_data);
-        btnLoggingSettings = findViewById(R.id.btn_logging_settings);
+        radioDegree = findViewById(R.id.radio_degree);
+        radioDegreeMsc = findViewById(R.id.radio_degree_msc);
+        radioDegreePhd = findViewById(R.id.radio_degree_phd);
     }
     
     private void setupToolbar() {
@@ -72,25 +81,37 @@ public class SettingsActivity extends AppCompatActivity {
                 showClearDataDialog();
             }
         });
-        
-        btnLoggingSettings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showLoggingSettingsDialog();
-            }
-        });
     }
     
     private void loadCurrentSettings() {
+        String email = preferencesManager.getUserEmail();
+        String bguUsername = preferencesManager.getBguUsername();
         Long userId = preferencesManager.getUserId();
         String apiUrl = preferencesManager.getApiBaseUrl();
+        String degree = preferencesManager.getUserDegree();
         
         Logger.i(Logger.TAG_UI, "Loading current settings");
-        Logger.d(Logger.TAG_UI, "Current User ID: " + userId);
+        Logger.d(Logger.TAG_UI, "Current User ID: " + userId + ", email: " + email + ", bguUsername: " + bguUsername);
         Logger.d(Logger.TAG_UI, "Current API URL: " + apiUrl);
         
-        editUserId.setText(userId != null && userId > 0 ? String.valueOf(userId) : "");
+        if (!TextUtils.isEmpty(bguUsername)) {
+            editUserId.setText(bguUsername);
+        } else if (!TextUtils.isEmpty(email)) {
+            editUserId.setText(email);
+        } else if (userId != null && userId > 0) {
+            editUserId.setText(String.valueOf(userId));
+        } else {
+            editUserId.setText("");
+        }
         editApiUrl.setText(apiUrl);
+        
+        if ("PhD".equalsIgnoreCase(degree)) {
+            radioDegreePhd.setChecked(true);
+            radioDegreeMsc.setChecked(false);
+        } else {
+            radioDegreeMsc.setChecked(true);
+            radioDegreePhd.setChecked(false);
+        }
     }
     
     private void saveSettings() {
@@ -98,13 +119,14 @@ public class SettingsActivity extends AppCompatActivity {
         
         String userIdInput = editUserId.getText().toString().trim();
         String apiUrl = editApiUrl.getText().toString().trim();
+        int selectedDegreeId = radioDegree.getCheckedRadioButtonId();
         
         Logger.d(Logger.TAG_UI, "Attempting to save settings - User ID: " + userIdInput + ", API URL: " + apiUrl);
         
         // Validate inputs
         if (userIdInput.isEmpty()) {
-            Logger.w(Logger.TAG_UI, "Save settings failed - User ID is empty");
-            Toast.makeText(this, "User ID is required", Toast.LENGTH_SHORT).show();
+            Logger.w(Logger.TAG_UI, "Save settings failed - User ID (email) is empty");
+            Toast.makeText(this, "User ID (email) is required", Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -114,14 +136,39 @@ public class SettingsActivity extends AppCompatActivity {
             return;
         }
         
+        if (selectedDegreeId == View.NO_ID) {
+            Logger.w(Logger.TAG_UI, "Save settings failed - Degree not selected");
+            Toast.makeText(this, "Please select your degree", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
         try {
             // Save settings
-            Long parsedUserId = Long.parseLong(userIdInput);
-            if (parsedUserId <= 0) {
-                throw new NumberFormatException("User ID must be positive");
+            preferencesManager.setBguUsername(userIdInput);
+            preferencesManager.setUserEmail(userIdInput);
+            Long derivedUserId;
+            try {
+                derivedUserId = Long.parseLong(userIdInput);
+            } catch (NumberFormatException numberFormatException) {
+                // Derive a stable numeric ID from the email string
+                derivedUserId = (long) Math.abs(userIdInput.hashCode());
+                Logger.i(Logger.TAG_UI, "Derived numeric user ID from email: " + derivedUserId);
             }
-            preferencesManager.setUserId(parsedUserId);
+            preferencesManager.setUserId(derivedUserId);
             preferencesManager.setApiBaseUrl(apiUrl);
+            String selectedDegree = selectedDegreeId == R.id.radio_degree_phd ? "PhD" : "MSc";
+            preferencesManager.setUserDegree(selectedDegree);
+            if ("PhD".equals(selectedDegree)) {
+                preferencesManager.setUserRole("PRESENTER");
+            } else {
+                preferencesManager.setUserRole(null);
+            }
+
+            String loggerRole = preferencesManager.getActiveRole();
+            if (loggerRole == null) {
+                loggerRole = preferencesManager.getUserRole();
+            }
+            ServerLogger.getInstance(this).updateUserContext(preferencesManager.getUserId(), loggerRole, userIdInput);
             
             // Update API client with new base URL
             ApiClient.getInstance(this).updateBaseUrl(this);
@@ -132,7 +179,7 @@ public class SettingsActivity extends AppCompatActivity {
             Toast.makeText(this, "✅ Settings saved successfully!", Toast.LENGTH_LONG).show();
             
             // Also show in logs for debugging
-            Logger.i(Logger.TAG_UI, "Settings saved - User ID: " + parsedUserId + ", API URL: " + apiUrl);
+            Logger.i(Logger.TAG_UI, "Settings saved - User ID: " + derivedUserId + ", BGU Username: " + userIdInput + ", Degree: " + selectedDegree + ", API URL: " + apiUrl);
             
         } catch (Exception e) {
             Logger.e(Logger.TAG_UI, "Failed to save settings", e);
@@ -172,22 +219,6 @@ public class SettingsActivity extends AppCompatActivity {
         
         // Navigate back to role picker
         finish();
-    }
-    
-    private void showLoggingSettingsDialog() {
-        Logger.userAction("Logging Settings", "User clicked logging settings button");
-        
-        new AlertDialog.Builder(this)
-                .setTitle("Logging Settings")
-                .setMessage("This feature allows you to configure logging levels and settings for debugging purposes.\n\n" +
-                           "Current logging is automatically configured for optimal performance.")
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        Logger.i(Logger.TAG_UI, "Logging settings dialog closed");
-                    }
-                })
-                .show();
     }
     
     @Override

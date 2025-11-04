@@ -54,6 +54,8 @@ public class ServerLogger {
     private boolean serverLoggingEnabled = true;
     private Long userId;
     private String userRole;
+    private String bguUsername;
+    private final PreferencesManager preferencesManager;
     private java.util.List<LogEntry> pendingLogs = new java.util.ArrayList<>();
     private static final int BATCH_SIZE = 10;
     private static final long BATCH_TIMEOUT_MS = 30000; // 30 seconds
@@ -69,11 +71,12 @@ public class ServerLogger {
         this.context = context.getApplicationContext();
         this.apiService = ApiClient.getInstance(context).getApiService();
         this.executorService = Executors.newSingleThreadScheduledExecutor();
+        this.preferencesManager = PreferencesManager.getInstance(context);
         
         // Get user info for logging context
-        PreferencesManager prefs = PreferencesManager.getInstance(context);
-        this.userId = prefs.getUserId();
-        this.userRole = prefs.getUserRole();
+        this.userId = preferencesManager.getUserId();
+        this.userRole = resolveUserRole();
+        this.bguUsername = resolveBguUsername();
 
         // Load any persisted pending logs from previous runs
         loadPendingLogs();
@@ -100,8 +103,24 @@ public class ServerLogger {
      * Update user context for logging
      */
     public void updateUserContext(Long userId, String userRole) {
+        updateUserContext(userId, userRole, preferencesManager.getBguUsername());
+    }
+
+    public void updateUserContext(Long userId, String userRole, String bguUsername) {
         this.userId = userId;
-        this.userRole = userRole;
+        String normalizedRole = normalizeRole(userRole);
+        if (normalizedRole == null) {
+            this.userRole = resolveUserRole();
+        } else {
+            this.userRole = normalizedRole;
+        }
+
+        String normalizedUsername = normalizeUsername(bguUsername);
+        if (normalizedUsername != null) {
+            this.bguUsername = normalizedUsername;
+        } else {
+            this.bguUsername = resolveBguUsername();
+        }
     }
     
     /**
@@ -246,12 +265,13 @@ public class ServerLogger {
      * Create structured log entry
      */
     private LogEntry createLogEntry(int level, String tag, String message, Throwable throwable) {
+        refreshUserContext();
         LogEntry entry = new LogEntry();
         entry.timestamp = System.currentTimeMillis();
         entry.level = getLevelString(level);
         entry.tag = tag;
         entry.message = truncate(message, MAX_MESSAGE_LENGTH);
-        entry.userId = this.userId;
+        entry.bguUsername = this.bguUsername;
         entry.userRole = this.userRole;
         entry.deviceInfo = getDeviceInfo();
         entry.appVersion = getAppVersion();
@@ -262,6 +282,69 @@ public class ServerLogger {
         }
         
         return entry;
+    }
+
+    private void refreshUserContext() {
+        this.userId = preferencesManager.getUserId();
+        this.userRole = resolveUserRole();
+        this.bguUsername = resolveBguUsername();
+    }
+
+    private String resolveUserRole() {
+        String activeRole = normalizeRole(preferencesManager.getActiveRole());
+        if (activeRole != null) {
+            return activeRole;
+        }
+
+        String storedRole = preferencesManager.getUserRole();
+        if (storedRole != null && storedRole.trim().equalsIgnoreCase("BOTH")) {
+            return null;
+        }
+
+        return normalizeRole(storedRole);
+    }
+
+    private String resolveBguUsername() {
+        String username = normalizeUsername(preferencesManager.getBguUsername());
+        if (username != null) {
+            return username;
+        }
+
+        return normalizeUsername(preferencesManager.getUserEmail());
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null) {
+            return null;
+        }
+
+        String trimmed = role.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        String upper = trimmed.toUpperCase(Locale.US);
+        switch (upper) {
+            case "STUDENT":
+            case "PRESENTER":
+            case "ADMIN":
+                return upper;
+            default:
+                return null;
+        }
+    }
+
+    private String normalizeUsername(String username) {
+        if (username == null) {
+            return null;
+        }
+
+        String trimmed = username.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        return trimmed;
     }
     
     /**
@@ -537,7 +620,7 @@ public class ServerLogger {
         public String level;
         public String tag;
         public String message;
-        public Long userId;
+        public String bguUsername;
         public String userRole;
         public String deviceInfo;
         public String appVersion;
@@ -549,12 +632,12 @@ public class ServerLogger {
         
         // Constructor for easy creation
         public LogEntry(Long timestamp, String level, String tag, String message, 
-                       Long userId, String userRole, String deviceInfo, String appVersion) {
+                       String bguUsername, String userRole, String deviceInfo, String appVersion) {
             this.timestamp = timestamp;
             this.level = level;
             this.tag = tag;
             this.message = message;
-            this.userId = userId;
+            this.bguUsername = bguUsername;
             this.userRole = userRole;
             this.deviceInfo = deviceInfo;
             this.appVersion = appVersion;
@@ -573,8 +656,8 @@ public class ServerLogger {
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
         
-        public Long getUserId() { return userId; }
-        public void setUserId(Long userId) { this.userId = userId; }
+        public String getBguUsername() { return bguUsername; }
+        public void setBguUsername(String bguUsername) { this.bguUsername = bguUsername; }
         
         public String getUserRole() { return userRole; }
         public void setUserRole(String userRole) { this.userRole = userRole; }

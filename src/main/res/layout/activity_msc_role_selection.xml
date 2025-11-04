@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/background_light">
+
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/primary_blue"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:title="Select Your Role"
+        app:titleTextColor="@color/white"
+        app:navigationIcon="@drawable/ic_arrow_back_white" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <!-- Header -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/select_role"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:textColor="@color/gray_800"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/role_selection_instruction_semester"
+                android:textSize="16sp"
+                android:textColor="@color/gray_600"
+                android:gravity="center"
+                android:layout_marginBottom="32dp" />
+
+            <!-- Role Selection Cards -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="32dp">
+
+                <!-- Presenter Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_presenter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:cardUseCompatPadding="true"
+                    app:cardBackgroundColor="@color/white"
+                    app:strokeColor="@color/gray_300"
+                    app:strokeWidth="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="20dp"
+                        android:gravity="center_vertical"
+                        android:minHeight="72dp">
+
+                        <CheckBox
+                            android:id="@+id/check_presenter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="16dp"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:buttonTint="@color/primary_blue" />
+
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_teacher"
+                            android:contentDescription="@string/presenter"
+                            android:layout_marginEnd="16dp"
+                            android:tint="@color/purple_700" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/im_presenting_semester"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/gray_800"
+                            android:gravity="center_vertical"
+                            android:letterSpacing="0.02" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Participant Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_participant"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:cardUseCompatPadding="true"
+                    app:cardBackgroundColor="@color/white"
+                    app:strokeColor="@color/gray_300"
+                    app:strokeWidth="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="20dp"
+                        android:gravity="center_vertical"
+                        android:minHeight="72dp">
+
+                        <CheckBox
+                            android:id="@+id/check_participant"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="16dp"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:buttonTint="@color/primary_blue" />
+
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_student"
+                            android:contentDescription="@string/student"
+                            android:layout_marginEnd="16dp"
+                            android:tint="@color/teal_700" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/im_participant"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/gray_800"
+                            android:gravity="center_vertical"
+                            android:letterSpacing="0.02" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Both Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_both"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="2dp"
+                    app:cardUseCompatPadding="true"
+                    app:cardBackgroundColor="@color/white"
+                    app:strokeColor="@color/gray_300"
+                    app:strokeWidth="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="20dp"
+                        android:gravity="center_vertical"
+                        android:minHeight="72dp">
+
+                        <CheckBox
+                            android:id="@+id/check_both"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="16dp"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:buttonTint="@color/primary_blue" />
+
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_teacher"
+                            android:contentDescription="@string/presenter"
+                            android:layout_marginEnd="16dp"
+                            android:tint="@color/primary_blue" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/both_roles"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/gray_800"
+                            android:gravity="center_vertical"
+                            android:letterSpacing="0.02" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+            <!-- Info Text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/role_selection_info_semester"
+                android:textSize="14sp"
+                android:textColor="@color/gray_500"
+                android:gravity="center"
+                android:layout_marginBottom="24dp"
+                android:padding="16dp"
+                android:background="@color/gray_100" />
+
+            <!-- Confirm Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_confirm"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/save_and_continue"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:layout_marginBottom="16dp"
+                android:letterSpacing="0.02"
+                android:elevation="4dp"
+                android:textAllCaps="false"
+                app:cornerRadius="18dp"
+                app:backgroundTint="@color/primary_blue"
+                app:strokeColor="@color/primary_blue_dark"
+                app:strokeWidth="1dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>
+

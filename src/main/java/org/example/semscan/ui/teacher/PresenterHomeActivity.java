@@ -54,7 +54,9 @@ public class PresenterHomeActivity extends AppCompatActivity {
             navigateToRolePicker();
             return;
         }
-        
+
+        preferencesManager.setActiveRole("PRESENTER");
+
         initializeViews();
         setupToolbar();
         setupClickListeners();

@@ -79,6 +79,9 @@ public interface ApiService {
     // Users
     @GET("api/v1/users/{userId}")
     Call<User> getUserById(@Path("userId") Long userId);
+
+    @POST("api/v1/users")
+    Call<User> createOrUpdateUser(@Body CreateOrUpdateUserRequest request);
     
     
         // Export (No authentication required)
@@ -171,6 +174,20 @@ public interface ApiService {
             this.studentId = studentId;
             this.reason = reason;
             this.deviceId = deviceId;
+        }
+    }
+
+    class CreateOrUpdateUserRequest {
+        public Long userId;
+        public String email;
+        public String firstName;
+        public String lastName;
+
+        public CreateOrUpdateUserRequest(Long userId, String email, String firstName, String lastName) {
+            this.userId = userId;
+            this.email = email;
+            this.firstName = firstName;
+            this.lastName = lastName;
         }
     }
 

@@ -8,8 +8,13 @@ public class PreferencesManager {
     private static final String PREFS_NAME = "semscan_prefs";
     private static final String KEY_USER_ROLE = "user_role";
     private static final String KEY_USER_ID = "user_id";
+    private static final String KEY_USER_EMAIL = "user_email";
+    private static final String KEY_BGU_USERNAME = "bgu_username";
     private static final String KEY_USER_NAME = "user_name";
     private static final String KEY_API_BASE_URL = "api_base_url";
+    private static final String KEY_USER_DEGREE = "user_degree";
+    private static final String KEY_IS_FIRST_TIME_LOGIN = "is_first_time_login";
+    private static final String KEY_ACTIVE_ROLE = "active_role";
     
     private static PreferencesManager instance;
     private SharedPreferences prefs;
@@ -29,6 +34,15 @@ public class PreferencesManager {
     public void setUserRole(String role) {
         Logger.prefs(KEY_USER_ROLE, role);
         prefs.edit().putString(KEY_USER_ROLE, role).apply();
+        if ("BOTH".equals(role)) {
+            if (getActiveRole() == null) {
+                setActiveRole("STUDENT");
+            }
+        } else if (role != null) {
+            setActiveRole(role);
+        } else {
+            setActiveRole(null);
+        }
     }
     
     public String getUserRole() {
@@ -36,15 +50,21 @@ public class PreferencesManager {
     }
     
     public boolean isPresenter() {
-        return "PRESENTER".equals(getUserRole());
+        String role = getUserRole();
+        return "PRESENTER".equals(role) || "BOTH".equals(role);
     }
     
     public boolean isTeacher() {
-        return "PRESENTER".equals(getUserRole()); // For backward compatibility
+        return isPresenter(); // For backward compatibility
     }
     
     public boolean isStudent() {
-        return "STUDENT".equals(getUserRole());
+        String role = getUserRole();
+        return "STUDENT".equals(role) || "BOTH".equals(role);
+    }
+    
+    public boolean hasBothRoles() {
+        return "BOTH".equals(getUserRole());
     }
     
     public boolean hasRole() {
@@ -94,6 +114,33 @@ public class PreferencesManager {
     public String getUserName() {
         return prefs.getString(KEY_USER_NAME, null);
     }
+
+    // User Email (for display as User ID)
+    public void setUserEmail(String email) {
+        Logger.prefs(KEY_USER_EMAIL, email);
+        if (email == null || email.trim().isEmpty()) {
+            prefs.edit().remove(KEY_USER_EMAIL).apply();
+        } else {
+            prefs.edit().putString(KEY_USER_EMAIL, email.trim()).apply();
+        }
+    }
+
+    public String getUserEmail() {
+        return prefs.getString(KEY_USER_EMAIL, null);
+    }
+
+    public void setBguUsername(String username) {
+        Logger.prefs(KEY_BGU_USERNAME, username);
+        if (username == null || username.trim().isEmpty()) {
+            prefs.edit().remove(KEY_BGU_USERNAME).apply();
+        } else {
+            prefs.edit().putString(KEY_BGU_USERNAME, username.trim()).apply();
+        }
+    }
+
+    public String getBguUsername() {
+        return prefs.getString(KEY_BGU_USERNAME, null);
+    }
     
     // API Base URL
     public void setApiBaseUrl(String baseUrl) {
@@ -111,12 +158,67 @@ public class PreferencesManager {
         prefs.edit().clear().apply();
     }
     
+    // User Degree
+    public void setUserDegree(String degree) {
+        Logger.prefs(KEY_USER_DEGREE, degree);
+        if (degree == null) {
+            prefs.edit().remove(KEY_USER_DEGREE).apply();
+        } else {
+            prefs.edit().putString(KEY_USER_DEGREE, degree).apply();
+        }
+    }
+    
+    public String getUserDegree() {
+        return prefs.getString(KEY_USER_DEGREE, null);
+    }
+    
+    public boolean hasDegree() {
+        return getUserDegree() != null;
+    }
+    
+    public boolean isMSc() {
+        return "MSc".equals(getUserDegree());
+    }
+    
+    public boolean isPhD() {
+        return "PhD".equals(getUserDegree());
+    }
+    
+    // First-time login flag
+    public void setFirstTimeLogin(boolean isFirstTime) {
+        Logger.prefs(KEY_IS_FIRST_TIME_LOGIN, String.valueOf(isFirstTime));
+        prefs.edit().putBoolean(KEY_IS_FIRST_TIME_LOGIN, isFirstTime).apply();
+    }
+    
+    public boolean isFirstTimeLogin() {
+        return prefs.getBoolean(KEY_IS_FIRST_TIME_LOGIN, true);
+    }
+    
     // Clear user data but keep settings
+    // Note: Degree is preserved - it's a fundamental property that doesn't change when changing roles
     public void clearUserData() {
         prefs.edit()
                 .remove(KEY_USER_ROLE)
                 .remove(KEY_USER_ID)
                 .remove(KEY_USER_NAME)
+                .remove(KEY_USER_EMAIL)
+                .remove(KEY_BGU_USERNAME)
+                .remove(KEY_ACTIVE_ROLE)
+                // Don't remove KEY_USER_DEGREE - degree persists across role changes
                 .apply();
+    }
+
+    // Active role helpers
+    public void setActiveRole(String role) {
+        Logger.prefs(KEY_ACTIVE_ROLE, role);
+        if (role == null) {
+            prefs.edit().remove(KEY_ACTIVE_ROLE).apply();
+        } else {
+            prefs.edit().putString(KEY_ACTIVE_ROLE, role).apply();
+        }
+    }
+
+    public String getActiveRole() {
+        return prefs.getString(KEY_ACTIVE_ROLE, null);
     }
 }
