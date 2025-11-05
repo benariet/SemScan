@@ -1,6 +1,7 @@
 package org.example.semscan.ui;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -25,11 +26,10 @@ public class SettingsActivity extends AppCompatActivity {
     
     private EditText editUserId;
     private EditText editApiUrl;
-    private MaterialButton btnSave;
-    private MaterialButton btnClearData;
-    private RadioGroup radioDegree;
-    private RadioButton radioDegreeMsc;
-    private RadioButton radioDegreePhd;
+    private Button btnSave;
+    private Button btnClearData;
+    private Button btnLoggingSettings;
+    private Button btnLoginTest;
     
     private PreferencesManager preferencesManager;
     
@@ -53,9 +53,8 @@ public class SettingsActivity extends AppCompatActivity {
         editApiUrl = findViewById(R.id.edit_api_url);
         btnSave = findViewById(R.id.btn_save);
         btnClearData = findViewById(R.id.btn_clear_data);
-        radioDegree = findViewById(R.id.radio_degree);
-        radioDegreeMsc = findViewById(R.id.radio_degree_msc);
-        radioDegreePhd = findViewById(R.id.radio_degree_phd);
+        btnLoggingSettings = findViewById(R.id.btn_logging_settings);
+        btnLoginTest = findViewById(R.id.btn_login_test);
     }
     
     private void setupToolbar() {
@@ -79,6 +78,20 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 showClearDataDialog();
+            }
+        });
+        
+        btnLoggingSettings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showLoggingSettingsDialog();
+            }
+        });
+        
+        btnLoginTest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openLoginTest();
             }
         });
     }
@@ -219,6 +232,29 @@ public class SettingsActivity extends AppCompatActivity {
         
         // Navigate back to role picker
         finish();
+    }
+    
+    private void showLoggingSettingsDialog() {
+        Logger.userAction("Logging Settings", "User clicked logging settings button");
+        
+        new AlertDialog.Builder(this)
+                .setTitle("Logging Settings")
+                .setMessage("This feature allows you to configure logging levels and settings for debugging purposes.\n\n" +
+                           "Current logging is automatically configured for optimal performance.")
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Logger.i(Logger.TAG_UI, "Logging settings dialog closed");
+                    }
+                })
+                .show();
+    }
+    
+    private void openLoginTest() {
+        Logger.userAction("Login Test", "User clicked login test button");
+        
+        Intent intent = new Intent(this, org.example.semscan.ui.auth.LoginActivity.class);
+        startActivity(intent);
     }
     
     @Override

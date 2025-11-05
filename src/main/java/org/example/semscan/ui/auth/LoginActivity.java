@@ -1,25 +1,27 @@
 package org.example.semscan.ui.auth;
 
+import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.android.material.button.MaterialButton;
+import androidx.appcompat.widget.Toolbar;
 
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
-import org.example.semscan.data.model.User;
-import org.example.semscan.ui.student.StudentHomeActivity;
-import org.example.semscan.ui.teacher.PresenterHomeActivity;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.ServerLogger;
+import org.example.semscan.utils.ToastUtils;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -27,13 +29,16 @@ import retrofit2.Response;
 
 public class LoginActivity extends AppCompatActivity {
     
+    private EditText editUsername;
+    private EditText editPassword;
+    private Button btnLogin;
+    private TextView textResponse;
+    private CheckBox checkRememberCredentials;
+    
     private PreferencesManager preferencesManager;
     private ApiService apiService;
-    private View loginForm;
-    private EditText editEmail;
-    private EditText editPassword;
-    private MaterialButton btnLogin;
-    private ProgressBar progressBar;
+    private ServerLogger serverLogger;
+    private SharedPreferences loginPrefs;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,176 +49,317 @@ public class LoginActivity extends AppCompatActivity {
         
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
+        serverLogger = ServerLogger.getInstance(this);
+        loginPrefs = getSharedPreferences("login_credentials", MODE_PRIVATE);
+        
+        // Clear any existing saved credentials for testing consistency
+        clearSavedCredentials();
         
         initializeViews();
-        setupListeners();
-
-        String storedEmail = preferencesManager.getUserEmail();
-        if (!TextUtils.isEmpty(storedEmail)) {
-            editEmail.setText(storedEmail);
-        }
-
-        showLoginForm(true);
+        setupToolbar();
+        setupClickListeners();
+        loadSavedCredentials();
     }
-
+    
     private void initializeViews() {
-        loginForm = findViewById(R.id.login_form);
-        editEmail = findViewById(R.id.edit_email);
+        editUsername = findViewById(R.id.edit_username);
         editPassword = findViewById(R.id.edit_password);
         btnLogin = findViewById(R.id.btn_login);
-        progressBar = findViewById(R.id.progress_login);
+        textResponse = findViewById(R.id.text_response);
+        checkRememberCredentials = findViewById(R.id.check_remember_credentials);
+        
+        // Don't pre-fill anything here - let loadSavedCredentials() handle it
     }
-
-    private void setupListeners() {
-        btnLogin.setOnClickListener(v -> attemptLogin());
-    }
-
-    private void attemptLogin() {
-        String emailInput = editEmail.getText().toString().trim();
-
-        if (TextUtils.isEmpty(emailInput)) {
-            editEmail.setError(getString(R.string.login_email_hint));
-            editEmail.requestFocus();
-            return;
-        }
-
-        showLoginForm(false);
-
-        // Reset previous state and persist new credentials
-        preferencesManager.clearUserData();
-        preferencesManager.setUserDegree(null);
-        preferencesManager.setFirstTimeLogin(true);
-        preferencesManager.setUserEmail(emailInput);
-        preferencesManager.setBguUsername(emailInput);
-
-        Long derivedUserId;
-        try {
-            derivedUserId = Long.parseLong(emailInput);
-        } catch (NumberFormatException numberFormatException) {
-            derivedUserId = (long) Math.abs(emailInput.hashCode());
-        }
-        preferencesManager.setUserId(derivedUserId);
-
-        Logger.i(Logger.TAG_UI, "User signed in with ID: " + derivedUserId);
-
-        ApiService.CreateOrUpdateUserRequest request =
-                new ApiService.CreateOrUpdateUserRequest(derivedUserId, emailInput, null, null);
-
-        apiService.createOrUpdateUser(request).enqueue(new Callback<User>() {
-            @Override
-            public void onResponse(Call<User> call, Response<User> response) {
-                if (!response.isSuccessful()) {
-                    Logger.e(Logger.TAG_API, "Failed to register user. Code: " + response.code());
-                    Toast.makeText(LoginActivity.this, R.string.login_error_register, Toast.LENGTH_LONG).show();
-                    showLoginForm(true);
-                    return;
-                }
-
-                User user = response.body();
-                if (user != null) {
-                    if (user.getUserId() != null) {
-                        preferencesManager.setUserId(user.getUserId());
-                    }
-
-                    if (!TextUtils.isEmpty(user.getEmail())) {
-                        preferencesManager.setUserEmail(user.getEmail());
-                        preferencesManager.setBguUsername(user.getEmail());
-                    }
-
-                    preferencesManager.setUserName(user.getFullName());
-                }
-
-                proceedAfterLogin();
+    
+    private void setupToolbar() {
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        if (toolbar != null) {
+            setSupportActionBar(toolbar);
+            if (getSupportActionBar() != null) {
+                getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+                getSupportActionBar().setTitle("Login");
             }
-
+        }
+    }
+    
+    private void setupClickListeners() {
+        btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onFailure(Call<User> call, Throwable t) {
-                Logger.e(Logger.TAG_API, "Failed to register user", t);
-                Toast.makeText(LoginActivity.this, R.string.login_error_register, Toast.LENGTH_LONG).show();
-                showLoginForm(true);
+            public void onClick(View v) {
+                performLogin();
             }
         });
     }
     
-    private void proceedAfterLogin() {
-        String degree = preferencesManager.getUserDegree();
-        String role = preferencesManager.getUserRole();
-        boolean isFirstTime = preferencesManager.isFirstTimeLogin();
-
-        if (isFirstTime || degree == null || role == null) {
-            Logger.i(Logger.TAG_UI, "First-time configuration required, launching setup");
-            launchFirstTimeSetup();
-            return;
-        }
-
-        if ("BOTH".equals(role)) {
-            Logger.i(Logger.TAG_UI, "User has BOTH roles, launching context picker");
-            launchRoleContextPicker();
-            return;
-        }
-
-        navigateToHome();
-    }
-
-    private void launchFirstTimeSetup() {
-        Intent intent = new Intent(this, FirstTimeSetupActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
-
-    private void launchRoleContextPicker() {
-        Intent intent = new Intent(this, RoleContextActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
-    
-    private void navigateToHome() {
-        Intent intent;
-        String targetActivity;
+    /**
+     * Load saved credentials from SharedPreferences
+     */
+    private void loadSavedCredentials() {
+        // Always start with empty fields and unchecked checkbox
+        editUsername.setText("");
+        editPassword.setText("");
+        checkRememberCredentials.setChecked(false);
         
-        String role = preferencesManager.getUserRole();
-
-        if (preferencesManager.hasBothRoles()) {
-            String activeRole = preferencesManager.getActiveRole();
-            if ("PRESENTER".equals(activeRole)) {
-                intent = new Intent(this, PresenterHomeActivity.class);
-                targetActivity = "PresenterHomeActivity";
+        boolean credentialsSaved = loginPrefs.getBoolean("credentials_saved", false);
+        if (credentialsSaved) {
+            String savedUsername = loginPrefs.getString("saved_username", "");
+            String savedPassword = loginPrefs.getString("saved_password", "");
+            
+            if (!TextUtils.isEmpty(savedUsername) && !TextUtils.isEmpty(savedPassword)) {
+                editUsername.setText(savedUsername);
+                editPassword.setText(savedPassword);
+                checkRememberCredentials.setChecked(true);
+                
+                Logger.d(Logger.TAG_UI, "Loaded saved credentials for user: " + savedUsername);
             } else {
-                intent = new Intent(this, StudentHomeActivity.class);
-                targetActivity = "StudentHomeActivity";
+                // Invalid saved credentials, clear them
+                clearSavedCredentials();
+                // Fall back to test credentials
+                editUsername.setText("student_username");
+                editPassword.setText("student_password");
+                Logger.d(Logger.TAG_UI, "Invalid saved credentials, using test credentials");
             }
-        } else if (preferencesManager.isPresenter() && !preferencesManager.isStudent()) {
-            intent = new Intent(this, PresenterHomeActivity.class);
-            targetActivity = "PresenterHomeActivity";
-        } else if (preferencesManager.isStudent() && !preferencesManager.isPresenter()) {
-            intent = new Intent(this, StudentHomeActivity.class);
-            targetActivity = "StudentHomeActivity";
         } else {
-            Logger.w(Logger.TAG_UI, "No valid role found for navigation, returning to setup");
-            launchFirstTimeSetup();
+            // No saved credentials, pre-fill with test credentials
+            editUsername.setText("student_username");
+            editPassword.setText("student_password");
+            Logger.d(Logger.TAG_UI, "No saved credentials, using test credentials");
+        }
+    }
+    
+    /**
+     * Save credentials to SharedPreferences
+     */
+    private void saveCredentials(String username, String password) {
+        SharedPreferences.Editor editor = loginPrefs.edit();
+        editor.putString("saved_username", username);
+        editor.putString("saved_password", password);
+        editor.putBoolean("credentials_saved", true);
+        editor.apply();
+        
+        Logger.d(Logger.TAG_UI, "Saved credentials for user: " + username);
+    }
+    
+    /**
+     * Clear saved credentials from SharedPreferences
+     */
+    private void clearSavedCredentials() {
+        SharedPreferences.Editor editor = loginPrefs.edit();
+        editor.remove("saved_username");
+        editor.remove("saved_password");
+        editor.putBoolean("credentials_saved", false);
+        editor.apply();
+        
+        Logger.d(Logger.TAG_UI, "Cleared saved credentials");
+    }
+    
+    /**
+     * Show error dialog for wrong credentials
+     */
+    private void showWrongCredentialsDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Login Failed")
+                .setMessage("Username or password is incorrect")
+                .setPositiveButton("OK", null)
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
+    
+    /**
+     * Navigate to RolePickerActivity after successful login
+     */
+    private void navigateToRolePicker() {
+        Intent intent = new Intent(this, org.example.semscan.ui.RolePickerActivity.class);
+        startActivity(intent);
+        finish(); // Close the login activity so user can't go back
+    }
+    
+    private void performLogin() {
+        String username = editUsername.getText().toString().trim();
+        String password = editPassword.getText().toString().trim();
+        
+        // Validate input
+        if (TextUtils.isEmpty(username)) {
+            ToastUtils.showError(this, "Please enter username");
+            editUsername.requestFocus();
             return;
         }
         
-        Logger.i(Logger.TAG_UI, "Navigating to: " + targetActivity);
+        if (TextUtils.isEmpty(password)) {
+            ToastUtils.showError(this, "Please enter password");
+            editPassword.requestFocus();
+            return;
+        }
         
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        // Disable button during login
+        btnLogin.setEnabled(false);
+        btnLogin.setText("Logging in...");
+        
+        // Clear previous response
+        textResponse.setText("Sending login request...");
+        
+        Logger.userAction("Login Attempt", "Username: " + username);
+        Logger.api("POST", "api/v1/auth/login", "Username: " + username);
+        
+        // Log the request details to server
+        serverLogger.i(Logger.TAG_UI, "Login attempt started for user: " + username);
+        
+        // Create login request
+        ApiService.LoginRequest loginRequest = new ApiService.LoginRequest(username, password);
+        
+        // Make API call
+        Call<ApiService.LoginResponse> call = apiService.login(loginRequest);
+        call.enqueue(new Callback<ApiService.LoginResponse>() {
+            @Override
+            public void onResponse(Call<ApiService.LoginResponse> call, Response<ApiService.LoginResponse> response) {
+                btnLogin.setEnabled(true);
+                btnLogin.setText("Login");
+                
+                if (response.isSuccessful() && response.body() != null) {
+                    ApiService.LoginResponse loginResponse = response.body();
+                    
+                    // Check if login was actually successful based on the 'ok' field
+                    if (loginResponse.ok) {
+                        // Login was successful
+                        Logger.apiResponse("POST", "api/v1/auth/login", response.code(), 
+                            "Login successful: " + loginResponse.message);
+                        
+                        // Log to server with comprehensive details
+                        String responseDetails = String.format("ok: %s, message: %s", 
+                            loginResponse.ok, 
+                            loginResponse.message != null ? loginResponse.message : "null");
+                        
+                        // Log the full response data
+                        serverLogger.i(Logger.TAG_UI, "Login successful for user: " + username + 
+                            " - Response: " + responseDetails + 
+                            " - Status Code: " + response.code());
+                        
+                        // Also log the raw response for debugging
+                        serverLogger.d(Logger.TAG_UI, "Login API Response - Username: " + username + 
+                            " - Full Response: {\"ok\":" + loginResponse.ok + 
+                            ",\"message\":\"" + (loginResponse.message != null ? loginResponse.message : "null") + "\"}");
+                        
+                        serverLogger.flushLogs();
+                        
+                        // Display success response
+                        String responseText = "✅ LOGIN SUCCESSFUL\n\n" +
+                                           "Status Code: " + response.code() + "\n" +
+                                           "Response: {\n" +
+                                           "  \"ok\": " + loginResponse.ok + ",\n" +
+                                           "  \"message\": \"" + loginResponse.message + "\"\n" +
+                                           "}\n\n" +
+                                           "Username: " + username + "\n" +
+                                           "Timestamp: " + java.text.SimpleDateFormat.getDateTimeInstance().format(new java.util.Date());
+                        
+                        textResponse.setText(responseText);
+                        ToastUtils.showSuccess(LoginActivity.this, "Login successful!");
+                        
+                        // Handle credential saving based on checkbox
+                        if (checkRememberCredentials.isChecked()) {
+                            saveCredentials(username, password);
+                        } else {
+                            clearSavedCredentials();
+                        }
+                        
+                        // Navigate to RolePickerActivity after successful login
+                        navigateToRolePicker();
+                        
+                    } else {
+                        // Login failed (HTTP 200 but ok: false)
+                        Logger.apiError("POST", "api/v1/auth/login", response.code(), 
+                            "Login failed - ok: false, message: " + loginResponse.message);
+                        
+                        // Log failed login to server
+                        serverLogger.e(Logger.TAG_UI, "Login failed for user: " + username + 
+                            " - Response: ok: false, message: " + (loginResponse.message != null ? loginResponse.message : "null") + 
+                            " - Status Code: " + response.code());
+                        serverLogger.flushLogs();
+                        
+                        // Display failed login response
+                        String responseText = "❌ LOGIN FAILED\n\n" +
+                                           "Status Code: " + response.code() + "\n" +
+                                           "Response: {\n" +
+                                           "  \"ok\": " + loginResponse.ok + ",\n" +
+                                           "  \"message\": \"" + loginResponse.message + "\"\n" +
+                                           "}\n\n" +
+                                           "Username: " + username + "\n" +
+                                           "Timestamp: " + java.text.SimpleDateFormat.getDateTimeInstance().format(new java.util.Date());
+                        
+                        textResponse.setText(responseText);
+                        showWrongCredentialsDialog();
+                    }
+                    
+                } else {
+                    // Handle error response
+                    String errorBody = null;
+                    if (response.errorBody() != null) {
+                        try {
+                            errorBody = response.errorBody().string();
+                        } catch (Exception e) {
+                            Logger.e(Logger.TAG_UI, "Error reading login response body", e);
+                        }
+                    }
+                    
+                    Logger.apiError("POST", "api/v1/auth/login", response.code(), errorBody);
+                    
+                    // Log error to server
+                    serverLogger.e(Logger.TAG_UI, "Login failed for user: " + username + 
+                        " - Code: " + response.code() + " - Error: " + errorBody);
+                    serverLogger.flushLogs();
+                    
+                    // Display error response
+                    String responseText = "❌ LOGIN FAILED\n\n" +
+                                       "Status Code: " + response.code() + "\n" +
+                                       "Error: " + (errorBody != null ? errorBody : "Unknown error") + "\n\n" +
+                                       "Username: " + username + "\n" +
+                                       "Timestamp: " + java.text.SimpleDateFormat.getDateTimeInstance().format(new java.util.Date());
+                    
+                    textResponse.setText(responseText);
+                    
+                    // Show appropriate error dialog based on status code
+                    if (response.code() == 401 || response.code() == 403) {
+                        showWrongCredentialsDialog();
+                    } else {
+                        ToastUtils.showError(LoginActivity.this, "Login failed: " + response.code());
+                    }
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<ApiService.LoginResponse> call, Throwable t) {
+                btnLogin.setEnabled(true);
+                btnLogin.setText("Login");
+                
+                Logger.e(Logger.TAG_UI, "Login network failure", t);
+                
+                // Log network error to server
+                serverLogger.e(Logger.TAG_UI, "Login network failure for user: " + 
+                    editUsername.getText().toString() + " - Error: " + t.getMessage());
+                serverLogger.flushLogs();
+                
+                // Display network error
+                String responseText = "❌ NETWORK ERROR\n\n" +
+                                   "Error: " + t.getMessage() + "\n\n" +
+                                   "Username: " + editUsername.getText().toString() + "\n" +
+                                   "Timestamp: " + java.text.SimpleDateFormat.getDateTimeInstance().format(new java.util.Date());
+                
+                textResponse.setText(responseText);
+                ToastUtils.showError(LoginActivity.this, "Network error: " + t.getMessage());
+            }
+        });
     }
     
-    private void showLoginForm(boolean show) {
-        loginForm.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-        progressBar.setVisibility(show ? View.GONE : View.VISIBLE);
-        editEmail.setEnabled(show);
-        editPassword.setEnabled(show);
-        btnLogin.setEnabled(show);
-    }
-
     @Override
-    public void onBackPressed() {
-        moveTaskToBack(true);
+    public boolean onSupportNavigateUp() {
+        finish();
+        return true;
+    }
+    
+    @Override
+    protected void onDestroy() {
+        if (serverLogger != null) {
+            serverLogger.flushLogs();
+        }
+        super.onDestroy();
     }
 }
-

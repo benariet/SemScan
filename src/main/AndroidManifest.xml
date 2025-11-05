@@ -35,16 +35,6 @@
             android:name=".ui.RolePickerActivity"
             android:exported="false"
             android:theme="@style/Theme.SemScan" />
-
-        <activity
-            android:name=".ui.auth.FirstTimeSetupActivity"
-            android:exported="false"
-            android:theme="@style/Theme.SemScan.Light" />
-
-        <activity
-            android:name=".ui.auth.RoleContextActivity"
-            android:exported="false"
-            android:theme="@style/Theme.SemScan.Light" />
         
         <activity
             android:name=".ui.student.StudentHomeActivity"

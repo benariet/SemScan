@@ -17,7 +17,7 @@ public class PresenterSeminarDisplayInstrumentedTest {
     @Test
     public void displayMethods_respectInstanceNameAndDescriptionPriority() {
         ApiService.PresenterSeminarDto dto = new ApiService.PresenterSeminarDto();
-        dto.instanceName = "Custom Instance";
+        dto .instanceName = "Custom Instance";
         dto.seminarDisplayName = "Catalog Seminar";
         dto.instanceDescription = "Presenter description";
         dto.seminarDescription = "Catalog description";

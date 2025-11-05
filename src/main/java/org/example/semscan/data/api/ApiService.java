@@ -83,6 +83,10 @@ public interface ApiService {
     @POST("api/v1/users")
     Call<User> createOrUpdateUser(@Body CreateOrUpdateUserRequest request);
     
+    // Authentication
+    @POST("api/v1/auth/login")
+    Call<LoginResponse> login(@Body LoginRequest request);
+    
     
         // Export (No authentication required)
         @GET("api/v1/export/xlsx")
@@ -329,6 +333,29 @@ public interface ApiService {
 
         public CreatePresenterSeminarRequest(String seminarName, java.util.List<PresenterSeminarSlotDto> slots) {
             this(null, seminarName, null, null, null, slots);
+        }
+    }
+    
+    // Authentication DTOs
+    class LoginRequest {
+        public String username;
+        public String password;
+        
+        public LoginRequest(String username, String password) {
+            this.username = username;
+            this.password = password;
+        }
+    }
+    
+    class LoginResponse {
+        public boolean ok;
+        public String message;
+        
+        public LoginResponse() {}
+        
+        public LoginResponse(boolean ok, String message) {
+            this.ok = ok;
+            this.message = message;
         }
     }
     

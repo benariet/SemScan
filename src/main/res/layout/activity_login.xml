@@ -4,77 +4,175 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp"
     android:background="@color/background_light">
 
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/primary_blue"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:title="Login"
+        app:titleTextColor="@color/white" />
+
     <LinearLayout
-        android:id="@+id/login_form"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+    <!-- Header -->
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal">
+        android:text="Welcome to SemScan"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="@color/primary_blue"
+        android:gravity="center"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="48dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:textColor="@color/purple_700"
-            android:layout_marginBottom="8dp" />
+    <!-- Login Form Card -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="4dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/login_subtitle"
-            android:textSize="16sp"
-            android:textColor="@color/gray_600"
-            android:layout_marginBottom="32dp" />
-
-        <EditText
-            android:id="@+id/edit_email"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/login_email_hint"
-            android:inputType="textEmailAddress"
-            android:background="@drawable/edittext_background"
-            android:padding="16dp"
-            android:textColor="@color/gray_800"
-            android:textColorHint="@color/gray_500"
-            android:layout_marginBottom="16dp" />
+            android:orientation="vertical"
+            android:padding="24dp">
 
-        <EditText
-            android:id="@+id/edit_password"
+            <!-- Username Field -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Username"
+                android:textSize="16sp"
+                android:textColor="@color/gray_700"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/edit_username"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/edittext_background"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:hint="Enter username"
+                android:textSize="16sp"
+                android:textColor="@color/gray_800"
+                android:textColorHint="@color/gray_500"
+                android:inputType="text"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Password Field -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Password"
+                android:textSize="16sp"
+                android:textColor="@color/gray_700"
+                android:layout_marginBottom="8dp" />
+
+            <EditText
+                android:id="@+id/edit_password"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/edittext_background"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:hint="Enter password"
+                android:textSize="16sp"
+                android:textColor="@color/gray_800"
+                android:textColorHint="@color/gray_500"
+                android:inputType="textPassword"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Remember Credentials Checkbox -->
+            <CheckBox
+                android:id="@+id/check_remember_credentials"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Remember my credentials"
+                android:textSize="14sp"
+                android:textColor="@color/gray_700"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Login Button -->
+            <Button
+                android:id="@+id/btn_login"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="Login"
+                android:textSize="16sp"
+                android:textColor="@color/white"
+                android:background="@drawable/button_primary"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Test Credentials Info -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Test Credentials:\nUsername: student_username\nPassword: student_password"
+                android:textSize="12sp"
+                android:textColor="@color/gray_600"
+                android:background="@color/gray_100"
+                android:padding="12dp"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- Response Display -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="4dp">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/login_password_hint"
-            android:inputType="textPassword"
-            android:background="@drawable/edittext_background"
-            android:padding="16dp"
-            android:textColor="@color/gray_800"
-            android:textColorHint="@color/gray_500"
-            android:layout_marginBottom="24dp" />
+            android:orientation="vertical"
+            android:padding="24dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_login"
-            style="@style/SemScanButtonOutlinedPrimary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/login_button"
-            android:textColor="@color/white"
-            app:backgroundTint="@color/primary_blue"
-            app:strokeColor="@color/primary_blue_dark"
-            app:strokeWidth="1dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Response"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/gray_700"
+                android:layout_marginBottom="12dp" />
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:background="@color/gray_50"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/text_response"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No response yet..."
+                    android:textSize="14sp"
+                    android:textColor="@color/gray_600"
+                    android:fontFamily="monospace" />
+
+            </ScrollView>
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
 
     </LinearLayout>
 
-    <ProgressBar
-        android:id="@+id/progress_login"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:visibility="gone" />
-
 </LinearLayout>
-
