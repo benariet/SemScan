@@ -11,6 +11,7 @@
     <!-- Custom colors -->
     <color name="primary_blue">#FF2196F3</color>
     <color name="primary_blue_dark">#FF1976D2</color>
+    <color name="primary_blue_light">#FFF7941D</color>
     <color name="accent_green">#FF4CAF50</color>
     <color name="accent_red">#FFF44336</color>
     <color name="accent_orange">#FFFF9800</color>

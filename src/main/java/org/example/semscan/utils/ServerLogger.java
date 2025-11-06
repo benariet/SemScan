@@ -52,7 +52,7 @@ public class ServerLogger {
     private ApiService apiService;
     private ScheduledExecutorService executorService;
     private boolean serverLoggingEnabled = true;
-    private Long userId;
+    private String bguUsername;
     private String userRole;
     private java.util.List<LogEntry> pendingLogs = new java.util.ArrayList<>();
     private static final int BATCH_SIZE = 10;
@@ -72,7 +72,7 @@ public class ServerLogger {
         
         // Get user info for logging context
         PreferencesManager prefs = PreferencesManager.getInstance(context);
-        this.userId = prefs.getUserId();
+        this.bguUsername = prefs.getUserName();
         this.userRole = prefs.getUserRole();
 
         // Load any persisted pending logs from previous runs
@@ -99,8 +99,8 @@ public class ServerLogger {
     /**
      * Update user context for logging
      */
-    public void updateUserContext(Long userId, String userRole) {
-        this.userId = userId;
+    public void updateUserContext(String bguUsername, String userRole) {
+        this.bguUsername = bguUsername != null ? bguUsername.trim().toLowerCase(java.util.Locale.US) : null;
         this.userRole = userRole;
     }
     
@@ -251,7 +251,7 @@ public class ServerLogger {
         entry.level = getLevelString(level);
         entry.tag = tag;
         entry.message = truncate(message, MAX_MESSAGE_LENGTH);
-        entry.userId = this.userId;
+        entry.bguUsername = this.bguUsername;
         entry.userRole = this.userRole;
         entry.deviceInfo = getDeviceInfo();
         entry.appVersion = getAppVersion();
@@ -537,7 +537,7 @@ public class ServerLogger {
         public String level;
         public String tag;
         public String message;
-        public Long userId;
+        public String bguUsername;
         public String userRole;
         public String deviceInfo;
         public String appVersion;
@@ -548,13 +548,13 @@ public class ServerLogger {
         public LogEntry() {}
         
         // Constructor for easy creation
-        public LogEntry(Long timestamp, String level, String tag, String message, 
-                       Long userId, String userRole, String deviceInfo, String appVersion) {
+        public LogEntry(Long timestamp, String level, String tag, String message,
+                        String bguUsername, String userRole, String deviceInfo, String appVersion) {
             this.timestamp = timestamp;
             this.level = level;
             this.tag = tag;
             this.message = message;
-            this.userId = userId;
+            this.bguUsername = bguUsername;
             this.userRole = userRole;
             this.deviceInfo = deviceInfo;
             this.appVersion = appVersion;
@@ -573,8 +573,8 @@ public class ServerLogger {
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
         
-        public Long getUserId() { return userId; }
-        public void setUserId(Long userId) { this.userId = userId; }
+        public String getBguUsername() { return bguUsername; }
+        public void setBguUsername(String bguUsername) { this.bguUsername = bguUsername; }
         
         public String getUserRole() { return userRole; }
         public void setUserRole(String userRole) { this.userRole = userRole; }

@@ -120,8 +120,45 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="change_role">Change Role</string>
-    <string name="user_id">User ID</string>
-    <string name="api_base_url">API Base URL</string>
+    <string name="settings_username">Username</string>
+    <string name="settings_username_saved">Username saved successfully.</string>
+    <string name="setup_title">Complete Your Profile</string>
+    <string name="setup_header">Welcome to SemScan</string>
+    <string name="setup_subheader">We need a few details to tailor your presenter and participant experience.</string>
+    <string name="setup_first_name">First name</string>
+    <string name="setup_last_name">Last name</string>
+    <string name="setup_email">Email address</string>
+    <string name="setup_degree_label">Academic degree</string>
+    <string name="setup_degree_placeholder">Tap to choose your degree</string>
+    <string name="setup_participation_label">Participation preference</string>
+    <string name="setup_participation_placeholder">Tap to choose how you participate</string>
+    <string name="setup_complete_button">Finish setup</string>
+    <string name="setup_degree_title">Select Degree</string>
+    <string name="setup_degree_prompt">Which degree are you enrolled in?</string>
+    <string name="setup_degree_msc">MSc</string>
+    <string name="setup_degree_msc_description">Masters students may present once per cycle.</string>
+    <string name="setup_degree_phd">PhD</string>
+    <string name="setup_degree_phd_description">Doctoral presenters manage session schedules.</string>
+    <string name="setup_participation_title">Choose Participation</string>
+    <string name="setup_participation_prompt">How do you plan to participate in seminars?</string>
+    <string name="setup_participation_presenter">Presenter only</string>
+    <string name="setup_participation_presenter_description">I primarily lead sessions and manage attendance.</string>
+    <string name="setup_participation_participant">Participant only</string>
+    <string name="setup_participation_participant_description">I join sessions to scan attendance and engage.</string>
+    <string name="setup_participation_both">Both presenter and participant</string>
+    <string name="setup_participation_both_description">I switch roles depending on the seminar cycle.</string>
+    <string name="setup_participation_presenter_locked">PhD presenters are always registered as presenters.</string>
+    <string name="setup_msc_title">Today’s Role</string>
+    <string name="setup_msc_prompt">For today’s seminar cycle, what fits best?</string>
+    <string name="setup_msc_option_presenter">I’m presenting today</string>
+    <string name="setup_msc_option_participant">I’m participating (no presentation)</string>
+    <string name="setup_error_first_name">First name is required</string>
+    <string name="setup_error_last_name">Last name is required</string>
+    <string name="setup_error_email">Enter a valid email</string>
+    <string name="setup_error_degree">Select your degree to continue</string>
+    <string name="setup_error_participation">Select your participation preference</string>
+    <string name="setup_success">Profile saved. Let’s get you started!</string>
+    <string name="network_error_generic">Network error: %1$s</string>
     <string name="about">About</string>
     <string name="version">Version %s</string>
 
@@ -192,6 +229,23 @@
     <string name="presenter_slot_register_button">Register now</string>
     <string name="presenter_slot_registered_badge">Registered</string>
     <string name="presenter_slot_full_badge">Full</string>
+
+    <!-- Login -->
+    <string name="login_title">Welcome to SemScan</string>
+    <string name="login_subtitle">Log in with your university username</string>
+    <string name="login_username_hint">Username</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_button">Log in</string>
+    <string name="login_skip_auth_button">Skip auth (test)</string>
+    <string name="login_username_required">Please enter your username</string>
+    <string name="login_password_required">Please enter your password</string>
+    <string name="login_skip_auth_success">Logged in as %1$s (test mode)</string>
+
+    <!-- Settings / Logout -->
+    <string name="logout">Logout</string>
+    <string name="logout_confirm_title">Log out</string>
+    <string name="logout_confirm_message">This will log you out and return to the login screen.</string>
+    <string name="logout_success">You have been logged out.</string>
     
     <!-- Permissions -->
     <string name="camera_permission_required">Camera permission is required to scan QR codes</string>

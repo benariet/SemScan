@@ -9,8 +9,8 @@ public class Attendance {
     @SerializedName("sessionId")
     private Long sessionId;
     
-    @SerializedName("studentId")
-    private Long studentId;
+    @SerializedName("studentUsername")
+    private String studentUsername;
     
     @SerializedName("attendanceTime")
     private String attendanceTime;
@@ -30,8 +30,8 @@ public class Attendance {
     @SerializedName("requested_at")
     private Long requestedAt;
     
-    @SerializedName("approved_by")
-    private Long approvedBy;
+    @SerializedName("approvedByUsername")
+    private String approvedByUsername;
     
     @SerializedName("approved_at")
     private Long approvedAt;
@@ -44,10 +44,10 @@ public class Attendance {
     
     public Attendance() {}
     
-    public Attendance(Long attendanceId, Long sessionId, Long studentId, String attendanceTime, String method) {
+    public Attendance(Long attendanceId, Long sessionId, String studentUsername, String attendanceTime, String method) {
         this.attendanceId = attendanceId;
         this.sessionId = sessionId;
-        this.studentId = studentId;
+        this.studentUsername = studentUsername;
         this.attendanceTime = attendanceTime;
         this.method = method;
     }
@@ -69,12 +69,12 @@ public class Attendance {
         this.sessionId = sessionId;
     }
     
-    public Long getStudentId() {
-        return studentId;
+    public String getStudentUsername() {
+        return studentUsername;
     }
     
-    public void setStudentId(Long studentId) {
-        this.studentId = studentId;
+    public void setStudentUsername(String studentUsername) {
+        this.studentUsername = studentUsername;
     }
     
     public String getAttendanceTime() {
@@ -142,12 +142,12 @@ public class Attendance {
         this.requestedAt = requestedAt;
     }
     
-    public Long getApprovedBy() {
-        return approvedBy;
+    public String getApprovedByUsername() {
+        return approvedByUsername;
     }
     
-    public void setApprovedBy(Long approvedBy) {
-        this.approvedBy = approvedBy;
+    public void setApprovedByUsername(String approvedByUsername) {
+        this.approvedByUsername = approvedByUsername;
     }
     
     public Long getApprovedAt() {
@@ -192,12 +192,13 @@ public class Attendance {
         return "Attendance{" +
                 "attendanceId=" + attendanceId +
                 ", sessionId=" + sessionId +
-                ", studentId=" + studentId +
+                ", studentUsername='" + studentUsername + '\'' +
                 ", attendanceTime=" + attendanceTime +
                 ", method='" + method + '\'' +
                 ", alreadyPresent=" + alreadyPresent +
                 ", requestStatus='" + requestStatus + '\'' +
                 ", manualReason='" + manualReason + '\'' +
+                ", approvedByUsername='" + approvedByUsername + '\'' +
                 '}';
     }
 }

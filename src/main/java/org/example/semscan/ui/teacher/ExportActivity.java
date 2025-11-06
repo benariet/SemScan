@@ -21,7 +21,7 @@ import org.example.semscan.R;
 import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
-import org.example.semscan.data.model.Attendance;
+import org.example.semscan.data.model.ManualAttendanceResponse;
 import org.example.semscan.data.model.Session;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
@@ -105,12 +105,12 @@ public class ExportActivity extends AppCompatActivity {
     private void setupRequestAdapter() {
         requestAdapter = new ManualRequestAdapter(new ManualRequestAdapter.OnRequestActionListener() {
             @Override
-            public void onApprove(Attendance request) {
+            public void onApprove(ManualAttendanceResponse request) {
                 approveRequest(request);
             }
             
             @Override
-            public void onReject(Attendance request) {
+            public void onReject(ManualAttendanceResponse request) {
                 rejectRequest(request);
             }
         });
@@ -127,33 +127,33 @@ public class ExportActivity extends AppCompatActivity {
             return;
         }
         
-        Logger.api("GET", "api/v1/attendance/pending-requests", "Session ID: " + currentSessionId);
+        Logger.api("GET", "api/v1/attendance/manual/pending-requests", "Session ID: " + currentSessionId);
         
-        Call<List<Attendance>> call = apiService.getPendingRequests(currentSessionId);
-        call.enqueue(new Callback<List<Attendance>>() {
+        Call<List<ManualAttendanceResponse>> call = apiService.getPendingManualRequests(currentSessionId);
+        call.enqueue(new Callback<List<ManualAttendanceResponse>>() {
             @Override
-            public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
+            public void onResponse(Call<List<ManualAttendanceResponse>> call, Response<List<ManualAttendanceResponse>> response) {
                 Logger.d("ExportActivity", "=== API RESPONSE DEBUG ===");
                 Logger.d("ExportActivity", "Response successful: " + response.isSuccessful());
                 Logger.d("ExportActivity", "Response code: " + response.code());
                 Logger.d("ExportActivity", "Response body null: " + (response.body() == null));
                 
                 if (response.isSuccessful() && response.body() != null) {
-                    List<Attendance> pendingRequests = response.body();
-                    Logger.apiResponse("GET", "api/v1/attendance/pending-requests", 
+                    List<ManualAttendanceResponse> pendingRequests = response.body();
+                    Logger.apiResponse("GET", "api/v1/attendance/manual/pending-requests", 
                         response.code(), "Found " + pendingRequests.size() + " pending requests");
                     
                     // Debug logging for pending requests
                     Logger.d("ExportActivity", "=== PENDING REQUESTS DEBUG ===");
                     Logger.d("ExportActivity", "Total pending requests: " + pendingRequests.size());
                     for (int i = 0; i < pendingRequests.size(); i++) {
-                        Attendance req = pendingRequests.get(i);
+                        ManualAttendanceResponse req = pendingRequests.get(i);
                         Logger.d("ExportActivity", "Request " + i + ":");
                         Logger.d("ExportActivity", "  - Attendance ID: '" + req.getAttendanceId() + "'");
                         Logger.d("ExportActivity", "  - Session ID: '" + req.getSessionId() + "'");
-                        Logger.d("ExportActivity", "  - Student ID: '" + req.getStudentId() + "'");
+                        Logger.d("ExportActivity", "  - Student Username: '" + req.getStudentUsername() + "'");
                         Logger.d("ExportActivity", "  - Request Status: '" + req.getRequestStatus() + "'");
-                        Logger.d("ExportActivity", "  - Manual Reason: '" + req.getManualReason() + "'");
+                        Logger.d("ExportActivity", "  - Manual Reason: '" + req.getReason() + "'");
                         Logger.d("ExportActivity", "  - Full object: " + req.toString());
                     }
                     
@@ -177,7 +177,7 @@ public class ExportActivity extends AppCompatActivity {
                         }
                     }
                     
-                    Logger.apiError("GET", "api/v1/attendance/pending-requests", 
+                    Logger.apiError("GET", "api/v1/attendance/manual/pending-requests", 
                         response.code(), errorBody != null ? errorBody : "Failed to get pending requests");
                     Logger.d("ExportActivity", "API Error - Code: " + response.code() + ", Body: " + errorBody);
                     ToastUtils.showError(ExportActivity.this, "Failed to check pending requests");
@@ -185,14 +185,14 @@ public class ExportActivity extends AppCompatActivity {
             }
             
             @Override
-            public void onFailure(Call<List<Attendance>> call, Throwable t) {
+            public void onFailure(Call<List<ManualAttendanceResponse>> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to check pending requests", t);
                 ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
             }
         });
     }
     
-    private void showReviewModal(List<Attendance> pendingRequests) {
+    private void showReviewModal(List<ManualAttendanceResponse> pendingRequests) {
         Logger.d("ExportActivity", "=== SHOW REVIEW MODAL DEBUG ===");
         Logger.d("ExportActivity", "Creating review modal for " + pendingRequests.size() + " requests");
         
@@ -255,16 +255,16 @@ public class ExportActivity extends AppCompatActivity {
         }
     }
     
-    private void approveRequest(Attendance request) {
+    private void approveRequest(ManualAttendanceResponse request) {
         // API key no longer required - removed authentication
         
         // Debug logging to see what's in the request object
         Logger.d("ExportActivity", "=== ATTENDANCE REQUEST DEBUG ===");
         Logger.d("ExportActivity", "Attendance ID: '" + request.getAttendanceId() + "'");
         Logger.d("ExportActivity", "Session ID: '" + request.getSessionId() + "'");
-        Logger.d("ExportActivity", "Student ID: '" + request.getStudentId() + "'");
+        Logger.d("ExportActivity", "Student Username: '" + request.getStudentUsername() + "'");
         Logger.d("ExportActivity", "Request Status: '" + request.getRequestStatus() + "'");
-        Logger.d("ExportActivity", "Manual Reason: '" + request.getManualReason() + "'");
+        Logger.d("ExportActivity", "Manual Reason: '" + request.getReason() + "'");
         Logger.d("ExportActivity", "Attendance object: " + request.toString());
         
         // Check if attendanceId is null
@@ -274,14 +274,15 @@ public class ExportActivity extends AppCompatActivity {
             return;
         }
         
-        Logger.userAction("Approve Request", "Approving manual request for student: " + request.getStudentId());
-        Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 
-            "Attendance ID: " + request.getAttendanceId());
-        
-        Call<Attendance> call = apiService.approveManualRequest(request.getAttendanceId());
-        call.enqueue(new Callback<Attendance>() {
+        Logger.userAction("Approve Request", "Approving manual request for student: " + request.getStudentUsername());
+        Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve",
+                "Attendance ID: " + request.getAttendanceId());
+
+        Call<ManualAttendanceResponse> call = apiService.approveManualRequest(
+                request.getAttendanceId(), preferencesManager.getUserName());
+        call.enqueue(new Callback<ManualAttendanceResponse>() {
             @Override
-            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+            public void onResponse(Call<ManualAttendanceResponse> call, Response<ManualAttendanceResponse> response) {
                 if (response.isSuccessful()) {
                     Logger.apiResponse("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 
                         response.code(), "Request approved successfully");
@@ -296,24 +297,25 @@ public class ExportActivity extends AppCompatActivity {
             }
             
             @Override
-            public void onFailure(Call<Attendance> call, Throwable t) {
+            public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to approve request", t);
                 ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
             }
         });
     }
     
-    private void rejectRequest(Attendance request) {
+    private void rejectRequest(ManualAttendanceResponse request) {
         // API key no longer required - removed authentication
         
-        Logger.userAction("Reject Request", "Rejecting manual request for student: " + request.getStudentId());
-        Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject", 
-            "Attendance ID: " + request.getAttendanceId());
-        
-        Call<Attendance> call = apiService.rejectManualRequest(request.getAttendanceId());
-        call.enqueue(new Callback<Attendance>() {
+        Logger.userAction("Reject Request", "Rejecting manual request for student: " + request.getStudentUsername());
+        Logger.api("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject",
+                "Attendance ID: " + request.getAttendanceId());
+
+        Call<ManualAttendanceResponse> call = apiService.rejectManualRequest(
+                request.getAttendanceId(), preferencesManager.getUserName());
+        call.enqueue(new Callback<ManualAttendanceResponse>() {
             @Override
-            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+            public void onResponse(Call<ManualAttendanceResponse> call, Response<ManualAttendanceResponse> response) {
                 if (response.isSuccessful()) {
                     Logger.apiResponse("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject", 
                         response.code(), "Request rejected successfully");
@@ -328,19 +330,19 @@ public class ExportActivity extends AppCompatActivity {
             }
             
             @Override
-            public void onFailure(Call<Attendance> call, Throwable t) {
+            public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to reject request", t);
                 ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
             }
         });
     }
     
-    private void approveAllSafe(List<Attendance> requests) {
+    private void approveAllSafe(List<ManualAttendanceResponse> requests) {
         // TODO: Implement bulk approve logic based on auto_flags
         Toast.makeText(this, "Approve All Safe - Not implemented yet", Toast.LENGTH_SHORT).show();
     }
     
-    private void rejectAllDuplicates(List<Attendance> requests) {
+    private void rejectAllDuplicates(List<ManualAttendanceResponse> requests) {
         // TODO: Implement bulk reject duplicates logic
         Toast.makeText(this, "Reject All Duplicates - Not implemented yet", Toast.LENGTH_SHORT).show();
     }
@@ -461,7 +463,7 @@ public class ExportActivity extends AppCompatActivity {
      * Provide a simple way to handle pending requests without dialog
      * This can be called as a fallback if the dialog fails
      */
-    private void handlePendingRequestsDirectly(List<Attendance> pendingRequests) {
+    private void handlePendingRequestsDirectly(List<ManualAttendanceResponse> pendingRequests) {
         Logger.d("ExportActivity", "Handling pending requests directly - count: " + pendingRequests.size());
         
         // For now, just show a message and allow user to continue
@@ -474,9 +476,9 @@ public class ExportActivity extends AppCompatActivity {
         ToastUtils.showError(this, message);
         
         // For debugging, let's also log the details
-        for (Attendance req : pendingRequests) {
+        for (ManualAttendanceResponse req : pendingRequests) {
             Logger.d("ExportActivity", "Pending request - ID: " + req.getAttendanceId() + 
-                      ", Student: " + req.getStudentId() + ", Reason: " + req.getManualReason());
+                      ", Student: " + req.getStudentUsername() + ", Reason: " + req.getReason());
         }
     }
     

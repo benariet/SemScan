@@ -3,12 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/action_create_seminar"
-        android:title="Create seminar"
-        android:icon="@drawable/ic_add"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/action_settings"
         android:title="@string/settings"
         android:icon="@drawable/ic_settings"

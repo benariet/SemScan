@@ -239,12 +239,7 @@ public class PresenterHomeActivity extends AppCompatActivity {
         } else if (id == R.id.action_change_role) {
             changeRole();
             return true;
-        } else if (id == R.id.action_create_seminar) {
-            Logger.userAction("Menu", "Presenter selected Create seminar");
-            startActivity(new Intent(this, AddAvailabilityActivity.class));
-            return true;
         }
-        
         return super.onOptionsItemSelected(item);
     }
     

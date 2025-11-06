@@ -3,7 +3,7 @@ package org.example.semscan.data.model;
 public class ManualAttendanceResponse {
     private Long attendanceId;
     private Long sessionId;
-    private Long studentId;
+    private String studentUsername;
     private String studentName;
     private String reason;
     private String requestStatus;
@@ -20,8 +20,8 @@ public class ManualAttendanceResponse {
     public Long getSessionId() { return sessionId; }
     public void setSessionId(Long sessionId) { this.sessionId = sessionId; }
     
-    public Long getStudentId() { return studentId; }
-    public void setStudentId(Long studentId) { this.studentId = studentId; }
+    public String getStudentUsername() { return studentUsername; }
+    public void setStudentUsername(String studentUsername) { this.studentUsername = studentUsername; }
     
     public String getStudentName() { return studentName; }
     public void setStudentName(String studentName) { this.studentName = studentName; }

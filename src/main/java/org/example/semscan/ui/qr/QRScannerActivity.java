@@ -219,7 +219,7 @@ public class QRScannerActivity extends AppCompatActivity {
         // Log the complete request
         Logger.d(Logger.TAG_QR, "Request object created:");
         Logger.d(Logger.TAG_QR, "  - sessionId: '" + request.sessionId + "'");
-        Logger.d(Logger.TAG_QR, "  - username: '" + request.username + "'");
+        Logger.d(Logger.TAG_QR, "  - username: '" + request.studentUsername + "'");
         Logger.d(Logger.TAG_QR, "  - timestampMs: " + request.timestampMs);
         
         // API key no longer required - removed authentication

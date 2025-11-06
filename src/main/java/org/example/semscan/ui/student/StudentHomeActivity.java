@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.text.TextUtils;
 import android.widget.EditText;
 import android.widget.Toast;
 import android.widget.ProgressBar;
@@ -17,7 +18,6 @@ import androidx.cardview.widget.CardView;
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
-import org.example.semscan.data.model.User;
 import org.example.semscan.data.model.Seminar;
 import java.util.List;
 import org.example.semscan.ui.RolePickerActivity;
@@ -53,12 +53,12 @@ public class StudentHomeActivity extends AppCompatActivity {
         serverLogger = ServerLogger.getInstance(this);
         
         // Update user context for student logging
-        Long userId = preferencesManager.getUserId();
+        String username = preferencesManager.getUserName();
         String userRole = preferencesManager.getUserRole();
-        serverLogger.updateUserContext(userId, userRole);
-        
+        serverLogger.updateUserContext(username, userRole);
+
         // Test logging to verify student context
-        serverLogger.i(ServerLogger.TAG_UI, "StudentHomeActivity created - User: " + userId + ", Role: " + userRole);
+        serverLogger.i(ServerLogger.TAG_UI, "StudentHomeActivity created - User: " + username + ", Role: " + userRole);
 
         // Check if user is actually a student
         if (!preferencesManager.isStudent()) {
@@ -88,47 +88,19 @@ public class StudentHomeActivity extends AppCompatActivity {
     }
     
     private void updateWelcomeMessage() {
-        Long userId = preferencesManager.getUserId();
-        
-        if (userId == null || userId <= 0) {
+        String username = preferencesManager.getUserName();
+
+        if (TextUtils.isEmpty(username)) {
             textWelcomeMessage.setText("Welcome, Student!");
-            Logger.w(Logger.TAG_UI, "No user ID found, using generic welcome message");
+            Logger.w(Logger.TAG_UI, "No username found, using generic welcome message");
             return;
         }
-        
-        textWelcomeMessage.setText("Welcome, Student!");
 
-        apiService.getStudentUserById(userId).enqueue(new retrofit2.Callback<org.example.semscan.data.model.User>() {
-            @Override
-            public void onResponse(Call<org.example.semscan.data.model.User> call, Response<org.example.semscan.data.model.User> response) {
-                if (!response.isSuccessful() || response.body() == null) {
-                    Logger.w(Logger.TAG_UI, "Failed to fetch student name. Code: " + response.code());
-                    return;
-                }
-
-                org.example.semscan.data.model.User user = response.body();
-                String fullName = user.getFullName();
-                if (fullName != null) {
-                    fullName = fullName.trim();
-                }
-
-                if (fullName != null && !fullName.isEmpty()) {
-                    textWelcomeMessage.setText("Welcome, " + fullName + "!");
-                    Logger.i(Logger.TAG_UI, "Welcome message updated with student name: " + fullName);
-                    if (serverLogger != null) {
-                        serverLogger.i(ServerLogger.TAG_UI, "Student resolved to: " + fullName);
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<org.example.semscan.data.model.User> call, Throwable t) {
-                Logger.e(Logger.TAG_UI, "Failed to load student profile", t);
-                if (serverLogger != null) {
-                    serverLogger.e(ServerLogger.TAG_UI, "Failed to load student profile", t);
-                }
-            }
-        });
+        textWelcomeMessage.setText(getString(R.string.welcome_user, username));
+        Logger.i(Logger.TAG_UI, "Welcome message set with username: " + username);
+        if (serverLogger != null) {
+            serverLogger.i(ServerLogger.TAG_UI, "Student resolved to username: " + username);
+        }
     }
     
     private void setupToolbar() {

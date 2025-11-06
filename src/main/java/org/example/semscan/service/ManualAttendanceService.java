@@ -1,16 +1,14 @@
 package org.example.semscan.service;
 
 import android.content.Context;
-import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
-import org.example.semscan.data.model.Attendance;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.data.model.ManualAttendanceRequest;
 import org.example.semscan.data.model.ManualAttendanceResponse;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -30,12 +28,12 @@ public class ManualAttendanceService {
     }
     
     public interface ManualAttendanceCallback {
-        void onSuccess(Attendance response);
+        void onSuccess(ManualAttendanceResponse response);
         void onError(String error);
     }
     
     public interface PendingRequestsCallback {
-        void onSuccess(List<Attendance> requests);
+        void onSuccess(List<ManualAttendanceResponse> requests);
         void onError(String error);
     }
     
@@ -54,10 +52,10 @@ public class ManualAttendanceService {
         );
         // API key no longer required - removed authentication
         
-        Call<Attendance> call = apiService.createManualRequest(apiRequest);
-        call.enqueue(new Callback<Attendance>() {
+        Call<ManualAttendanceResponse> call = apiService.createManualRequest(apiRequest);
+        call.enqueue(new Callback<ManualAttendanceResponse>() {
             @Override
-            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+            public void onResponse(Call<ManualAttendanceResponse> call, Response<ManualAttendanceResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
@@ -66,7 +64,7 @@ public class ManualAttendanceService {
             }
             
             @Override
-            public void onFailure(Call<Attendance> call, Throwable t) {
+            public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
                 callback.onError("Network error: " + t.getMessage());
             }
         });
@@ -76,10 +74,10 @@ public class ManualAttendanceService {
     public void getPendingRequests(Long sessionId, PendingRequestsCallback callback) {
         // API key no longer required - removed authentication
         
-        Call<List<Attendance>> call = apiService.getPendingRequests(sessionId);
-        call.enqueue(new Callback<List<Attendance>>() {
+        Call<List<ManualAttendanceResponse>> call = apiService.getPendingManualRequests(sessionId);
+        call.enqueue(new Callback<List<ManualAttendanceResponse>>() {
             @Override
-            public void onResponse(Call<List<Attendance>> call, Response<List<Attendance>> response) {
+            public void onResponse(Call<List<ManualAttendanceResponse>> call, Response<List<ManualAttendanceResponse>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
@@ -88,7 +86,7 @@ public class ManualAttendanceService {
             }
             
             @Override
-            public void onFailure(Call<List<Attendance>> call, Throwable t) {
+            public void onFailure(Call<List<ManualAttendanceResponse>> call, Throwable t) {
                 callback.onError("Network error: " + t.getMessage());
             }
         });
@@ -97,11 +95,17 @@ public class ManualAttendanceService {
     // Approve request
     public void approveRequest(Long attendanceId, ManualAttendanceCallback callback) {
         // API key no longer required - removed authentication
-        
-        Call<Attendance> call = apiService.approveManualRequest(attendanceId);
-        call.enqueue(new Callback<Attendance>() {
+        String presenterUsername = preferencesManager.getUserName();
+        if (presenterUsername == null || presenterUsername.trim().isEmpty()) {
+            callback.onError("Missing presenter username. Please log in again.");
+            return;
+        }
+        presenterUsername = presenterUsername.trim().toLowerCase(Locale.US);
+
+        Call<ManualAttendanceResponse> call = apiService.approveManualRequest(attendanceId, presenterUsername);
+        call.enqueue(new Callback<ManualAttendanceResponse>() {
             @Override
-            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+            public void onResponse(Call<ManualAttendanceResponse> call, Response<ManualAttendanceResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
@@ -110,7 +114,7 @@ public class ManualAttendanceService {
             }
             
             @Override
-            public void onFailure(Call<Attendance> call, Throwable t) {
+            public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
                 callback.onError("Network error: " + t.getMessage());
             }
         });
@@ -119,11 +123,17 @@ public class ManualAttendanceService {
     // Reject request
     public void rejectRequest(Long attendanceId, ManualAttendanceCallback callback) {
         // API key no longer required - removed authentication
-        
-        Call<Attendance> call = apiService.rejectManualRequest(attendanceId);
-        call.enqueue(new Callback<Attendance>() {
+        String presenterUsername = preferencesManager.getUserName();
+        if (presenterUsername == null || presenterUsername.trim().isEmpty()) {
+            callback.onError("Missing presenter username. Please log in again.");
+            return;
+        }
+        presenterUsername = presenterUsername.trim().toLowerCase(Locale.US);
+
+        Call<ManualAttendanceResponse> call = apiService.rejectManualRequest(attendanceId, presenterUsername);
+        call.enqueue(new Callback<ManualAttendanceResponse>() {
             @Override
-            public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+            public void onResponse(Call<ManualAttendanceResponse> call, Response<ManualAttendanceResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
@@ -132,7 +142,7 @@ public class ManualAttendanceService {
             }
             
             @Override
-            public void onFailure(Call<Attendance> call, Throwable t) {
+            public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
                 callback.onError("Network error: " + t.getMessage());
             }
         });

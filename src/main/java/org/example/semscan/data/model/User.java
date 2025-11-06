@@ -2,103 +2,90 @@ package org.example.semscan.data.model;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * User profile DTO aligned with the username-first backend contract.
+ */
 public class User {
-    @SerializedName("user_id")
-    private Long userId;
-    
-    @SerializedName("first_name")
-    private String firstName;
-    
-    @SerializedName("last_name")
-    private String lastName;
-    
+
+    @SerializedName("bguUsername")
+    private String bguUsername;
+
+    @SerializedName("email")
     private String email;
-    private String role; // "STUDENT" or "PRESENTER"
-    
-    @SerializedName("student_id")
-    private Long studentId;
-    
-    public User() {}
-    
-    public User(Long userId, String firstName, String lastName, String email, String role, Long studentId) {
-        this.userId = userId;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.role = role;
-        this.studentId = studentId;
+
+    @SerializedName("firstName")
+    private String firstName;
+
+    @SerializedName("lastName")
+    private String lastName;
+
+    @SerializedName("degree")
+    private String degree; // MSc | PhD
+
+    @SerializedName("participationPreference")
+    private String participationPreference; // PARTICIPANT_ONLY | PRESENTER_ONLY | BOTH
+
+    public User() {
     }
-    
-    // Getters and Setters
-    public Long getUserId() {
-        return userId;
+
+    public String getBguUsername() {
+        return bguUsername;
     }
-    
-    public void setUserId(Long userId) {
-        this.userId = userId;
+
+    public void setBguUsername(String bguUsername) {
+        this.bguUsername = bguUsername;
     }
-    
-    public String getFirstName() {
-        return firstName;
-    }
-    
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-    
-    public String getLastName() {
-        return lastName;
-    }
-    
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-    
-    public String getFullName() {
-        return firstName + " " + lastName;
-    }
-    
+
     public String getEmail() {
         return email;
     }
-    
+
     public void setEmail(String email) {
         this.email = email;
     }
-    
-    public String getRole() {
-        return role;
+
+    public String getFirstName() {
+        return firstName;
     }
-    
-    public void setRole(String role) {
-        this.role = role;
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
     }
-    
-    public Long getStudentId() {
-        return studentId;
+
+    public String getLastName() {
+        return lastName;
     }
-    
-    public void setStudentId(Long studentId) {
-        this.studentId = studentId;
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
-    
-    public boolean isPresenter() {
-        return "PRESENTER".equals(role);
+
+    public String getFullName() {
+        if (firstName == null && lastName == null) {
+            return null;
+        }
+        if (firstName == null) {
+            return lastName;
+        }
+        if (lastName == null) {
+            return firstName;
+        }
+        return firstName + " " + lastName;
     }
-    
-    public boolean isStudent() {
-        return "STUDENT".equals(role);
+
+    public String getDegree() {
+        return degree;
     }
-    
-    @Override
-    public String toString() {
-        return "User{" +
-                "userId=" + userId +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", email='" + email + '\'' +
-                ", role='" + role + '\'' +
-                ", studentId=" + studentId +
-                '}';
+
+    public void setDegree(String degree) {
+        this.degree = degree;
+    }
+
+    public String getParticipationPreference() {
+        return participationPreference;
+    }
+
+    public void setParticipationPreference(String participationPreference) {
+        this.participationPreference = participationPreference;
     }
 }

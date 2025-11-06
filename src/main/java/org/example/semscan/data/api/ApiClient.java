@@ -6,17 +6,15 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import org.example.semscan.constants.ApiConstants;
-import org.example.semscan.utils.PreferencesManager;
 
 public class ApiClient {
-    private static final String DEFAULT_BASE_URL = "http://10.0.2.2:8080/"; // Android emulator localhost
+    private static final String DEFAULT_BASE_URL = ApiConstants.SERVER_URL;
     private static ApiClient instance;
     private ApiService apiService;
     private String currentBaseUrl;
     
     private ApiClient(Context context) {
-        // Force use of localhost for debugging
-        currentBaseUrl = "http://localhost:8080/";
+        currentBaseUrl = normalizeBaseUrl(DEFAULT_BASE_URL);
         
         // Log the current API URL for debugging
         android.util.Log.d("ApiClient", "Current API Base URL: " + currentBaseUrl);
@@ -47,8 +45,7 @@ public class ApiClient {
     }
     
     public static synchronized ApiClient getInstance(Context context) {
-        // Force use of localhost for debugging - ignore preferences
-        String currentUrl = "http://localhost:8080/";
+        String currentUrl = normalizeBaseUrl(DEFAULT_BASE_URL);
         
         // If instance is null or URL has changed, create new instance
         if (instance == null || !instance.currentBaseUrl.equals(currentUrl)) {
@@ -67,20 +64,14 @@ public class ApiClient {
         return currentBaseUrl;
     }
     
-    public void updateBaseUrl(Context context) {
-        // Get the latest API URL from preferences
-        PreferencesManager preferencesManager = PreferencesManager.getInstance(context);
-        String newBaseUrl = preferencesManager.getApiBaseUrl();
-        
-        // Ensure URL ends with /
-        if (!newBaseUrl.endsWith("/")) {
-            newBaseUrl += "/";
+    private static String normalizeBaseUrl(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return "http://localhost:8080/";
         }
-        
-        // Only recreate if URL changed
-        if (!newBaseUrl.equals(currentBaseUrl)) {
-            currentBaseUrl = newBaseUrl;
-            createApiService();
+        String trimmed = url.trim();
+        if (!trimmed.endsWith("/")) {
+            trimmed += "/";
         }
+        return trimmed;
     }
 }

@@ -10,7 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.example.semscan.R;
-import org.example.semscan.data.model.Attendance;
+import org.example.semscan.data.model.ManualAttendanceResponse;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -20,13 +20,13 @@ import java.util.Locale;
 
 public class ManualRequestAdapter extends RecyclerView.Adapter<ManualRequestAdapter.RequestViewHolder> {
     
-    private List<Attendance> requests;
+    private List<ManualAttendanceResponse> requests;
     private OnRequestActionListener listener;
     private SimpleDateFormat timeFormat;
     
     public interface OnRequestActionListener {
-        void onApprove(Attendance request);
-        void onReject(Attendance request);
+        void onApprove(ManualAttendanceResponse request);
+        void onReject(ManualAttendanceResponse request);
     }
     
     public ManualRequestAdapter(OnRequestActionListener listener) {
@@ -35,7 +35,7 @@ public class ManualRequestAdapter extends RecyclerView.Adapter<ManualRequestAdap
         this.timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
     }
     
-    public void updateRequests(List<Attendance> newRequests) {
+    public void updateRequests(List<ManualAttendanceResponse> newRequests) {
         this.requests.clear();
         this.requests.addAll(newRequests);
         notifyDataSetChanged();
@@ -51,7 +51,7 @@ public class ManualRequestAdapter extends RecyclerView.Adapter<ManualRequestAdap
     
     @Override
     public void onBindViewHolder(@NonNull RequestViewHolder holder, int position) {
-        Attendance request = requests.get(position);
+        ManualAttendanceResponse request = requests.get(position);
         holder.bind(request);
     }
     
@@ -80,17 +80,19 @@ public class ManualRequestAdapter extends RecyclerView.Adapter<ManualRequestAdap
             btnReject = itemView.findViewById(R.id.btn_reject);
         }
         
-        public void bind(Attendance request) {
+        public void bind(ManualAttendanceResponse request) {
             // Set student name (you'll need to get this from user data)
-            textStudentName.setText("Student " + request.getStudentId());
+            textStudentName.setText("Student " + request.getStudentUsername());
             
             // Set request time
             if (request.getRequestedAt() != null) {
-                textRequestTime.setText(timeFormat.format(new Date(request.getRequestedAt())));
+                textRequestTime.setText(request.getRequestedAt());
+            } else {
+                textRequestTime.setText("-");
             }
             
             // Set reason
-            textReason.setText(request.getManualReason() != null ? request.getManualReason() : "No reason provided");
+            textReason.setText(request.getReason() != null ? request.getReason() : "No reason provided");
             
             // Set flags based on auto_flags JSON
             setFlags(request);
@@ -109,7 +111,7 @@ public class ManualRequestAdapter extends RecyclerView.Adapter<ManualRequestAdap
             });
         }
         
-        private void setFlags(Attendance request) {
+        private void setFlags(ManualAttendanceResponse request) {
             // Parse auto_flags JSON to determine flags
             // For now, we'll show basic flags
             textFlags.setText("✓ In window");

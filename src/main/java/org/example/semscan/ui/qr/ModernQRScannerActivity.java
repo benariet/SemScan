@@ -147,10 +147,10 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
         serverLogger = ServerLogger.getInstance(this);
-        Long userId = preferencesManager.getUserId();
+        String username = preferencesManager.getUserName();
         String userRole = preferencesManager.getUserRole();
-        serverLogger.updateUserContext(userId, userRole);
-        serverLogger.userAction("Open QR Scanner", "ModernQRScannerActivity opened");
+        serverLogger.updateUserContext(username, userRole);
+        serverLogger.userAction("Open QR Scanner", "ModernQRScannerActivity opened as " + username);
         cameraExecutor = Executors.newSingleThreadExecutor();
         
         // Initialize ML Kit Barcode Scanner
