@@ -2,12 +2,12 @@ package org.example.semscan.ui.teacher;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -16,23 +16,23 @@ import androidx.cardview.widget.CardView;
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
-import org.example.semscan.data.model.User;
 import org.example.semscan.ui.RolePickerActivity;
 import org.example.semscan.ui.SettingsActivity;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.utils.ServerLogger;
 
+import java.util.Locale;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import org.example.semscan.ui.teacher.AddAvailabilityActivity;
 
 public class PresenterHomeActivity extends AppCompatActivity {
-    
+
     private CardView cardStartSession;
-    private CardView cardCreateSeminar;
-    private CardView cardCreateInstance;
+    private CardView cardEnrollSlot;
+    private CardView cardMySlot;
     private Button btnSettings;
     private Button btnChangeRole;
     private TextView textWelcomeMessage;
@@ -68,52 +68,50 @@ public class PresenterHomeActivity extends AppCompatActivity {
     
     private void initializeViews() {
         cardStartSession = findViewById(R.id.card_start_session);
-        cardCreateSeminar = findViewById(R.id.card_create_seminar);
-        cardCreateInstance = findViewById(R.id.card_create_instance);
+        cardEnrollSlot = findViewById(R.id.card_enroll_slot);
+        cardMySlot = findViewById(R.id.card_my_slot);
         btnSettings = findViewById(R.id.btn_settings);
         btnChangeRole = findViewById(R.id.btn_change_role);
         textWelcomeMessage = findViewById(R.id.text_welcome_message);
     }
     
     private void updateWelcomeMessage() {
-        Long userId = preferencesManager.getUserId();
-        
-        if (userId == null || userId <= 0) {
-            textWelcomeMessage.setText("Welcome, Presenter!");
-            Logger.w(Logger.TAG_UI, "No user ID found, using generic welcome message");
+        final String cachedName = preferencesManager.getUserName();
+        if (!TextUtils.isEmpty(cachedName)) {
+            textWelcomeMessage.setText(getString(R.string.welcome_user, cachedName.trim()));
+        } else {
+            textWelcomeMessage.setText(R.string.presenter_home_welcome_default);
+        }
+
+        final String username = preferencesManager.getUserName();
+        if (username == null || username.trim().isEmpty()) {
+            Logger.w(Logger.TAG_UI, "No username cached; skipping presenter home fetch");
             return;
         }
-        
-        textWelcomeMessage.setText("Welcome, Presenter!");
 
-        apiService.getUserById(userId).enqueue(new retrofit2.Callback<org.example.semscan.data.model.User>() {
+        final String normalizedUsername = username.trim().toLowerCase(Locale.US);
+        apiService.getPresenterHome(normalizedUsername).enqueue(new Callback<ApiService.PresenterHomeResponse>() {
             @Override
-            public void onResponse(Call<org.example.semscan.data.model.User> call, Response<org.example.semscan.data.model.User> response) {
-                if (!response.isSuccessful() || response.body() == null) {
-                    Logger.w(Logger.TAG_UI, "Failed to fetch presenter name. Code: " + response.code());
+            public void onResponse(Call<ApiService.PresenterHomeResponse> call, Response<ApiService.PresenterHomeResponse> response) {
+                if (!response.isSuccessful() || response.body() == null || response.body().presenter == null) {
+                    Logger.w(Logger.TAG_UI, "Presenter home fetch failed code=" + response.code());
                     return;
                 }
-
-                org.example.semscan.data.model.User user = response.body();
-                String fullName = user.getFullName();
-                if (fullName != null) {
-                    fullName = fullName.trim();
+                String name = response.body().presenter.name;
+                if (name == null || name.trim().isEmpty()) {
+                    return;
                 }
-
-                if (fullName != null && !fullName.isEmpty()) {
-                    textWelcomeMessage.setText("Welcome, " + fullName + "!");
-                    Logger.i(Logger.TAG_UI, "Welcome message updated with presenter name: " + fullName);
-                    if (serverLogger != null) {
-                        serverLogger.i(ServerLogger.TAG_UI, "Presenter resolved to: " + fullName);
-                    }
+                textWelcomeMessage.setText(getString(R.string.welcome_user, name.trim()));
+                if (serverLogger != null) {
+                    serverLogger.i(ServerLogger.TAG_UI, "Presenter resolved from home endpoint: " + name);
                 }
             }
 
             @Override
-            public void onFailure(Call<org.example.semscan.data.model.User> call, Throwable t) {
-                Logger.e(Logger.TAG_UI, "Failed to load presenter profile", t);
+            public void onFailure(Call<ApiService.PresenterHomeResponse> call, Throwable t) {
+                Logger.e(Logger.TAG_UI, "Failed to load presenter home", t);
                 if (serverLogger != null) {
-                    serverLogger.e(ServerLogger.TAG_UI, "Failed to load presenter profile", t);
+                    serverLogger.e(ServerLogger.TAG_UI, "Failed to load presenter home", t);
                 }
             }
         });
@@ -129,33 +127,28 @@ public class PresenterHomeActivity extends AppCompatActivity {
     }
     
     private void setupClickListeners() {
-        cardStartSession.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Logger.userAction("Open Start Session", "Presenter tapped start session card");
-                if (serverLogger != null) {
-                    serverLogger.userAction("Open Start Session", "Presenter tapped start session card");
-                }
-                openStartSession();
+        cardStartSession.setOnClickListener(v -> {
+            Logger.userAction("Open Session", "Presenter tapped open session card");
+            if (serverLogger != null) {
+                serverLogger.userAction("Open Session", "Presenter tapped open session card");
             }
+            openStartSession();
         });
 
-        cardCreateSeminar.setOnClickListener(v -> {
-            Logger.userAction("Create Seminar", "Presenter tapped create seminar card");
+        cardEnrollSlot.setOnClickListener(v -> {
+            Logger.userAction("Open Slot Selection", "Presenter tapped enroll slot card");
             if (serverLogger != null) {
-                serverLogger.userAction("Create Seminar", "Presenter tapped create seminar card");
+                serverLogger.userAction("Open Slot Selection", "Presenter tapped enroll slot card");
             }
-            Intent intent = new Intent(PresenterHomeActivity.this, AddSeminarActivity.class);
-            startActivity(intent);
+            openSlotSelection(false);
         });
 
-        cardCreateInstance.setOnClickListener(v -> {
-            Logger.userAction("Create Seminar Instance", "Presenter tapped create instance card");
+        cardMySlot.setOnClickListener(v -> {
+            Logger.userAction("Open My Slot", "Presenter tapped my slot card");
             if (serverLogger != null) {
-                serverLogger.userAction("Create Seminar Instance", "Presenter tapped create instance card");
+                serverLogger.userAction("Open My Slot", "Presenter tapped my slot card");
             }
-            Intent intent = new Intent(PresenterHomeActivity.this, AddAvailabilityActivity.class);
-            startActivity(intent);
+            openMySlot();
         });
         
         btnSettings.setOnClickListener(new View.OnClickListener() {
@@ -190,7 +183,16 @@ public class PresenterHomeActivity extends AppCompatActivity {
         }
     }
     
-    // Export removed from home - accessed directly from QR display after session ends
+    private void openSlotSelection(boolean scrollToMySlot) {
+        Intent intent = new Intent(this, PresenterSlotSelectionActivity.class);
+        intent.putExtra(PresenterSlotSelectionActivity.EXTRA_SCROLL_TO_MY_SLOT, scrollToMySlot);
+        startActivity(intent);
+    }
+
+    private void openMySlot() {
+        Intent intent = new Intent(this, PresenterMySlotActivity.class);
+        startActivity(intent);
+    }
     
     private void openSettings() {
         Intent intent = new Intent(this, SettingsActivity.class);

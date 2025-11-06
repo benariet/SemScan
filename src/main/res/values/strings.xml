@@ -124,6 +124,74 @@
     <string name="api_base_url">API Base URL</string>
     <string name="about">About</string>
     <string name="version">Version %s</string>
+
+    <!-- Presenter Home (revamped) -->
+    <string name="presenter_home_welcome_default">Welcome, Presenter!</string>
+    <string name="welcome_user">Welcome, %1$s!</string>
+    <string name="presenter_home_enroll_title">Select a presentation slot</string>
+    <string name="presenter_home_enroll_description">Browse upcoming seminar dates and enroll yourself.</string>
+    <string name="presenter_home_my_slot_card_title">My registered slot</string>
+    <string name="presenter_home_my_slot_card_description">Review your assigned seminar details and make changes.</string>
+
+    <!-- Presenter Slot Selection -->
+    <string name="presenter_slot_selection_title">Available seminar slots</string>
+    <string name="presenter_slot_empty_title">No slots available</string>
+    <string name="presenter_slot_empty_message">Check back later or refresh to load the latest schedule.</string>
+    <string name="presenter_slot_refresh">Refresh</string>
+
+    <!-- Presenter My Slot -->
+    <string name="presenter_my_slot_screen_title">My registered slot</string>
+    <string name="presenter_my_slot_intro">You can review the seminar slot you are registered to. To switch slots, return to the list of available times.</string>
+    <string name="presenter_my_slot_empty">You are not registered to any seminar slot yet.</string>
+    <string name="presenter_my_slot_change_button">Browse available slots</string>
+    <string name="presenter_my_slot_cancel_button">Cancel registration</string>
+    <string name="presenter_my_slot_cancel_success">Your registration was cancelled.</string>
+    <string name="presenter_my_slot_cancel_error">Could not cancel registration. Please try again.</string>
+    <string name="presenter_my_slot_no_slot_error">No slot to cancel.</string>
+    <string name="presenter_my_slot_no_user_error">User information missing. Please log in again.</string>
+
+    <!-- Presenter Slot Details -->
+    <string name="presenter_home_slot_title_format">%1$s • %2$s</string>
+    <string name="presenter_home_slot_registered_count">Registered: %1$d / %2$d</string>
+    <string name="presenter_home_slot_available_count"> • Available: %1$d</string>
+    <string name="presenter_home_slot_state_available">Available</string>
+    <string name="presenter_home_slot_state_partial">Partially booked</string>
+    <string name="presenter_home_slot_state_full">Full</string>
+    <string name="presenter_home_register_title">Register for this slot</string>
+    <string name="presenter_home_register_description">Provide your presentation details to reserve this slot.</string>
+    <string name="presenter_home_topic_hint">Presentation topic (optional)</string>
+    <string name="presenter_home_supervisor_name_hint">Supervisor full name (optional)</string>
+    <string name="presenter_home_supervisor_email_hint">Supervisor email (optional)</string>
+    <string name="presenter_home_supervisor_email_invalid">Enter a valid supervisor email address</string>
+    <string name="presenter_home_register_success">You have been registered for this slot.</string>
+    <string name="presenter_home_register_already">You are already registered for this slot.</string>
+    <string name="presenter_home_register_full">This slot is already full.</string>
+    <string name="presenter_home_register_conflict">You already have another slot booked.</string>
+    <string name="room_with_label">Room %1$s</string>
+    <string name="building_with_label">Building %1$s</string>
+
+    <!-- Presenter Start Session -->
+    <string name="presenter_start_session_title">Open session QR</string>
+    <string name="presenter_start_session_subtitle">We’ll use your registered time slot to generate the session QR code.</string>
+    <string name="presenter_start_session_button">Open session</string>
+    <string name="presenter_start_session_button_resume">View session QR</string>
+    <string name="presenter_start_session_empty">You are not registered for a presentation slot. Register first to open your session.</string>
+    <string name="presenter_start_session_error_no_user">We couldn’t find your username. Please log in again.</string>
+    <string name="presenter_start_session_status_open">Session already open</string>
+    <string name="presenter_start_session_error_load">Could not load your slot details. Please try again.</string>
+    <string name="presenter_start_session_toast_open">Opening session…</string>
+
+    <!-- Presenter Attendance QR -->
+    <string name="presenter_attendance_qr_title">Session QR</string>
+    <string name="presenter_attendance_qr_instructions">Ask students to scan this QR to confirm their attendance.</string>
+    <string name="presenter_attendance_qr_valid_until">Valid until %1$s</string>
+    <string name="presenter_attendance_qr_opened_at">Opened at %1$s</string>
+    <string name="presenter_attendance_qr_close_hint">The session closes automatically when the slot ends.</string>
+
+    <!-- Dialog / misc -->
+    <string name="presenter_slot_register_button">Register now</string>
+    <string name="presenter_slot_registered_badge">Registered</string>
+    <string name="presenter_slot_full_badge">Full</string>
     
     <!-- Permissions -->
     <string name="camera_permission_required">Camera permission is required to scan QR codes</string>

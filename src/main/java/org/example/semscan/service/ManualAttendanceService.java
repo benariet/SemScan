@@ -48,7 +48,7 @@ public class ManualAttendanceService {
     public void createManualRequest(ManualAttendanceRequest request, ManualAttendanceCallback callback) {
         ApiService.CreateManualRequestRequest apiRequest = new ApiService.CreateManualRequestRequest(
             request.getSessionId(),
-            request.getStudentId(),
+            request.getStudentUsername(),
             request.getReason(),
             request.getDeviceId()
         );

@@ -12,6 +12,7 @@ import android.widget.Toast;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.Build;
+import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -299,30 +300,30 @@ public class ModernQRScannerActivity extends AppCompatActivity {
     }
     
     private void submitAttendance(Long sessionId) {
-        Long studentId = preferencesManager.getUserId();
-        if (studentId == null || studentId <= 0) {
-            Logger.e(TAG, "Student ID not found or invalid");
+        String studentUsername = preferencesManager.getUserName();
+        if (TextUtils.isEmpty(studentUsername)) {
+            Logger.e(TAG, "Student username not found or invalid");
             if (serverLogger != null) {
-                serverLogger.e(ServerLogger.TAG_QR, "Student ID not found or invalid");
+                serverLogger.e(ServerLogger.TAG_QR, "Student username not found or invalid");
             }
-            showError("Student ID not found. Please log in again.");
+            showError("Student username not found. Please log in again.");
             return;
         }
 
-        Logger.d(TAG, "Submitting attendance - Session: " + sessionId + ", Student: " + studentId);
+        Logger.d(TAG, "Submitting attendance - Session: " + sessionId + ", Student: " + studentUsername);
         if (serverLogger != null) {
-            serverLogger.attendance("Submit Attendance", "Session: " + sessionId + ", Student: " + studentId);
+            serverLogger.attendance("Submit Attendance", "Session: " + sessionId + ", Student: " + studentUsername);
         }
         
         // Debug: Log the API base URL being used
         String apiBaseUrl = ApiClient.getInstance(this).getCurrentBaseUrl();
         Logger.d(TAG, "API Base URL: " + apiBaseUrl);
         if (serverLogger != null) {
-            serverLogger.api("POST", "api/v1/attendance", "Base URL: " + apiBaseUrl + ", Session: " + sessionId + ", Student: " + studentId);
+            serverLogger.api("POST", "api/v1/attendance", "Base URL: " + apiBaseUrl + ", Session: " + sessionId + ", Student: " + studentUsername);
         }
         
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
-            sessionId, studentId, System.currentTimeMillis()
+            sessionId, studentUsername, System.currentTimeMillis()
         );
         
         // API key no longer required - removed authentication
@@ -337,13 +338,13 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                         Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
                         if (serverLogger != null) {
                             serverLogger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
-                            serverLogger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + studentId);
+                            serverLogger.attendance("Attendance Success", "Session: " + sessionId + ", Username: " + studentUsername);
                             serverLogger.flushLogs();
                         }
                         vibrateSuccess();
                         updateStatus("Success!", R.color.success_green);
                         showSuccess("Attendance recorded successfully!");
-                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + studentId);
+                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Username: " + studentUsername);
                         
                         // Return to previous screen after delay
                         new android.os.Handler().postDelayed(() -> finish(), 2000);
@@ -355,7 +356,7 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                 } else {
                     Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
                     if (serverLogger != null) {
-                        serverLogger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
+                        serverLogger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance for student " + studentUsername);
                     }
                     updateStatus("Request failed", R.color.error_red);
                     
@@ -399,7 +400,7 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                     // Show the specific error message in a dialog
                     showErrorDialog(errorMessage);
                     if (serverLogger != null) {
-                        serverLogger.attendance("Attendance Failed", "Session: " + sessionId + ", Student: " + studentId + ", Reason: " + errorMessage);
+                        serverLogger.attendance("Attendance Failed", "Session: " + sessionId + ", Student: " + studentUsername + ", Reason: " + errorMessage);
                     }
                 }
             }

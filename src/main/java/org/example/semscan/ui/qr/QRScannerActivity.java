@@ -3,6 +3,7 @@ package org.example.semscan.ui.qr;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -194,17 +195,17 @@ public class QRScannerActivity extends AppCompatActivity {
             return;
         }
         
-        Long studentId = preferencesManager.getUserId();
-        Logger.d(Logger.TAG_QR, "Student ID from preferences: '" + studentId + "'");
-        
-        if (studentId == null || studentId <= 0) {
-            Logger.e(Logger.TAG_QR, "Student ID validation failed: null or empty");
-            showError("Student ID not found. Please log in again.");
+        String studentUsername = preferencesManager.getUserName();
+        Logger.d(Logger.TAG_QR, "Student username from preferences: '" + studentUsername + "'");
+        if (TextUtils.isEmpty(studentUsername)) {
+            Logger.e(Logger.TAG_QR, "Student username validation failed: null or empty");
+            showError("Student username not found. Please log in again.");
             return;
         }
         
-        Logger.attendance("Submitting Attendance", "Session ID: '" + sessionId + "', Student ID: '" + studentId + "'");
-        Logger.api("POST", "api/v1/attendance", "Session ID: " + sessionId);
+        Logger.qr("Submitting attendance", "Session ID: " + sessionId);
+        Logger.d(Logger.TAG_QR, "  - username: '" + studentUsername + "'");
+        Logger.d(Logger.TAG_QR, "  - timestamp: '" + System.currentTimeMillis() + "'");
         
         // Debug: Log the API base URL being used
         String apiBaseUrl = ApiClient.getInstance(this).getCurrentBaseUrl();
@@ -212,13 +213,13 @@ public class QRScannerActivity extends AppCompatActivity {
         
         // Create request with validated data
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
-            sessionId, studentId, System.currentTimeMillis()
+                sessionId, studentUsername, System.currentTimeMillis()
         );
         
         // Log the complete request
         Logger.d(Logger.TAG_QR, "Request object created:");
         Logger.d(Logger.TAG_QR, "  - sessionId: '" + request.sessionId + "'");
-        Logger.d(Logger.TAG_QR, "  - studentId: '" + request.studentId + "'");
+        Logger.d(Logger.TAG_QR, "  - username: '" + request.username + "'");
         Logger.d(Logger.TAG_QR, "  - timestampMs: " + request.timestampMs);
         
         // API key no longer required - removed authentication
@@ -238,7 +239,7 @@ public class QRScannerActivity extends AppCompatActivity {
                     if (result != null) {
                         Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
                         showSuccess("Attendance recorded successfully!");
-                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + studentId);
+                        Logger.attendance("Attendance Success", "Session: " + sessionId + ", Student: " + studentUsername);
                     } else {
                         showError("Invalid response from server");
                     }
@@ -291,7 +292,7 @@ public class QRScannerActivity extends AppCompatActivity {
                     showErrorDialog(errorMessage);
                     // Report the parsed error to server as ERROR (attach synthetic exception for context)
                     if (response.code() == 409 || (errorMessage != null && errorMessage.toLowerCase().contains("already"))) {
-                        serverLogger.e(ServerLogger.TAG_ATTENDANCE, "Duplicate attendance attempt for session " + sessionId + ", student " + studentId, new IllegalStateException("ALREADY_ATTENDED"));
+                        serverLogger.e(ServerLogger.TAG_ATTENDANCE, "Duplicate attendance attempt for session " + sessionId + ", student " + studentUsername, new IllegalStateException("ALREADY_ATTENDED"));
                     } else {
                         serverLogger.e(Logger.TAG_QR, "Attendance submission error: " + errorMessage, new RuntimeException("HTTP " + response.code()));
                     }

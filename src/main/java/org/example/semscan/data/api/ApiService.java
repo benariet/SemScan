@@ -133,12 +133,12 @@ public interface ApiService {
     
     class SubmitAttendanceRequest {
         public Long sessionId;
-        public Long studentId;
+        public String username;
         public long timestampMs;
-        
-        public SubmitAttendanceRequest(Long sessionId, Long studentId, long timestampMs) {
+
+        public SubmitAttendanceRequest(Long sessionId, String username, long timestampMs) {
             this.sessionId = sessionId;
-            this.studentId = studentId;
+            this.username = username;
             this.timestampMs = timestampMs;
         }
     }
@@ -162,13 +162,13 @@ public interface ApiService {
 
     class CreateManualRequestRequest {
         public Long sessionId;
-        public Long studentId;
+        public String username;
         public String reason;
         public String deviceId;
-        
-        public CreateManualRequestRequest(Long sessionId, Long studentId, String reason, String deviceId) {
+
+        public CreateManualRequestRequest(Long sessionId, String username, String reason, String deviceId) {
             this.sessionId = sessionId;
-            this.studentId = studentId;
+            this.username = username;
             this.reason = reason;
             this.deviceId = deviceId;
         }
@@ -315,4 +315,139 @@ public interface ApiService {
         }
     }
     
+    // =============================
+    // Presenter Home + Slot Catalog
+    // =============================
+
+    @GET("api/v1/presenters/{username}/home")
+    Call<PresenterHomeResponse> getPresenterHome(@Path("username") String username);
+
+    @POST("api/v1/presenters/{username}/home/slots/{slotId}/register")
+    Call<PresenterRegisterResponse> registerForSlot(
+            @Path("username") String username,
+            @Path("slotId") Long slotId,
+            @Body PresenterRegisterRequest body
+    );
+
+    @DELETE("api/v1/presenters/{username}/home/slots/{slotId}/register")
+    Call<Void> cancelSlotRegistration(
+            @Path("username") String username,
+            @Path("slotId") Long slotId
+    );
+
+    @POST("api/v1/presenters/{username}/home/slots/{slotId}/attendance/open")
+    Call<PresenterAttendanceOpenResponse> openPresenterAttendance(
+            @Path("username") String username,
+            @Path("slotId") Long slotId
+    );
+
+    @GET("api/v1/presenters/{username}/home/slots/{slotId}/attendance/qr")
+    Call<PresenterAttendanceOpenResponse> getPresenterAttendanceQr(
+            @Path("username") String username,
+            @Path("slotId") Long slotId
+    );
+
+    @GET("api/v1/slots")
+    Call<java.util.List<SlotCard>> getPublicSlots();
+
+    class PresenterHomeResponse {
+        public PresenterSummary presenter;
+        public MySlotSummary mySlot;
+        public java.util.List<SlotCard> slotCatalog = new java.util.ArrayList<>();
+        public AttendancePanel attendance;
+    }
+
+    class PresenterSummary {
+        public Long id;
+        public String name;
+        public String degree;
+        public boolean alreadyRegistered;
+        public String currentCycleId;
+        public String bguUsername;
+    }
+
+    class MySlotSummary {
+        public Long slotId;
+        public String semesterLabel;
+        public String date;
+        public String dayOfWeek;
+        public String timeRange;
+        public String room;
+        public String building;
+        public java.util.List<PresenterCoPresenter> coPresenters = new java.util.ArrayList<>();
+    }
+
+    class PresenterCoPresenter {
+        public String name;
+        public String degree;
+        public String topic;
+    }
+
+    class SlotCard {
+        public Long slotId;
+        public String semesterLabel;
+        public String date;
+        public String dayOfWeek;
+        public String timeRange;
+        public String room;
+        public String building;
+        public SlotState state;
+        public int capacity;
+        public int enrolledCount;
+        public int availableCount;
+        public boolean canRegister;
+        public String disableReason;
+        public boolean alreadyRegistered;
+        public java.util.List<PresenterCoPresenter> registered = new java.util.ArrayList<>();
+    }
+
+    enum SlotState {
+        FREE,
+        SEMI,
+        FULL
+    }
+
+    class AttendancePanel {
+        public boolean canOpen;
+        public boolean alreadyOpen;
+        public String status;
+        public String warning;
+        public String openQrUrl;
+        public String openedAt;
+        public String closesAt;
+        public Long sessionId;
+        public String qrPayload;
+    }
+
+    class PresenterRegisterRequest {
+        public String topic;
+        public String supervisorName;
+        public String supervisorEmail;
+
+        public PresenterRegisterRequest() {}
+
+        public PresenterRegisterRequest(String topic, String supervisorName, String supervisorEmail) {
+            this.topic = topic;
+            this.supervisorName = supervisorName;
+            this.supervisorEmail = supervisorEmail;
+        }
+    }
+
+    class PresenterRegisterResponse {
+        public boolean success;
+        public String message;
+        public String code;
+    }
+
+    class PresenterAttendanceOpenResponse {
+        public boolean success;
+        public String message;
+        public String code;
+        public String qrUrl;
+        public String qrPayload;
+        public String openedAt;
+        public String closesAt;
+        public Long sessionId;
+    }
+
 }

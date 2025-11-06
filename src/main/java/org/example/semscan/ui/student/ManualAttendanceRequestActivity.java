@@ -190,10 +190,10 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
     }
 
     private void submitManualRequest(String reason) {
-        Long studentId = preferencesManager.getUserId();
-        if (studentId == null || studentId <= 0) {
-            Logger.e(Logger.TAG_UI, "Cannot submit manual request - no student ID");
-            showError("Student ID not found. Please check settings.");
+        String studentUsername = preferencesManager.getUserName();
+        if (TextUtils.isEmpty(studentUsername)) {
+            Logger.e(Logger.TAG_UI, "Cannot submit manual request - no student username");
+            showError("Student username not found. Please check settings.");
             return;
         }
         
@@ -201,13 +201,13 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
             getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
         
         Logger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
-            ", Student ID: " + studentId + ", Reason: " + reason);
+            ", Student username: " + studentUsername + ", Reason: " + reason);
         serverLogger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
-            ", Student ID: " + studentId + ", Reason: " + reason);
+            ", Student username: " + studentUsername + ", Reason: " + reason);
         Logger.api("POST", "api/v1/attendance/manual", 
-            "Session ID: " + currentSessionId + ", Student ID: " + studentId);
+            "Session ID: " + currentSessionId + ", Student username: " + studentUsername);
         serverLogger.api("POST", "api/v1/attendance/manual", 
-            "Session ID: " + currentSessionId + ", Student ID: " + studentId);
+            "Session ID: " + currentSessionId + ", Student username: " + studentUsername);
         
         Session selectedSession = sessionsAdapter.getSelectedSession();
         if (selectedSession == null) {
@@ -217,7 +217,7 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
 
         currentSessionId = selectedSession.getSessionId();
         ApiService.CreateManualRequestRequest request = new ApiService.CreateManualRequestRequest(
-            currentSessionId, studentId, reason, deviceId);
+            currentSessionId, studentUsername, reason, deviceId);
         
         Call<Attendance> call = apiService.createManualRequest(request);
         call.enqueue(new Callback<Attendance>() {
@@ -226,9 +226,9 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
                 if (response.isSuccessful()) {
                     Attendance attendance = response.body();
                     if (attendance != null) {
-                        Logger.attendance("Manual Request Submitted", "Student: " + studentId + 
+                        Logger.attendance("Manual Request Submitted", "Student: " + studentUsername + 
                             ", Session: " + currentSessionId);
-                        serverLogger.attendance("Manual Request Submitted", "Student: " + studentId + 
+                        serverLogger.attendance("Manual Request Submitted", "Student: " + studentUsername + 
                             ", Session: " + currentSessionId);
                         Logger.apiResponse("POST", "api/v1/attendance/manual", 
                             response.code(), "Manual request submitted successfully");
