@@ -72,7 +72,24 @@
             android:theme="@style/Theme.SemScan" />
             
         <activity
+            android:name=".ui.teacher.PresenterSlotSelectionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
+            android:name=".ui.teacher.PresenterMySlotActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+            
+        <activity
             android:name=".ui.teacher.PresenterStartSessionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait"
+            android:keepScreenOn="true" />
+            
+        <activity
+            android:name=".ui.teacher.PresenterAttendanceQrActivity"
             android:exported="false"
             android:theme="@style/Theme.SemScan"
             android:screenOrientation="portrait"

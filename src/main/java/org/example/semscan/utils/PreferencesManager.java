@@ -49,7 +49,11 @@ public class PreferencesManager {
     }
     
     public boolean isStudent() {
-        return "STUDENT".equals(getUserRole());
+        return "STUDENT".equals(getUserRole()) || "PARTICIPANT".equals(getUserRole());
+    }
+    
+    public boolean isParticipant() {
+        return "PARTICIPANT".equals(getUserRole());
     }
     
     public boolean hasRole() {

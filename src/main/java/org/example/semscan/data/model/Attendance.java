@@ -42,6 +42,22 @@ public class Attendance {
     @SerializedName("auto_flags")
     private String autoFlags; // JSON string for inWindow, duplicate, capExceeded flags
     
+    // Additional fields for export display
+    @SerializedName("firstName")
+    private String firstName;
+    
+    @SerializedName("lastName")
+    private String lastName;
+    
+    @SerializedName("timeSlot")
+    private String timeSlot; // e.g., "2025-11-09 14:00-15:00"
+    
+    @SerializedName("presenter")
+    private String presenter; // Presenter name or username
+    
+    @SerializedName("topic")
+    private String topic; // Seminar topic
+    
     public Attendance() {}
     
     public Attendance(Long attendanceId, Long sessionId, String studentUsername, String attendanceTime, String method) {
@@ -172,6 +188,47 @@ public class Attendance {
     
     public void setAutoFlags(String autoFlags) {
         this.autoFlags = autoFlags;
+    }
+    
+    // Additional fields getters and setters
+    public String getFirstName() {
+        return firstName;
+    }
+    
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+    
+    public String getLastName() {
+        return lastName;
+    }
+    
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+    
+    public String getTimeSlot() {
+        return timeSlot;
+    }
+    
+    public void setTimeSlot(String timeSlot) {
+        this.timeSlot = timeSlot;
+    }
+    
+    public String getPresenter() {
+        return presenter;
+    }
+    
+    public void setPresenter(String presenter) {
+        this.presenter = presenter;
+    }
+    
+    public String getTopic() {
+        return topic;
+    }
+    
+    public void setTopic(String topic) {
+        this.topic = topic;
     }
     
     // Utility methods for manual requests

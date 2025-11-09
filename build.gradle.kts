@@ -1,3 +1,5 @@
+import java.io.ByteArrayOutputStream
+
 plugins {
     id("com.android.application") version "8.13.0"
 }
@@ -81,4 +83,98 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.11.1")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+}
+
+tasks.register("installDebugAllDevices") {
+    group = "install"
+    description = "Assemble debug once, then install+launch on all connected devices."
+    
+    dependsOn("assembleDebug")
+    
+    doLast {
+        // מצא APK אחרון של debug
+        val apkDir = file("build/outputs/apk/debug")
+        if (!apkDir.exists()) {
+            throw GradleException("Debug APK directory not found. Run 'assembleDebug' first.")
+        }
+        
+        val apks = apkDir.listFiles { _, name -> name.endsWith(".apk") }
+            ?: throw GradleException("No debug APK found in ${apkDir.absolutePath}")
+        
+        if (apks.isEmpty()) {
+            throw GradleException("No debug APK found")
+        }
+        
+        val apk = apks.maxByOrNull { it.lastModified() }
+            ?: throw GradleException("Could not find latest APK")
+        
+        println("Found APK: ${apk.name}")
+        
+        // שלוף מכשירים במצב device
+        val output = ByteArrayOutputStream()
+        project.exec {
+            commandLine("adb", "devices")
+            standardOutput = output
+        }
+        
+        val lines = output.toString().split("\n").drop(1)
+        val serials: List<String> = lines
+            .filter { line -> line.contains("\tdevice") }
+            .map { line -> line.split("\t")[0] }
+            .filter { line -> line.isNotBlank() }
+        
+        if (serials.isEmpty()) {
+            throw GradleException("No connected devices found. Connect a device and enable USB debugging.")
+        }
+        
+        println("Found ${serials.size} device(s): ${serials.joinToString(", ")}")
+        
+        val pkg = "org.example.semscan"
+        val activity = "org.example.semscan.ui.auth.LoginActivity"
+        
+        serials.forEach { serial: String ->
+            println("---- Device: $serial ----")
+            
+            // Setup port forwarding
+            try {
+                project.exec {
+                    commandLine("adb", "-s", serial, "reverse", "tcp:8080", "tcp:8080")
+                    isIgnoreExitValue = true
+                }
+                println("  [OK] Port forwarding active")
+            } catch (e: Exception) {
+                println("  [WARN] Port forwarding failed (may already be active)")
+            }
+            
+            // Stop app
+            project.exec {
+                commandLine("adb", "-s", serial, "shell", "am", "force-stop", pkg)
+                isIgnoreExitValue = true
+            }
+            
+            // Install APK
+            println("  Installing APK...")
+            project.exec {
+                commandLine("adb", "-s", serial, "install", "-r", "-d", apk.absolutePath)
+            }
+            
+            // Launch app with explicit intent flags
+            println("  Launching app...")
+            val launchResult = project.exec {
+                commandLine("adb", "-s", serial, "shell", "am", "start", 
+                    "-a", "android.intent.action.MAIN",
+                    "-c", "android.intent.category.LAUNCHER",
+                    "-n", "$pkg/$activity")
+                isIgnoreExitValue = true
+            }
+            
+            if (launchResult.exitValue == 0) {
+                println("  ✓ Installed and launched on $serial")
+            } else {
+                println("  ⚠ Installed on $serial but launch may have failed")
+            }
+        }
+        
+        println("\n✅ Done! Installed on ${serials.size} device(s).")
+    }
 }

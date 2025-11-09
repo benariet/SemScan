@@ -3,9 +3,10 @@
     <string name="app_name">SemScan</string>
     
     <!-- Role Selection -->
-    <string name="select_role">Select Your Role</string>
+    <string name="select_role">What am I today?</string>
     <string name="presenter">Presenter</string>
-    <string name="student">Student</string>
+    <string name="student">Participant</string>
+    <string name="participant">Participant</string>
     <string name="role_description">Choose your role to access the appropriate features</string>
     
     <!-- Student Home -->
@@ -148,10 +149,11 @@
     <string name="setup_participation_both">Both presenter and participant</string>
     <string name="setup_participation_both_description">I switch roles depending on the seminar cycle.</string>
     <string name="setup_participation_presenter_locked">PhD presenters are always registered as presenters.</string>
-    <string name="setup_msc_title">Today’s Role</string>
-    <string name="setup_msc_prompt">For today’s seminar cycle, what fits best?</string>
-    <string name="setup_msc_option_presenter">I’m presenting today</string>
-    <string name="setup_msc_option_participant">I’m participating (no presentation)</string>
+    <string name="setup_msc_title">MSc Role Selection</string>
+    <string name="setup_msc_prompt">For this semester, what fits best?</string>
+    <string name="setup_msc_option_presenter">I am a presenter</string>
+    <string name="setup_msc_option_participant">I am a participant</string>
+    <string name="setup_msc_option_both">I am both presenter and participant</string>
     <string name="setup_error_first_name">First name is required</string>
     <string name="setup_error_last_name">Last name is required</string>
     <string name="setup_error_email">Enter a valid email</string>
@@ -204,6 +206,7 @@
     <string name="presenter_home_register_already">You are already registered for this slot.</string>
     <string name="presenter_home_register_full">This slot is already full.</string>
     <string name="presenter_home_register_conflict">You already have another slot booked.</string>
+    <string name="presenter_slot_registered_in_another">You are registered in another slot</string>
     <string name="room_with_label">Room %1$s</string>
     <string name="building_with_label">Building %1$s</string>
 
@@ -217,13 +220,34 @@
     <string name="presenter_start_session_status_open">Session already open</string>
     <string name="presenter_start_session_error_load">Could not load your slot details. Please try again.</string>
     <string name="presenter_start_session_toast_open">Opening session…</string>
+    <string name="presenter_start_session_error_too_early">Cannot Open Session</string>
+    <string name="presenter_start_session_error_too_early_message">You can only open a session 10 minutes before your scheduled time slot. Please wait until %1$s to open your session.</string>
+    <string name="presenter_start_session_error_in_progress">Session In Progress</string>
+    <string name="presenter_start_session_error_in_progress_message">Another session is currently in progress. Please wait for it to end before opening a new session.</string>
+    <string name="presenter_start_session_error_generic">Cannot Open Session</string>
+    <string name="presenter_start_session_error_generic_message">Unable to open the session. Please try again later.</string>
+    <string name="presenter_start_session_error_network">Network Error</string>
+    <string name="presenter_start_session_error_network_message">Unable to connect to the server. Please check your internet connection and try again.</string>
 
     <!-- Presenter Attendance QR -->
     <string name="presenter_attendance_qr_title">Session QR</string>
     <string name="presenter_attendance_qr_instructions">Ask students to scan this QR to confirm their attendance.</string>
     <string name="presenter_attendance_qr_valid_until">Valid until %1$s</string>
     <string name="presenter_attendance_qr_opened_at">Opened at %1$s</string>
-    <string name="presenter_attendance_qr_close_hint">The session closes automatically when the slot ends.</string>
+    <string name="presenter_attendance_qr_error_generic">Failed to load QR code</string>
+    <string name="presenter_attendance_qr_error_not_found">Slot not found or you are not registered for this slot</string>
+    <string name="presenter_attendance_qr_error_not_open">Attendance is not open for this slot. Please open attendance first.</string>
+    <string name="presenter_attendance_qr_error_server">Server error. Please try again later.</string>
+    <string name="presenter_attendance_qr_error_connection">Connection error. Please check your internet connection.</string>
+    <string name="presenter_attendance_qr_error_server_unavailable">Server is not available. Please make sure the server is running.</string>
+    <string name="presenter_attendance_qr_end_session">End Session</string>
+    <string name="presenter_attendance_qr_cancel_session">Cancel Session</string>
+    <string name="presenter_attendance_qr_end_confirm_title">End Session</string>
+    <string name="presenter_attendance_qr_end_confirm_message">Are you sure you want to end this session? Students will no longer be able to scan the QR code.</string>
+    <string name="presenter_attendance_qr_cancel_confirm_title">Cancel Session</string>
+    <string name="presenter_attendance_qr_cancel_confirm_message">Are you sure you want to cancel this session? This will close the session and return to the home screen.</string>
+    <string name="presenter_attendance_qr_end_success">Session ended successfully</string>
+    <string name="presenter_attendance_qr_end_error">Failed to end session</string>
 
     <!-- Dialog / misc -->
     <string name="presenter_slot_register_button">Register now</string>
@@ -236,6 +260,7 @@
     <string name="login_username_hint">Username</string>
     <string name="login_password_hint">Password</string>
     <string name="login_button">Log in</string>
+    <string name="login_button_loading">Logging in...</string>
     <string name="login_skip_auth_button">Skip auth (test)</string>
     <string name="login_username_required">Please enter your username</string>
     <string name="login_password_required">Please enter your password</string>

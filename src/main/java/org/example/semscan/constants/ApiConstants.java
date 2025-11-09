@@ -64,6 +64,9 @@ public class ApiConstants {
     // =============================================
     public static final int MAX_EXPORT_FILE_SIZE_MB = 50;
     public static final String ALLOWED_EXPORT_FORMATS = "csv,xlsx";
+    // Multiple email recipients - separate with commas
+    // Example: "attendance@example.com,admin@example.com"
+    public static final String EXPORT_EMAIL_RECIPIENTS = "benariet@bgu.ac.il,talbnwork@gmail.com"; // Change these to your desired email addresses
     
     // =============================================
     // APPLICATION CONFIGURATION
@@ -76,9 +79,9 @@ public class ApiConstants {
     // =============================================
     // HTTP CONFIGURATION
     // =============================================
-    public static final int CONNECTION_TIMEOUT_SECONDS = 5;  // Reduced from 30 to 10 seconds
-    public static final int READ_TIMEOUT_SECONDS = 5;        // Reduced from 30 to 10 seconds
-    public static final int WRITE_TIMEOUT_SECONDS = 5;       // Reduced from 30 to 10 seconds
+    public static final int CONNECTION_TIMEOUT_SECONDS = 10;  // Connection timeout
+    public static final int READ_TIMEOUT_SECONDS = 15;        // Read timeout (increased for slow responses)
+    public static final int WRITE_TIMEOUT_SECONDS = 10;       // Write timeout
     
     // =============================================
     // ERROR CODES

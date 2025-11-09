@@ -87,15 +87,34 @@
                 android:textColor="@color/gray_700"
                 android:textSize="14sp" />
 
-            <TextView
-                android:id="@+id/text_close_hint"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="@string/presenter_attendance_qr_close_hint"
-                android:textAlignment="center"
-                android:textColor="@color/gray_600"
-                android:textSize="14sp" />
+                android:layout_marginTop="32dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cancel_session"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/presenter_attendance_qr_cancel_session" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_end_session"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/presenter_attendance_qr_end_session" />
+
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

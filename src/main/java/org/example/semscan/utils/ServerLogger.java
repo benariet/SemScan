@@ -1,6 +1,7 @@
 package org.example.semscan.utils;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.util.Log;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
@@ -48,13 +49,14 @@ public class ServerLogger {
     public static final String TAG_PERFORMANCE = "SemScan-Performance";
     
     private static ServerLogger instance;
-    private Context context;
-    private ApiService apiService;
-    private ScheduledExecutorService executorService;
+    private final Context context;
+    private final ApiService apiService;
+    private final ScheduledExecutorService executorService;
+    private final PreferencesManager preferencesManager;
     private boolean serverLoggingEnabled = true;
     private String bguUsername;
     private String userRole;
-    private java.util.List<LogEntry> pendingLogs = new java.util.ArrayList<>();
+    private final java.util.List<LogEntry> pendingLogs = new java.util.ArrayList<>();
     private static final int BATCH_SIZE = 10;
     private static final long BATCH_TIMEOUT_MS = 30000; // 30 seconds
     private static final int MAX_MESSAGE_LENGTH = 10000;
@@ -69,11 +71,13 @@ public class ServerLogger {
         this.context = context.getApplicationContext();
         this.apiService = ApiClient.getInstance(context).getApiService();
         this.executorService = Executors.newSingleThreadScheduledExecutor();
+        this.preferencesManager = PreferencesManager.getInstance(context);
         
-        // Get user info for logging context
-        PreferencesManager prefs = PreferencesManager.getInstance(context);
-        this.bguUsername = prefs.getUserName();
-        this.userRole = prefs.getUserRole();
+        // Get user info for logging context (only once profile completed)
+        this.bguUsername = shouldAttachUsername(preferencesManager.getUserName())
+                ? normalize(preferencesManager.getUserName())
+                : null;
+        this.userRole = preferencesManager.getUserRole();
 
         // Load any persisted pending logs from previous runs
         loadPendingLogs();
@@ -100,8 +104,22 @@ public class ServerLogger {
      * Update user context for logging
      */
     public void updateUserContext(String bguUsername, String userRole) {
-        this.bguUsername = bguUsername != null ? bguUsername.trim().toLowerCase(java.util.Locale.US) : null;
+        if (shouldAttachUsername(bguUsername)) {
+            this.bguUsername = normalize(bguUsername);
+        } else {
+            this.bguUsername = null;
+        }
         this.userRole = userRole;
+    }
+    
+    private boolean shouldAttachUsername(String username) {
+        return preferencesManager != null
+                && preferencesManager.hasCompletedInitialSetup()
+                && !TextUtils.isEmpty(username);
+    }
+
+    private String normalize(String value) {
+        return value == null ? null : value.trim().toLowerCase(Locale.US);
     }
     
     /**

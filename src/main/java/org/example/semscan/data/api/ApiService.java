@@ -107,8 +107,21 @@ public interface ApiService {
     Call<ServerLogger.LogResponse> sendLogs(@Body ServerLogger.LogRequest request);
 
     // =============================
+    // Authentication
+    // =============================
+
+    @POST("api/v1/auth/login")
+    Call<LoginResponse> login(@Body LoginRequest request);
+
+    // =============================
     // User profile
     // =============================
+
+    @POST("api/v1/users/exists")
+    Call<UserExistsResponse> checkUserExists(@Body UserExistsRequest request);
+
+    @GET("api/v1/users/username/{bguUsername}")
+    Call<UserProfileResponse> getUserProfile(@Path("bguUsername") String bguUsername);
 
     @POST("api/v1/users")
     Call<User> upsertUser(@Body UserProfileUpdateRequest request);
@@ -207,6 +220,16 @@ public interface ApiService {
         public String disableReason;
         public boolean alreadyRegistered;
         public List<PresenterCoPresenter> registered;
+        
+        // Session status fields
+        @SerializedName("attendanceOpenedAt")
+        public String attendanceOpenedAt;
+        
+        @SerializedName("attendanceClosesAt")
+        public String attendanceClosesAt;
+        
+        @SerializedName("hasClosedSession")
+        public Boolean hasClosedSession; // True if slot has a closed attendance session
     }
 
     enum SlotState {
@@ -251,11 +274,96 @@ public interface ApiService {
         public boolean success;
         public String message;
         public String code;
-        public String qrUrl;
+        public String qrUrl; // Legacy field - kept for backward compatibility
         public String closesAt;
         public String openedAt;
         public Long sessionId;
-        public String qrPayload;
+        public String qrPayload; // Legacy field - kept for backward compatibility
+        public QrContent qrContent; // New nested structure
+        public ServerInfo serverInfo;
+        public Metadata metadata;
+        
+        // Helper method to get the recommended QR URL
+        public String getQrUrl() {
+            if (qrContent != null && qrContent.recommended != null) {
+                return qrContent.recommended;
+            }
+            if (qrContent != null && qrContent.fullUrl != null) {
+                return qrContent.fullUrl;
+            }
+            // Fallback to legacy field
+            return qrUrl != null ? qrUrl : qrPayload;
+        }
+    }
+    
+    class QrContent {
+        public String fullUrl;
+        public String relativePath;
+        public String sessionIdOnly;
+        public String recommended;
+    }
+    
+    class ServerInfo {
+        public String serverUrl;
+        public String apiBaseUrl;
+        public String environment;
+    }
+    
+    class Metadata {
+        public String generatedAt;
+        public String version;
+        public String format;
+        public String description;
+    }
+    
+    class ErrorResponse {
+        public String error;
+        public String code;
+    }
+
+    class LoginRequest {
+        public String username;
+        public String password;
+
+        public LoginRequest(String username, String password) {
+            this.username = username != null ? username.trim().toLowerCase() : null;
+            this.password = password;
+        }
+    }
+
+    class LoginResponse {
+        public boolean ok;
+        public String message;
+        public String bguUsername;
+        public String email;
+        public boolean isFirstTime;
+        public boolean isPresenter;
+        public boolean isParticipant;
+    }
+
+    class UserProfileResponse {
+        public String bguUsername;
+        public String email;
+        public String firstName;
+        public String lastName;
+        public String degree;
+        public String participationPreference;
+    }
+
+    class UserExistsRequest {
+        public String username;
+
+        public UserExistsRequest(String username) {
+            this.username = username != null ? username.trim() : null;
+        }
+    }
+
+    class UserExistsResponse {
+        public boolean exists;
+
+        public UserExistsResponse(boolean exists) {
+            this.exists = exists;
+        }
     }
 
     class UserProfileUpdateRequest {

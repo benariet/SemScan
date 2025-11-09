@@ -114,6 +114,20 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
             title.setText(titleText);
 
             schedule.setText(safe(slot.timeRange));
+            
+            // Make card clickable - clicking card triggers register action
+            // Allow registration attempt even if canRegister is false (server will validate)
+            itemView.setOnClickListener(v -> {
+                // Allow registration attempt if:
+                // 1. Not already registered in this slot
+                // 2. Slot is not full
+                // 3. User is not already registered (checked by server)
+                if (!slot.alreadyRegistered && slot.state != ApiService.SlotState.FULL) {
+                    if (listener != null) {
+                        listener.onRegisterClicked(slot);
+                    }
+                }
+            });
 
             StringBuilder venue = new StringBuilder();
             if (slot.room != null && !slot.room.isEmpty()) {
@@ -148,7 +162,15 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
                 badge.setVisibility(View.VISIBLE);
             } else if (slot.state == ApiService.SlotState.FULL) {
                 badge.setText(R.string.presenter_slot_full_badge);
-                badge.setBackground(ContextCompat.getDrawable(context, R.drawable.bg_slot_status));
+                badge.setBackground(ContextCompat.getDrawable(context, R.drawable.bg_slot_status_red));
+                badge.setVisibility(View.VISIBLE);
+            } else if (slot.state == ApiService.SlotState.SEMI) {
+                badge.setText(R.string.presenter_home_slot_state_partial);
+                badge.setBackground(ContextCompat.getDrawable(context, R.drawable.bg_slot_status_yellow));
+                badge.setVisibility(View.VISIBLE);
+            } else if (slot.state == ApiService.SlotState.FREE) {
+                badge.setText(R.string.presenter_home_slot_state_available);
+                badge.setBackground(ContextCompat.getDrawable(context, R.drawable.bg_slot_status_green));
                 badge.setVisibility(View.VISIBLE);
             }
 
@@ -164,8 +186,14 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
                 });
             }
 
-            if (!slot.canRegister && slot.disableReason != null && slot.disableReason.trim().length() > 0) {
-                location.setText(slot.disableReason);
+            // Show disable reason or default message if can't register
+            if (!slot.canRegister) {
+                if (slot.disableReason != null && slot.disableReason.trim().length() > 0) {
+                    location.setText(slot.disableReason);
+                } else {
+                    // Default message when can't register but no specific reason provided
+                    location.setText(context.getString(R.string.presenter_slot_registered_in_another));
+                }
                 location.setVisibility(View.VISIBLE);
             }
         }

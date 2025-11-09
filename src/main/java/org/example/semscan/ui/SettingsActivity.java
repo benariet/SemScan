@@ -4,13 +4,14 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
+import com.google.android.material.button.MaterialButton;
 
 import org.example.semscan.R;
 import org.example.semscan.ui.auth.LoginActivity;
@@ -20,9 +21,9 @@ import org.example.semscan.utils.PreferencesManager;
 public class SettingsActivity extends AppCompatActivity {
 
     private EditText editUsername;
-    private Button btnSave;
-    private Button btnClearData;
-    private Button btnLogout;
+    private MaterialButton btnSave;
+    private MaterialButton btnClearData;
+    private MaterialButton btnLogout;
 
     private PreferencesManager preferencesManager;
 
@@ -38,6 +39,13 @@ public class SettingsActivity extends AppCompatActivity {
         initializeViews();
         setupToolbar();
         setupClickListeners();
+        loadCurrentSettings();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Reload settings in case username was updated elsewhere
         loadCurrentSettings();
     }
 
@@ -83,12 +91,20 @@ public class SettingsActivity extends AppCompatActivity {
     private void loadCurrentSettings() {
         String username = preferencesManager.getUserName();
         Logger.i(Logger.TAG_UI, "Loading current settings");
-        Logger.d(Logger.TAG_UI, "Current username: " + username);
+        Logger.d(Logger.TAG_UI, "Current username from preferences: " + username);
+        
+        // Also check if there's a bguUsername stored
+        if (username == null || username.isEmpty()) {
+            // Try to get from other sources if needed
+            Logger.w(Logger.TAG_UI, "Username is null or empty, checking alternative sources");
+        }
 
-        if (username != null) {
+        if (username != null && !username.isEmpty()) {
             editUsername.setText(username);
+            Logger.d(Logger.TAG_UI, "Username set in EditText: " + username);
         } else {
             editUsername.setText("");
+            Logger.w(Logger.TAG_UI, "Username is empty, EditText cleared");
         }
     }
 

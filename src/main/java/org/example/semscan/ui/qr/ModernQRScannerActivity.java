@@ -149,6 +149,29 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         serverLogger = ServerLogger.getInstance(this);
         String username = preferencesManager.getUserName();
         String userRole = preferencesManager.getUserRole();
+        
+        // Debug: Log stored preferences
+        Logger.d(TAG, "=== User Preferences Debug ===");
+        Logger.d(TAG, "Username: " + (username != null ? username : "NULL"));
+        Logger.d(TAG, "User Role: " + (userRole != null ? userRole : "NULL"));
+        Logger.d(TAG, "Is Student: " + preferencesManager.isStudent());
+        Logger.d(TAG, "Is Presenter: " + preferencesManager.isPresenter());
+        Logger.d(TAG, "==============================");
+        
+        // CRITICAL: Check if username exists - if not, redirect to login
+        if (username == null || username.isEmpty()) {
+            Logger.e(TAG, "ERROR: Username is NULL or empty in ModernQRScannerActivity!");
+            Logger.e(TAG, "User Role: " + userRole);
+            Logger.e(TAG, "Cannot scan QR without username. Redirecting to login.");
+            Toast.makeText(this, "Username not found. Please log in again.", Toast.LENGTH_LONG).show();
+            // Navigate to login
+            android.content.Intent intent = new android.content.Intent(this, org.example.semscan.ui.auth.LoginActivity.class);
+            intent.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+        
         serverLogger.updateUserContext(username, userRole);
         serverLogger.userAction("Open QR Scanner", "ModernQRScannerActivity opened as " + username);
         cameraExecutor = Executors.newSingleThreadExecutor();
@@ -301,12 +324,35 @@ public class ModernQRScannerActivity extends AppCompatActivity {
     
     private void submitAttendance(Long sessionId) {
         String studentUsername = preferencesManager.getUserName();
+        String userRole = preferencesManager.getUserRole();
+        
+        // Debug: Log all user info
+        Logger.d(TAG, "=== Attendance Submission Debug ===");
+        Logger.d(TAG, "Session ID: " + sessionId);
+        Logger.d(TAG, "Student Username: " + (studentUsername != null ? studentUsername : "NULL"));
+        Logger.d(TAG, "User Role: " + (userRole != null ? userRole : "NULL"));
+        Logger.d(TAG, "Is Student: " + preferencesManager.isStudent());
+        Logger.d(TAG, "Is Presenter: " + preferencesManager.isPresenter());
+        Logger.d(TAG, "===================================");
+        
         if (TextUtils.isEmpty(studentUsername)) {
             Logger.e(TAG, "Student username not found or invalid");
+            Logger.e(TAG, "Current user role: " + userRole);
+            Logger.e(TAG, "Is student check: " + preferencesManager.isStudent());
             if (serverLogger != null) {
-                serverLogger.e(ServerLogger.TAG_QR, "Student username not found or invalid");
+                serverLogger.e(ServerLogger.TAG_QR, "Student username not found or invalid - Role: " + userRole);
             }
-            showError("Student username not found. Please log in again.");
+            showError("Student username not found. Please log in again.\n\nDebug: Role=" + userRole + ", Username=" + studentUsername);
+            return;
+        }
+        
+        // Check if user is actually a student
+        if (!preferencesManager.isStudent()) {
+            Logger.e(TAG, "User is not a student - Role: " + userRole);
+            if (serverLogger != null) {
+                serverLogger.e(ServerLogger.TAG_QR, "User is not a student - Role: " + userRole);
+            }
+            showError("Only students can scan QR codes for attendance.\n\nCurrent role: " + userRole);
             return;
         }
 
@@ -322,9 +368,23 @@ public class ModernQRScannerActivity extends AppCompatActivity {
             serverLogger.api("POST", "api/v1/attendance", "Base URL: " + apiBaseUrl + ", Session: " + sessionId + ", Student: " + studentUsername);
         }
         
+        long timestampMs = System.currentTimeMillis();
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
-            sessionId, studentUsername, System.currentTimeMillis()
+            sessionId, studentUsername, timestampMs
         );
+        
+        // Log request details
+        Logger.d(TAG, "=== Request Details ===");
+        Logger.d(TAG, "Endpoint: POST /api/v1/attendance");
+        Logger.d(TAG, "Session ID: " + sessionId);
+        Logger.d(TAG, "Student Username: '" + studentUsername + "'");
+        Logger.d(TAG, "Timestamp (ms): " + timestampMs);
+        Logger.d(TAG, "Request Body: {sessionId: " + sessionId + ", studentUsername: \"" + studentUsername + "\", timestampMs: " + timestampMs + "}");
+        Logger.d(TAG, "========================");
+        
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_QR, "Request Body: {sessionId: " + sessionId + ", studentUsername: \"" + studentUsername + "\", timestampMs: " + timestampMs + "}");
+        }
         
         // API key no longer required - removed authentication
         
@@ -332,9 +392,24 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {
+                Logger.d(TAG, "=== Response Received ===");
+                Logger.d(TAG, "Response Code: " + response.code());
+                Logger.d(TAG, "Is Successful: " + response.isSuccessful());
+                Logger.d(TAG, "Has Body: " + (response.body() != null));
+                Logger.d(TAG, "Has Error Body: " + (response.errorBody() != null));
+                
                 if (response.isSuccessful()) {
                     Attendance result = response.body();
                     if (result != null) {
+                        Logger.d(TAG, "=== Success Response Body ===");
+                        Logger.d(TAG, "Attendance ID: " + result.getAttendanceId());
+                        Logger.d(TAG, "Session ID: " + result.getSessionId());
+                        Logger.d(TAG, "Student Username: " + result.getStudentUsername());
+                        Logger.d(TAG, "Attendance Time: " + result.getAttendanceTime());
+                        Logger.d(TAG, "Method: " + result.getMethod());
+                        Logger.d(TAG, "Already Present: " + result.isAlreadyPresent());
+                        Logger.d(TAG, "=============================");
+                        
                         Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
                         if (serverLogger != null) {
                             serverLogger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
@@ -349,11 +424,20 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                         // Return to previous screen after delay
                         new android.os.Handler().postDelayed(() -> finish(), 2000);
                     } else {
+                        Logger.e(TAG, "=== Error: Response body is NULL ===");
+                        Logger.e(TAG, "Response Code: " + response.code());
+                        Logger.e(TAG, "Response Message: " + response.message());
                         updateStatus("Invalid response", R.color.error_red);
                         showError("Invalid response from server");
                         resumeScanning();
                     }
                 } else {
+                    Logger.e(TAG, "=== Error Response ===");
+                    Logger.e(TAG, "Response Code: " + response.code());
+                    Logger.e(TAG, "Response Message: " + response.message());
+                    Logger.e(TAG, "Request URL: " + call.request().url());
+                    Logger.e(TAG, "Request Method: " + call.request().method());
+                    
                     Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
                     if (serverLogger != null) {
                         serverLogger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance for student " + studentUsername);
@@ -365,7 +449,10 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                     try {
                         if (response.errorBody() != null) {
                             String errorBody = response.errorBody().string();
-                            Logger.e(TAG, "Error response body: " + errorBody);
+                            Logger.e(TAG, "=== Error Response Body ===");
+                            Logger.e(TAG, "Full Error Body: " + errorBody);
+                            Logger.e(TAG, "Error Body Length: " + errorBody.length());
+                            Logger.e(TAG, "============================");
                             
                             // Try to extract the actual error message from the response
                             if (errorBody.contains("Student already attended this session")) {
@@ -391,12 +478,17 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                             }
                         }
                     } catch (Exception e) {
-                        Logger.e(TAG, "Failed to read error response body", e);
+                        Logger.e(TAG, "=== Exception reading error body ===");
+                        Logger.e(TAG, "Exception: " + e.getClass().getName());
+                        Logger.e(TAG, "Message: " + e.getMessage());
+                        Logger.e(TAG, "Stack trace:", e);
+                        Logger.e(TAG, "====================================");
                         // Fall back to generic error handling
                         handleAttendanceError(response.code());
                         return;
                     }
                     
+                    Logger.e(TAG, "Final Error Message: " + errorMessage);
                     // Show the specific error message in a dialog
                     showErrorDialog(errorMessage);
                     if (serverLogger != null) {
@@ -407,9 +499,18 @@ public class ModernQRScannerActivity extends AppCompatActivity {
             
             @Override
             public void onFailure(Call<Attendance> call, Throwable t) {
-                Logger.e(TAG, "Attendance submission failed", t);
+                Logger.e(TAG, "=== Network Failure ===");
+                Logger.e(TAG, "Exception Type: " + t.getClass().getName());
+                Logger.e(TAG, "Exception Message: " + t.getMessage());
+                Logger.e(TAG, "Request URL: " + (call.request() != null ? call.request().url() : "NULL"));
+                Logger.e(TAG, "Request Method: " + (call.request() != null ? call.request().method() : "NULL"));
+                Logger.e(TAG, "Session ID: " + sessionId);
+                Logger.e(TAG, "Student Username: '" + studentUsername + "'");
+                Logger.e(TAG, "Stack trace:", t);
+                Logger.e(TAG, "=======================");
+                
                 if (serverLogger != null) {
-                    serverLogger.e(ServerLogger.TAG_QR, "Attendance submission failed", t);
+                    serverLogger.e(ServerLogger.TAG_QR, "Network failure - Session: " + sessionId + ", Student: " + studentUsername, t);
                 }
                 updateStatus("Network error", R.color.error_red);
                 showError("Network error: " + t.getMessage());

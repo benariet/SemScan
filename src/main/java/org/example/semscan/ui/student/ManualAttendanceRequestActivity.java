@@ -168,9 +168,11 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
             btnSubmitRequest.setEnabled(false);
             progressLoading.setVisibility(View.GONE);
             formContainer.setVisibility(View.GONE);
+            currentSessionId = null; // Clear session ID when no sessions available
         } else {
             sessionsAdapter.setSessions(sessions);
-            currentSessionId = sessionsAdapter.getSelectedSessionId();
+            // currentSessionId is automatically set via the selection listener (line 109)
+            // No need to set it here as it will be set when the adapter notifies selection
             progressLoading.setVisibility(View.GONE);
             textStatus.setVisibility(View.GONE);
             formContainer.setVisibility(View.VISIBLE);
@@ -197,9 +199,42 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
             return;
         }
         
+        // Get and validate selected session FIRST before any logging or processing
+        Session selectedSession = sessionsAdapter.getSelectedSession();
+        if (selectedSession == null) {
+            Logger.w(Logger.TAG_UI, "No session selected when submitting manual request");
+            ToastUtils.showError(this, "Please choose a session");
+            return;
+        }
+        
+        // Validate that the selected session is still in the available sessions list
+        // This prevents using a stale session that might have been closed
+        boolean sessionStillValid = false;
+        for (Session session : availableSessions) {
+            if (session.getSessionId() != null && session.getSessionId().equals(selectedSession.getSessionId())) {
+                // Verify the session is still open
+                if ("OPEN".equals(session.getStatus()) || "open".equalsIgnoreCase(session.getStatus())) {
+                    sessionStillValid = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!sessionStillValid) {
+            Logger.w(Logger.TAG_UI, "Selected session is no longer valid - session may have been closed");
+            ToastUtils.showError(this, "The selected session is no longer available. Please refresh and select a different session.");
+            // Optionally refresh the session list
+            checkForActiveSessions();
+            return;
+        }
+        
+        // Set currentSessionId from the validated selected session
+        currentSessionId = selectedSession.getSessionId();
+        
         String deviceId = android.provider.Settings.Secure.getString(
             getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
         
+        // Log AFTER validation and setting currentSessionId
         Logger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
             ", Student username: " + studentUsername + ", Reason: " + reason);
         serverLogger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
@@ -208,14 +243,6 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
             "Session ID: " + currentSessionId + ", Student username: " + studentUsername);
         serverLogger.api("POST", "api/v1/attendance/manual", 
             "Session ID: " + currentSessionId + ", Student username: " + studentUsername);
-        
-        Session selectedSession = sessionsAdapter.getSelectedSession();
-        if (selectedSession == null) {
-            ToastUtils.showError(this, "Please choose a session");
-            return;
-        }
-
-        currentSessionId = selectedSession.getSessionId();
         ApiService.CreateManualRequestRequest request = new ApiService.CreateManualRequestRequest(
             currentSessionId, studentUsername, reason, deviceId);
         
@@ -372,40 +399,86 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
 
         static class SessionViewHolder extends RecyclerView.ViewHolder {
             private final TextView textTitle;
-            private final TextView textSubtitle;
-            private final TextView badgeActive;
+            private final TextView textDate;
+            private final TextView textDescription;
+            private final TextView badgeStatus;
 
             SessionViewHolder(@NonNull View itemView) {
                 super(itemView);
                 textTitle = itemView.findViewById(R.id.text_session_title);
-                textSubtitle = itemView.findViewById(R.id.text_session_subtitle);
-                badgeActive = itemView.findViewById(R.id.badge_session_status);
+                textDate = itemView.findViewById(R.id.text_session_date);
+                textDescription = itemView.findViewById(R.id.text_session_description);
+                badgeStatus = itemView.findViewById(R.id.badge_session_status);
             }
 
             void bind(Session session, int position, boolean selected, View.OnClickListener clickListener) {
-                String startTime = session.getStartTime() > 0 ?
-                        DateFormat.format("MMM dd • HH:mm", session.getStartTime()).toString()
-                        : "Unknown start";
+                // Format date and time nicely
+                String dateTimeStr = "Unknown date";
+                if (session.getStartTime() > 0) {
+                    java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("MMM dd, yyyy • HH:mm", java.util.Locale.getDefault());
+                    dateTimeStr = dateFormat.format(new java.util.Date(session.getStartTime()));
+                }
 
-                textTitle.setText("Session #" + session.getSessionId());
-
-                StringBuilder subtitleBuilder = new StringBuilder(startTime);
+                // Set title - use seminar name if available, otherwise use a descriptive title
+                String title = "Seminar Session";
                 if (session.getSeminarId() != null) {
-                    subtitleBuilder.append("  •  Seminar ").append(session.getSeminarId());
+                    title = "Seminar Session #" + session.getSeminarId();
                 }
-                if (!TextUtils.isEmpty(session.getStatus())) {
-                    subtitleBuilder.append("  •  ").append(session.getStatus());
+                textTitle.setText(title);
+
+                // Set date/time
+                textDate.setText(dateTimeStr);
+
+                // Set description - show seminar ID and status if available
+                StringBuilder descriptionBuilder = new StringBuilder();
+                if (session.getSeminarId() != null) {
+                    descriptionBuilder.append("Seminar ID: ").append(session.getSeminarId());
                 }
-                textSubtitle.setText(subtitleBuilder.toString());
+                if (session.getEndTime() != null && session.getEndTime() > 0) {
+                    if (descriptionBuilder.length() > 0) {
+                        descriptionBuilder.append(" • ");
+                    }
+                    java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault());
+                    String endTime = timeFormat.format(new java.util.Date(session.getEndTime()));
+                    descriptionBuilder.append("Until ").append(endTime);
+                }
+                
+                if (descriptionBuilder.length() > 0) {
+                    textDescription.setText(descriptionBuilder.toString());
+                    textDescription.setVisibility(View.VISIBLE);
+                } else {
+                    textDescription.setVisibility(View.GONE);
+                }
 
-                badgeActive.setVisibility(View.VISIBLE);
-                badgeActive.setText(session.getStatus() != null ? session.getStatus() : "Active");
-                int badgeColor = selected ? R.color.primary_blue : R.color.gray_600;
-                badgeActive.setTextColor(ContextCompat.getColor(itemView.getContext(), badgeColor));
+                // Set status badge
+                String status = session.getStatus() != null ? session.getStatus() : "OPEN";
+                badgeStatus.setText(status);
+                
+                // Set badge color based on selection
+                if (selected) {
+                    badgeStatus.setBackground(ContextCompat.getDrawable(itemView.getContext(), R.drawable.bg_slot_status));
+                    badgeStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.white));
+                } else {
+                    badgeStatus.setBackground(ContextCompat.getDrawable(itemView.getContext(), R.drawable.bg_slot_status));
+                    badgeStatus.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.white));
+                }
 
+                // Set card selection state
                 itemView.setOnClickListener(clickListener);
                 itemView.setSelected(selected);
-                itemView.setBackgroundResource(selected ? R.drawable.card_background_selected : R.drawable.card_background);
+                
+                // Change card elevation/background based on selection
+                if (itemView instanceof com.google.android.material.card.MaterialCardView) {
+                    com.google.android.material.card.MaterialCardView card = (com.google.android.material.card.MaterialCardView) itemView;
+                    if (selected) {
+                        card.setCardElevation(8f);
+                        card.setStrokeWidth(2);
+                        card.setStrokeColor(ContextCompat.getColor(itemView.getContext(), R.color.primary_blue));
+                    } else {
+                        card.setCardElevation(4f);
+                        card.setStrokeWidth(0);
+                    }
+                }
             }
         }
     }

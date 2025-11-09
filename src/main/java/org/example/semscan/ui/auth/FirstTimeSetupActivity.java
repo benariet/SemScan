@@ -246,6 +246,22 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
         toggleLoading(true);
 
         String username = preferencesManager.getUserName();
+        
+        // CRITICAL: Check if username exists before proceeding
+        if (username == null || username.isEmpty()) {
+            Logger.e(Logger.TAG_UI, "ERROR: Username is NULL or empty in FirstTimeSetupActivity!");
+            Logger.e(Logger.TAG_UI, "Cannot create user profile without username. User must log in first.");
+            toggleLoading(false);
+            Toast.makeText(this, "Username not found. Please log in again.", Toast.LENGTH_LONG).show();
+            // Navigate back to login
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+        
+        Logger.d(Logger.TAG_UI, "Creating user profile with username: " + username);
         String email = username != null ? username + "@bgu.ac.il" : null;
 
         ApiService.UserProfileUpdateRequest request = new ApiService.UserProfileUpdateRequest(
@@ -257,19 +273,31 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
                 selectedParticipation
         );
 
-        serverLogger.api("POST", "/api/v1/users", "Submitting first-time setup for " + username);
-
+        // Create user directly - this is the first time creating the user
+        serverLogger.api("POST", "/api/v1/users", "Creating new user profile for " + username);
+        
         apiService.upsertUser(request).enqueue(new Callback<User>() {
             @Override
             public void onResponse(Call<User> call, Response<User> response) {
                 toggleLoading(false);
                 if (!response.isSuccessful() || response.body() == null) {
-                    Logger.apiError("POST", "/api/v1/users", response.code(), "Failed onboarding");
-                    Toast.makeText(FirstTimeSetupActivity.this, R.string.error, Toast.LENGTH_LONG).show();
+                    String errorMsg = "Failed to create user profile";
+                    try {
+                        if (response.errorBody() != null) {
+                            String errorBody = response.errorBody().string();
+                            errorMsg = errorBody.length() > 100 ? errorBody.substring(0, 100) : errorBody;
+                        }
+                    } catch (Exception e) {
+                        // Ignore
+                    }
+                    Logger.apiError("POST", "/api/v1/users", response.code(), errorMsg);
+                    serverLogger.e(ServerLogger.TAG_API, "Failed to create user profile: " + errorMsg);
+                    Toast.makeText(FirstTimeSetupActivity.this, getString(R.string.error) + ": " + errorMsg, Toast.LENGTH_LONG).show();
                     return;
                 }
 
                 persistProfile(firstName, lastName, email, selectedDegree, selectedParticipation);
+                serverLogger.updateUserContext(preferencesManager.getUserName(), preferencesManager.getUserRole());
                 Toast.makeText(FirstTimeSetupActivity.this, R.string.setup_success, Toast.LENGTH_LONG).show();
                 Logger.userAction("FirstTimeSetup", "Onboarding complete");
                 serverLogger.userAction("FirstTimeSetup", "Onboarding complete");
@@ -279,14 +307,25 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<User> call, Throwable t) {
                 toggleLoading(false);
-                Logger.e(Logger.TAG_API, "Failed to submit profile", t);
-                serverLogger.e(Logger.TAG_API, "Failed to submit profile", t);
+                Logger.e(Logger.TAG_API, "Failed to create user profile", t);
+                serverLogger.e(ServerLogger.TAG_API, "Failed to create user profile", t);
                 Toast.makeText(FirstTimeSetupActivity.this, getString(R.string.network_error_generic, t.getMessage()), Toast.LENGTH_LONG).show();
             }
         });
     }
 
     private void persistProfile(String firstName, String lastName, String email, String degree, String participation) {
+        // CRITICAL: Ensure username is preserved - it should already be set from login
+        String username = preferencesManager.getUserName();
+        if (username == null || username.isEmpty()) {
+            Logger.e(Logger.TAG_UI, "WARNING: Username is NULL in persistProfile! This should not happen.");
+            Logger.e(Logger.TAG_UI, "Username should have been set during login. User needs to log in again.");
+        } else {
+            // Explicitly preserve username (should already be set, but ensure it's not lost)
+            preferencesManager.setUserName(username);
+            Logger.d(Logger.TAG_UI, "Preserving username in persistProfile: " + username);
+        }
+        
         preferencesManager.setFirstName(firstName);
         preferencesManager.setLastName(lastName);
         preferencesManager.setEmail(email);
@@ -297,10 +336,21 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
         if (PARTICIPATION_PRESENTER_ONLY.equals(participation)) {
             preferencesManager.setUserRole("PRESENTER");
         } else if (PARTICIPATION_PARTICIPANT_ONLY.equals(participation)) {
-            preferencesManager.setUserRole("STUDENT");
+            preferencesManager.setUserRole("PARTICIPANT"); // Changed from "STUDENT" to "PARTICIPANT" for consistency
         } else {
             preferencesManager.setUserRole(null);
         }
+        
+        // Final check: Log all saved values
+        Logger.d(Logger.TAG_UI, "=== Profile Persisted ===");
+        Logger.d(Logger.TAG_UI, "Username: " + preferencesManager.getUserName());
+        Logger.d(Logger.TAG_UI, "Role: " + preferencesManager.getUserRole());
+        Logger.d(Logger.TAG_UI, "First Name: " + preferencesManager.getFirstName());
+        Logger.d(Logger.TAG_UI, "Last Name: " + preferencesManager.getLastName());
+        Logger.d(Logger.TAG_UI, "Email: " + preferencesManager.getEmail());
+        Logger.d(Logger.TAG_UI, "Degree: " + preferencesManager.getDegree());
+        Logger.d(Logger.TAG_UI, "Participation: " + preferencesManager.getParticipationPreference());
+        Logger.d(Logger.TAG_UI, "=========================");
     }
 
     private void navigateToRolePicker() {

@@ -29,7 +29,12 @@ import org.example.semscan.data.api.ApiService;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -111,16 +116,20 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
     }
 
     private void renderSlots(ApiService.PresenterHomeResponse response) {
-        List<ApiService.SlotCard> slots = response != null && response.slotCatalog != null
+        List<ApiService.SlotCard> allSlots = response != null && response.slotCatalog != null
                 ? response.slotCatalog : Collections.emptyList();
-        slotAdapter.submitList(slots);
-        emptyState.setVisibility(slots.isEmpty() ? View.VISIBLE : View.GONE);
+        
+        // Filter out past slots
+        List<ApiService.SlotCard> futureSlots = filterPastSlots(allSlots);
+        
+        slotAdapter.submitList(futureSlots);
+        emptyState.setVisibility(futureSlots.isEmpty() ? View.VISIBLE : View.GONE);
 
         if (shouldScrollToMySlot && response != null && response.mySlot != null) {
             shouldScrollToMySlot = false;
             long targetSlot = response.mySlot.slotId != null ? response.mySlot.slotId : -1L;
             if (targetSlot > 0) {
-                int position = findSlotPosition(slots, targetSlot);
+                int position = findSlotPosition(futureSlots, targetSlot);
                 if (position >= 0) {
                     recyclerSlots.post(() -> recyclerSlots.smoothScrollToPosition(position));
                 }
@@ -136,6 +145,92 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
             }
         }
         return -1;
+    }
+
+    private List<ApiService.SlotCard> filterPastSlots(List<ApiService.SlotCard> slots) {
+        if (slots == null || slots.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<ApiService.SlotCard> futureSlots = new ArrayList<>();
+        Date now = new Date();
+        SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
+
+        for (ApiService.SlotCard slot : slots) {
+            // Filter out slots with closed sessions
+            // If a slot has a closed attendance session, it should not be available for registration
+            if (slot.hasClosedSession != null && slot.hasClosedSession) {
+                Logger.d(Logger.TAG_UI, "Filtering out slot " + slot.slotId + " - has closed session");
+                continue; // Skip this slot
+            }
+            
+            // Also check if attendance was closed by checking attendanceClosesAt
+            // If attendanceClosesAt exists and is in the past, the session is closed
+            if (slot.attendanceClosesAt != null && !slot.attendanceClosesAt.isEmpty()) {
+                try {
+                    // Parse the closesAt timestamp (format: "2025-11-09 13:10:49")
+                    SimpleDateFormat closesAtFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+                    Date closesAt = closesAtFormat.parse(slot.attendanceClosesAt);
+                    if (closesAt != null && closesAt.before(now)) {
+                        // Session closed in the past, filter out this slot
+                        Logger.d(Logger.TAG_UI, "Filtering out slot " + slot.slotId + " - attendance closed at " + slot.attendanceClosesAt);
+                        continue; // Skip this slot
+                    }
+                } catch (ParseException e) {
+                    // If parsing fails, don't filter it out (better to show than hide)
+                    Logger.w(Logger.TAG_UI, "Failed to parse attendanceClosesAt: " + slot.attendanceClosesAt + " - " + e.getMessage());
+                }
+            }
+            if (slot.date == null || slot.timeRange == null) {
+                // If we can't parse the date/time, include it (better to show than hide)
+                futureSlots.add(slot);
+                continue;
+            }
+
+            try {
+                // Parse date and time range
+                // Format: date is "yyyy-MM-dd", timeRange is "HH:mm-HH:mm"
+                String[] timeParts = slot.timeRange.split("-");
+                if (timeParts.length != 2) {
+                    // Can't parse time range, include it
+                    futureSlots.add(slot);
+                    continue;
+                }
+
+                String startTimeStr = slot.date + " " + timeParts[0].trim();
+                Date slotStartTime = dateTimeFormat.parse(startTimeStr);
+
+                if (slotStartTime != null) {
+                    // Include slots that are today or in the future
+                    // Compare dates (not times) to include all slots for today
+                    Calendar slotCal = Calendar.getInstance();
+                    slotCal.setTime(slotStartTime);
+                    slotCal.set(Calendar.HOUR_OF_DAY, 0);
+                    slotCal.set(Calendar.MINUTE, 0);
+                    slotCal.set(Calendar.SECOND, 0);
+                    slotCal.set(Calendar.MILLISECOND, 0);
+                    
+                    Calendar nowCal = Calendar.getInstance();
+                    nowCal.setTime(now);
+                    nowCal.set(Calendar.HOUR_OF_DAY, 0);
+                    nowCal.set(Calendar.MINUTE, 0);
+                    nowCal.set(Calendar.SECOND, 0);
+                    nowCal.set(Calendar.MILLISECOND, 0);
+                    
+                    // Include if slot date is today or in the future
+                    if (!slotCal.getTime().before(nowCal.getTime())) {
+                        futureSlots.add(slot);
+                    }
+                }
+                // If slot is in the past (before today), skip it
+            } catch (ParseException e) {
+                // If parsing fails, include the slot (better to show than hide)
+                Logger.w(Logger.TAG_UI, "Failed to parse slot date/time: " + slot.date + " " + slot.timeRange + " - " + e.getMessage());
+                futureSlots.add(slot);
+            }
+        }
+
+        return futureSlots;
     }
 
     private void loadSlots() {

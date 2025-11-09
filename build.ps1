@@ -13,10 +13,28 @@ $apks = Get-ChildItem -Recurse "build\outputs\apk" -Filter "*-debug.apk" | Sort-
 if (-not $apks) { throw "No APKs found after build" }
 Write-Host "Found APK: $($apks[0].Name)" -ForegroundColor Green
 
-# 3) Devices
-$devs = (adb devices) | Select-String "`tdevice$" | ForEach-Object { $_.Line.Split("`t")[0] }
-if (-not $devs) { throw "No devices found. Enable USB debugging." }
-Write-Host "Installing to: $($devs -join ', ')" -ForegroundColor Green
+# 3) Devices - Only physical devices (exclude emulators)
+$allDevs = (adb devices) | Select-String "`tdevice$" | ForEach-Object { $_.Line.Split("`t")[0] }
+# Filter out emulators (emulator-* pattern)
+$devs = $allDevs | Where-Object { $_ -notmatch "^emulator-" }
+if (-not $devs) { 
+    Write-Host "No physical devices found. Emulators detected: $($allDevs -join ', ')" -ForegroundColor Yellow
+    Write-Host "Please connect a physical device with USB debugging enabled." -ForegroundColor Yellow
+    throw "No physical devices found. Enable USB debugging on your device."
+}
+Write-Host "Installing to physical devices: $($devs -join ', ')" -ForegroundColor Green
+
+# 3.5) Setup port forwarding for API access (localhost:8080 -> dev machine:8080)
+Write-Host "Setting up port forwarding..." -ForegroundColor Cyan
+foreach ($d in $devs) {
+  Write-Host "→ Setting up port forwarding on $d ..." -ForegroundColor Yellow
+  adb -s $d reverse tcp:8080 tcp:8080
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "  ✓ Port forwarding active on $d" -ForegroundColor Green
+  } else {
+    Write-Host "  ⚠ Port forwarding failed on $d (may already be active)" -ForegroundColor Yellow
+  }
+}
 
 # 4) Install
 foreach ($d in $devs) {

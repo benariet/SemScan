@@ -32,12 +32,23 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_start_session"
+                    style="@style/SemScanButtonPrimary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/presenter_start_session_button"
+                    android:enabled="false" />
 
                 <TextView
                     android:id="@+id/text_subtitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
                     android:text="@string/presenter_start_session_subtitle"
                     android:textColor="@color/gray_700"
                     android:textSize="14sp" />
@@ -102,15 +113,6 @@
                     android:textColor="@color/gray_600"
                     android:textSize="16sp"
                     android:visibility="gone" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_start_session"
-                    style="@style/SemScanButtonPrimary"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="32dp"
-                    android:text="@string/presenter_start_session_button"
-                    android:enabled="false" />
 
             </LinearLayout>
         </ScrollView>

@@ -3,13 +3,15 @@ package org.example.semscan.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 
 import org.example.semscan.R;
+import org.example.semscan.ui.auth.LoginActivity;
 import org.example.semscan.ui.student.StudentHomeActivity;
 import org.example.semscan.ui.teacher.PresenterHomeActivity;
 import org.example.semscan.utils.Logger;
@@ -17,9 +19,9 @@ import org.example.semscan.utils.PreferencesManager;
 
 public class RolePickerActivity extends AppCompatActivity {
     
-    private CardView cardPresenter;
-    private CardView cardStudent;
-    private Button btnSettings;
+    private MaterialCardView cardPresenter;
+    private MaterialCardView cardStudent;
+    private MaterialButton btnSettings;
     private PreferencesManager preferencesManager;
     
     @Override
@@ -61,7 +63,7 @@ public class RolePickerActivity extends AppCompatActivity {
         cardStudent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                selectRole("STUDENT");
+                selectRole("PARTICIPANT");
             }
         });
         
@@ -77,7 +79,31 @@ public class RolePickerActivity extends AppCompatActivity {
         Logger.userAction("Select Role", "User selected role: " + role);
         Logger.i(Logger.TAG_UI, "Setting user role to: " + role);
         
+        // CRITICAL: Ensure username is preserved when setting role
+        String username = preferencesManager.getUserName();
+        if (username == null || username.isEmpty()) {
+            Logger.e(Logger.TAG_UI, "ERROR: Username is NULL or empty in RolePickerActivity!");
+            Logger.e(Logger.TAG_UI, "Cannot set role without username. User must log in again.");
+            Toast.makeText(this, "Username not found. Please log in again.", Toast.LENGTH_LONG).show();
+            // Navigate back to login
+            Intent intent = new Intent(this, org.example.semscan.ui.auth.LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+        
+        Logger.d(Logger.TAG_UI, "Setting role with username: " + username);
         preferencesManager.setUserRole(role);
+        
+        // Final check: Log all values before navigation
+        Logger.d(Logger.TAG_UI, "=== Role Selected ===");
+        Logger.d(Logger.TAG_UI, "Username: " + preferencesManager.getUserName());
+        Logger.d(Logger.TAG_UI, "Role: " + preferencesManager.getUserRole());
+        Logger.d(Logger.TAG_UI, "Is Student: " + preferencesManager.isStudent());
+        Logger.d(Logger.TAG_UI, "Is Presenter: " + preferencesManager.isPresenter());
+        Logger.d(Logger.TAG_UI, "=====================");
+        
         navigateToHome();
     }
     
@@ -88,7 +114,7 @@ public class RolePickerActivity extends AppCompatActivity {
         if (preferencesManager.isPresenter()) {
             intent = new Intent(this, PresenterHomeActivity.class);
             targetActivity = "PresenterHomeActivity";
-        } else if (preferencesManager.isStudent()) {
+        } else if (preferencesManager.isStudent() || preferencesManager.isParticipant()) {
             intent = new Intent(this, StudentHomeActivity.class);
             targetActivity = "StudentHomeActivity";
         } else {

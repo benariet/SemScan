@@ -47,8 +47,19 @@
             style="@style/SemScanButtonOutlinedPrimary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
             android:text="@string/setup_msc_option_participant"
             app:icon="@drawable/ic_role_student"
+            app:iconGravity="textStart"
+            app:iconPadding="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_msc_both"
+            style="@style/SemScanButtonOutlinedPrimary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setup_msc_option_both"
+            app:icon="@drawable/ic_role_presenter"
             app:iconGravity="textStart"
             app:iconPadding="12dp" />
 

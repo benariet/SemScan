@@ -25,6 +25,7 @@ public class MScRoleSelectionActivity extends AppCompatActivity {
 
         MaterialButton presenterButton = findViewById(R.id.btn_msc_presenter);
         MaterialButton participantButton = findViewById(R.id.btn_msc_participant);
+        MaterialButton bothButton = findViewById(R.id.btn_msc_both);
 
         presenterButton.setOnClickListener(v -> returnSelection(
                 FirstTimeSetupActivity.PARTICIPATION_PRESENTER_ONLY,
@@ -34,6 +35,11 @@ public class MScRoleSelectionActivity extends AppCompatActivity {
         participantButton.setOnClickListener(v -> returnSelection(
                 FirstTimeSetupActivity.PARTICIPATION_PARTICIPANT_ONLY,
                 getString(R.string.setup_msc_option_participant)
+        ));
+
+        bothButton.setOnClickListener(v -> returnSelection(
+                FirstTimeSetupActivity.PARTICIPATION_BOTH,
+                getString(R.string.setup_msc_option_both)
         ));
     }
 

@@ -50,6 +50,12 @@ public class ExportActivity extends AppCompatActivity {
     private Long currentSessionId;
     private ManualRequestAdapter requestAdapter;
     
+    // Session details for filename generation
+    private String sessionDate;
+    private String sessionTimeSlot;
+    private String sessionPresenter;
+    private String sessionTopic;
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +79,12 @@ public class ExportActivity extends AppCompatActivity {
         
         // Get current session ID from intent (passed from QR display)
         currentSessionId = getIntent().getLongExtra("sessionId", -1L);
+        
+        // Get session details for filename generation
+        sessionDate = getIntent().getStringExtra("sessionDate");
+        sessionTimeSlot = getIntent().getStringExtra("sessionTimeSlot");
+        sessionPresenter = getIntent().getStringExtra("sessionPresenter");
+        sessionTopic = getIntent().getStringExtra("sessionTopic");
         
         // Display the session ID
         if (currentSessionId != null && currentSessionId > 0) {
@@ -192,6 +204,46 @@ public class ExportActivity extends AppCompatActivity {
         });
     }
     
+    /**
+     * Refresh pending requests list without triggering export
+     * This is used when approving/rejecting requests - we just want to update the UI,
+     * not automatically proceed with export
+     */
+    private void refreshPendingRequestsOnly() {
+        if (currentSessionId == null || currentSessionId <= 0) {
+            return;
+        }
+        
+        Logger.api("GET", "api/v1/attendance/manual/pending-requests", "Session ID: " + currentSessionId + " (refresh only)");
+        
+        Call<List<ManualAttendanceResponse>> call = apiService.getPendingManualRequests(currentSessionId);
+        call.enqueue(new Callback<List<ManualAttendanceResponse>>() {
+            @Override
+            public void onResponse(Call<List<ManualAttendanceResponse>> call, Response<List<ManualAttendanceResponse>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<ManualAttendanceResponse> pendingRequests = response.body();
+                    Logger.d("ExportActivity", "Refreshed pending requests: " + pendingRequests.size() + " remaining");
+                    
+                    // Update the adapter with the new list
+                    requestAdapter.updateRequests(pendingRequests);
+                    
+                    // If there are no more pending requests, we could optionally show a message
+                    // but we should NOT automatically trigger export
+                    if (pendingRequests.isEmpty()) {
+                        Logger.d("ExportActivity", "All pending requests have been resolved");
+                        // Don't auto-export - user must click Export button explicitly
+                    }
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<List<ManualAttendanceResponse>> call, Throwable t) {
+                Logger.e(Logger.TAG_UI, "Failed to refresh pending requests", t);
+                // Don't show error toast for refresh - it's just a background update
+            }
+        });
+    }
+    
     private void showReviewModal(List<ManualAttendanceResponse> pendingRequests) {
         Logger.d("ExportActivity", "=== SHOW REVIEW MODAL DEBUG ===");
         Logger.d("ExportActivity", "Creating review modal for " + pendingRequests.size() + " requests");
@@ -287,8 +339,9 @@ public class ExportActivity extends AppCompatActivity {
                     Logger.apiResponse("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 
                         response.code(), "Request approved successfully");
                     Toast.makeText(ExportActivity.this, "Request approved", Toast.LENGTH_SHORT).show();
-                    // Refresh the list
-                    checkPendingRequests();
+                    // Refresh the list WITHOUT triggering export
+                    // Export should only happen when user clicks the Export button, not when approving requests
+                    refreshPendingRequestsOnly();
                 } else {
                     Logger.apiError("POST", "api/v1/attendance/" + request.getAttendanceId() + "/approve", 
                         response.code(), "Failed to approve request");
@@ -320,8 +373,9 @@ public class ExportActivity extends AppCompatActivity {
                     Logger.apiResponse("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject", 
                         response.code(), "Request rejected successfully");
                     Toast.makeText(ExportActivity.this, "Request rejected", Toast.LENGTH_SHORT).show();
-                    // Refresh the list
-                    checkPendingRequests();
+                    // Refresh the list WITHOUT triggering export
+                    // Export should only happen when user clicks the Export button, not when rejecting requests
+                    refreshPendingRequestsOnly();
                 } else {
                     Logger.apiError("POST", "api/v1/attendance/" + request.getAttendanceId() + "/reject", 
                         response.code(), "Failed to reject request");
@@ -373,12 +427,12 @@ public class ExportActivity extends AppCompatActivity {
         
         if (isExcel) {
             call = apiService.exportXlsx(sessionId);
-            filename = "attendance_" + sessionId + ".xlsx";
+            filename = generateExportFilename(sessionId, ".xlsx");
             mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             endpoint = "api/v1/export/xlsx";
         } else {
             call = apiService.exportCsv(sessionId);
-            filename = "attendance_" + sessionId + ".csv";
+            filename = generateExportFilename(sessionId, ".csv");
             mimeType = "text/csv";
             endpoint = "api/v1/export/csv";
         }
@@ -437,25 +491,58 @@ public class ExportActivity extends AppCompatActivity {
     }
     
     private void shareFile(File file, String mimeType) {
-        Logger.i(Logger.TAG_UI, "Sharing export file: " + file.getName() + " (" + mimeType + ")");
+        Logger.i(Logger.TAG_UI, "Sending export file via email: " + file.getName() + " (" + mimeType + ")");
         
         try {
             // Use FileProvider for secure file sharing
             Uri fileUri = FileProvider.getUriForFile(this, 
                 "org.example.semscan.fileprovider", file);
             
-            Intent shareIntent = new Intent(Intent.ACTION_SEND);
-            shareIntent.setType(mimeType);
-            shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
-            shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Attendance Export");
-            shareIntent.putExtra(Intent.EXTRA_TEXT, "Attendance data export from SemScan");
-            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            // Create email intent with specific recipients
+            Intent emailIntent = new Intent(Intent.ACTION_SEND);
+            emailIntent.setType("message/rfc822"); // Email MIME type
             
-            startActivity(Intent.createChooser(shareIntent, "Share attendance data"));
+            // Parse multiple email recipients (comma-separated)
+            String[] recipients = ApiConstants.EXPORT_EMAIL_RECIPIENTS.split(",");
+            // Trim whitespace from each email address
+            for (int i = 0; i < recipients.length; i++) {
+                recipients[i] = recipients[i].trim();
+            }
+            emailIntent.putExtra(Intent.EXTRA_EMAIL, recipients);
+            emailIntent.putExtra(Intent.EXTRA_SUBJECT, "SemScan Attendance Export - Session " + currentSessionId);
+            
+            // Build email body with session details
+            StringBuilder emailBody = new StringBuilder();
+            emailBody.append("Attendance data export from SemScan\n\n");
+            emailBody.append("Session ID: ").append(currentSessionId).append("\n");
+            if (sessionDate != null) {
+                emailBody.append("Date: ").append(sessionDate).append("\n");
+            }
+            if (sessionTimeSlot != null) {
+                emailBody.append("Time Slot: ").append(sessionTimeSlot).append("\n");
+            }
+            if (sessionPresenter != null) {
+                emailBody.append("Presenter: ").append(sessionPresenter).append("\n");
+            }
+            emailBody.append("\nPlease find the attendance export file attached.");
+            
+            emailIntent.putExtra(Intent.EXTRA_TEXT, emailBody.toString());
+            emailIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+            emailIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            
+            // Only show email apps, not all sharing apps
+            try {
+                startActivity(Intent.createChooser(emailIntent, "Send attendance export via email"));
+                Logger.i(Logger.TAG_UI, "Email intent launched successfully");
+            } catch (android.content.ActivityNotFoundException e) {
+                // No email app found
+                Logger.e(Logger.TAG_UI, "No email app found on device", e);
+                Toast.makeText(this, "No email app found. Please install an email app to send the export.", Toast.LENGTH_LONG).show();
+            }
             
         } catch (Exception e) {
-            Logger.e(Logger.TAG_UI, "Failed to share file", e);
-            Toast.makeText(this, "Failed to share file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Logger.e(Logger.TAG_UI, "Failed to send file via email", e);
+            Toast.makeText(this, "Failed to send email: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
     
@@ -503,6 +590,150 @@ public class ExportActivity extends AppCompatActivity {
                 return "Export failed (Code: " + responseCode + ")" + 
                        (errorBody != null ? " - " + errorBody : "");
         }
+    }
+    
+    /**
+     * Generate a descriptive filename for the export file
+     * Format: day_month_year_presenter_time.ext
+     * Example: 9_11_2025_john_doe_13-15.csv
+     *         9_11_2025_13-15.csv (if presenter not available)
+     */
+    private String generateExportFilename(Long sessionId, String extension) {
+        StringBuilder filename = new StringBuilder();
+        
+        // Parse date if available (format: "2025-11-09" or "09/11/2025")
+        String datePart = "";
+        if (sessionDate != null && !sessionDate.isEmpty()) {
+            try {
+                // Try to parse different date formats
+                if (sessionDate.contains("-")) {
+                    // Format: "2025-11-09" -> "9_11_2025"
+                    String[] parts = sessionDate.split("-");
+                    if (parts.length == 3) {
+                        int day = Integer.parseInt(parts[2]);
+                        int month = Integer.parseInt(parts[1]);
+                        int year = Integer.parseInt(parts[0]);
+                        datePart = String.format("%d_%d_%d", day, month, year);
+                    }
+                } else if (sessionDate.contains("/")) {
+                    // Format: "09/11/2025" -> "9_11_2025"
+                    String[] parts = sessionDate.split("/");
+                    if (parts.length == 3) {
+                        int day = Integer.parseInt(parts[0]);
+                        int month = Integer.parseInt(parts[1]);
+                        int year = Integer.parseInt(parts[2]);
+                        datePart = String.format("%d_%d_%d", day, month, year);
+                    }
+                }
+            } catch (Exception e) {
+                Logger.w(Logger.TAG_UI, "Failed to parse session date: " + sessionDate + " - " + e.getMessage());
+            }
+        }
+        
+        // If date parsing failed, try to extract from timeSlot
+        if (datePart.isEmpty() && sessionTimeSlot != null && sessionTimeSlot.contains(" ")) {
+            try {
+                String dateStr = sessionTimeSlot.split(" ")[0]; // Get date part
+                if (dateStr.contains("-")) {
+                    String[] parts = dateStr.split("-");
+                    if (parts.length == 3) {
+                        int day = Integer.parseInt(parts[2]);
+                        int month = Integer.parseInt(parts[1]);
+                        int year = Integer.parseInt(parts[0]);
+                        datePart = String.format("%d_%d_%d", day, month, year);
+                    }
+                }
+            } catch (Exception e) {
+                Logger.w(Logger.TAG_UI, "Failed to extract date from timeSlot: " + sessionTimeSlot + " - " + e.getMessage());
+            }
+        }
+        
+        // If still no date, use current date
+        if (datePart.isEmpty()) {
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            int day = cal.get(java.util.Calendar.DAY_OF_MONTH);
+            int month = cal.get(java.util.Calendar.MONTH) + 1; // Calendar.MONTH is 0-based
+            int year = cal.get(java.util.Calendar.YEAR);
+            datePart = String.format("%d_%d_%d", day, month, year);
+        }
+        
+        filename.append(datePart);
+        
+        // Extract time from timeSlot (format: "2025-11-09 14:00-15:00" -> "13-15" or "14-15")
+        String timePart = "";
+        if (sessionTimeSlot != null && !sessionTimeSlot.isEmpty()) {
+            try {
+                // Extract time range (e.g., "14:00-15:00" -> "14-15")
+                if (sessionTimeSlot.contains(" ")) {
+                    String timeRange = sessionTimeSlot.split(" ")[1]; // Get time part
+                    if (timeRange.contains("-")) {
+                        String[] times = timeRange.split("-");
+                        if (times.length == 2) {
+                            String startTime = times[0].trim(); // "14:00"
+                            String endTime = times[1].trim();   // "15:00"
+                            
+                            // Extract hour from "14:00" -> "14"
+                            if (startTime.contains(":")) {
+                                String startHour = startTime.split(":")[0];
+                                String endHour = endTime.contains(":") ? endTime.split(":")[0] : endTime;
+                                timePart = startHour + "-" + endHour;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Logger.w(Logger.TAG_UI, "Failed to parse timeSlot: " + sessionTimeSlot + " - " + e.getMessage());
+            }
+        }
+        
+        // Add presenter name
+        String presenterPart = "";
+        
+        if (sessionPresenter != null && !sessionPresenter.trim().isEmpty()) {
+            // Use presenter name, sanitize for filename
+            presenterPart = sanitizeForFilename(sessionPresenter.trim());
+        }
+        
+        // Build filename: date_presenter_time.ext or date_time.ext
+        if (!presenterPart.isEmpty()) {
+            filename.append("_").append(presenterPart);
+        }
+        
+        if (!timePart.isEmpty()) {
+            filename.append("_").append(timePart);
+        }
+        
+        // Fallback to sessionId if we don't have enough info
+        if (datePart.isEmpty() && presenterPart.isEmpty() && timePart.isEmpty()) {
+            filename = new StringBuilder("attendance_").append(sessionId);
+        }
+        
+        filename.append(extension);
+        
+        Logger.d(Logger.TAG_UI, "Generated export filename: " + filename.toString());
+        return filename.toString();
+    }
+    
+    /**
+     * Sanitize a string for use in a filename
+     * Removes special characters, replaces spaces with underscores, limits length
+     */
+    private String sanitizeForFilename(String input) {
+        if (input == null || input.isEmpty()) {
+            return "";
+        }
+        
+        // Replace spaces and special characters with underscores
+        String sanitized = input.replaceAll("[^a-zA-Z0-9_-]", "_")
+                                .replaceAll("_+", "_")  // Replace multiple underscores with single
+                                .replaceAll("^_|_$", ""); // Remove leading/trailing underscores
+        
+        // Limit length to 50 characters
+        if (sanitized.length() > 50) {
+            sanitized = sanitized.substring(0, 50);
+        }
+        
+        return sanitized.toLowerCase();
     }
     
     @Override

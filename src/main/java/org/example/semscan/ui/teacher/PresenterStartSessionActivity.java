@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -20,6 +21,10 @@ import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import java.util.Locale;
 
@@ -181,8 +186,50 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(Call<ApiService.PresenterAttendanceOpenResponse> call, Response<ApiService.PresenterAttendanceOpenResponse> response) {
                         setLoading(false);
-                        if (!response.isSuccessful() || response.body() == null) {
-                            Toast.makeText(PresenterStartSessionActivity.this, R.string.error, Toast.LENGTH_LONG).show();
+                        if (!response.isSuccessful()) {
+                            // Try to get error message from response body
+                            String errorMessage = getString(R.string.presenter_start_session_error_generic_message);
+                            if (response.body() != null && response.body().message != null && !response.body().message.trim().isEmpty()) {
+                                errorMessage = response.body().message;
+                            } else if (response.errorBody() != null) {
+                                try {
+                                    String errorBodyString = response.errorBody().string();
+                                    if (errorBodyString != null && !errorBodyString.trim().isEmpty()) {
+                                        // Try to parse JSON and extract message field
+                                        try {
+                                            JsonParser parser = new JsonParser();
+                                            JsonObject jsonObject = parser.parse(errorBodyString).getAsJsonObject();
+                                            if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
+                                                errorMessage = jsonObject.get("message").getAsString();
+                                            }
+                                        } catch (Exception e) {
+                                            // If JSON parsing fails, try manual extraction
+                                            int messageStart = errorBodyString.indexOf("\"message\":\"");
+                                            if (messageStart >= 0) {
+                                                messageStart += 11; // Length of "\"message\":\""
+                                                int messageEnd = errorBodyString.indexOf("\"", messageStart);
+                                                if (messageEnd > messageStart) {
+                                                    errorMessage = errorBodyString.substring(messageStart, messageEnd);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    Logger.e(Logger.TAG_API, "Failed to read error body", e);
+                                }
+                            }
+                            showErrorDialog(
+                                    getString(R.string.presenter_start_session_error_generic),
+                                    errorMessage
+                            );
+                            return;
+                        }
+
+                        if (response.body() == null) {
+                            showErrorDialog(
+                                    getString(R.string.presenter_start_session_error_generic),
+                                    getString(R.string.presenter_start_session_error_generic_message)
+                            );
                             return;
                         }
 
@@ -194,15 +241,43 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                                 openAttendanceQr(body.qrUrl, body.qrPayload, body.openedAt, body.closesAt, body.sessionId);
                                 break;
                             case "TOO_EARLY":
+                                // Always show the server message if available, otherwise show default with time
+                                String tooEarlyMessage;
+                                if (body.message != null && !body.message.trim().isEmpty()) {
+                                    // Check if message contains JSON and extract just the message text
+                                    tooEarlyMessage = extractMessageFromJson(body.message);
+                                } else {
+                                    // Build default message with actual time
+                                    String slotTime = "your scheduled time";
+                                    if (currentSlot != null && currentSlot.timeRange != null) {
+                                        String[] timeParts = currentSlot.timeRange.split("-");
+                                        if (timeParts.length > 0) {
+                                            slotTime = timeParts[0].trim();
+                                        }
+                                    }
+                                    tooEarlyMessage = getString(R.string.presenter_start_session_error_too_early_message, slotTime);
+                                }
+                                showErrorDialog(
+                                        getString(R.string.presenter_start_session_error_too_early),
+                                        tooEarlyMessage
+                                );
+                                break;
                             case "IN_PROGRESS":
-                                Toast.makeText(PresenterStartSessionActivity.this,
-                                        body.message != null ? body.message : getString(R.string.presenter_start_session_error_load),
-                                        Toast.LENGTH_LONG).show();
+                                String inProgressMessage = (body.message != null && !body.message.trim().isEmpty()) ? 
+                                        extractMessageFromJson(body.message) : getString(R.string.presenter_start_session_error_in_progress_message);
+                                showErrorDialog(
+                                        getString(R.string.presenter_start_session_error_in_progress),
+                                        inProgressMessage
+                                );
                                 break;
                             default:
-                                Toast.makeText(PresenterStartSessionActivity.this,
-                                        body.message != null ? body.message : getString(R.string.error),
-                                        Toast.LENGTH_LONG).show();
+                                // Always show server message if available
+                                String defaultMessage = (body.message != null && !body.message.trim().isEmpty()) ? 
+                                        extractMessageFromJson(body.message) : getString(R.string.presenter_start_session_error_generic_message);
+                                showErrorDialog(
+                                        getString(R.string.presenter_start_session_error_generic),
+                                        defaultMessage
+                                );
                                 break;
                         }
                         loadPresenterSlot();
@@ -212,7 +287,10 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     public void onFailure(Call<ApiService.PresenterAttendanceOpenResponse> call, Throwable t) {
                         setLoading(false);
                         Logger.e(Logger.TAG_API, "Failed to open attendance", t);
-                        Toast.makeText(PresenterStartSessionActivity.this, R.string.error, Toast.LENGTH_LONG).show();
+                        showErrorDialog(
+                                getString(R.string.presenter_start_session_error_network),
+                                getString(R.string.presenter_start_session_error_network_message)
+                        );
                     }
                 });
     }
@@ -244,6 +322,45 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
             builder.append(getString(R.string.building_with_label, currentSlot.building));
         }
         return builder.toString();
+    }
+
+    private String extractMessageFromJson(String message) {
+        if (message == null || message.trim().isEmpty()) {
+            return message;
+        }
+        
+        // If message looks like JSON, try to parse it
+        if (message.trim().startsWith("{") && message.contains("\"message\"")) {
+            try {
+                JsonParser parser = new JsonParser();
+                JsonObject jsonObject = parser.parse(message).getAsJsonObject();
+                if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
+                    return jsonObject.get("message").getAsString();
+                }
+            } catch (Exception e) {
+                // If parsing fails, try manual extraction
+                int messageStart = message.indexOf("\"message\":\"");
+                if (messageStart >= 0) {
+                    messageStart += 11; // Length of "\"message\":\""
+                    int messageEnd = message.indexOf("\"", messageStart);
+                    if (messageEnd > messageStart) {
+                        return message.substring(messageStart, messageEnd);
+                    }
+                }
+            }
+        }
+        
+        // Return message as-is if it's not JSON
+        return message;
+    }
+
+    private void showErrorDialog(String title, String message) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .setCancelable(true)
+                .show();
     }
 
     private String safe(String value) {
