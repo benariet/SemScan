@@ -288,7 +288,13 @@ public class QRDisplayActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<Session> call, Throwable t) {
                 Logger.e(Logger.TAG_QR, "Failed to end session", t);
-                Toast.makeText(QRDisplayActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                String errorMessage = getString(R.string.error_operation_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                Toast.makeText(QRDisplayActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -320,7 +326,13 @@ public class QRDisplayActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<Session> call, Throwable t) {
                 Logger.e(Logger.TAG_QR, "Failed to cancel session", t);
-                Toast.makeText(QRDisplayActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                String errorMessage = getString(R.string.error_operation_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                Toast.makeText(QRDisplayActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
             }
         });
     }

@@ -16,6 +16,11 @@ public class PreferencesManager {
     private static final String KEY_PARTICIPATION = "participation_preference";
     private static final String KEY_SETUP_COMPLETED = "initial_setup_completed";
     
+    // Remember Me credentials
+    private static final String KEY_SAVED_USERNAME = "saved_username";
+    private static final String KEY_SAVED_PASSWORD = "saved_password";
+    private static final String KEY_REMEMBER_ME = "remember_me_enabled";
+    
     private static PreferencesManager instance;
     private SharedPreferences prefs;
     
@@ -42,14 +47,6 @@ public class PreferencesManager {
     
     public boolean isPresenter() {
         return "PRESENTER".equals(getUserRole());
-    }
-    
-    public boolean isTeacher() {
-        return "PRESENTER".equals(getUserRole()); // For backward compatibility
-    }
-    
-    public boolean isStudent() {
-        return "STUDENT".equals(getUserRole()) || "PARTICIPANT".equals(getUserRole());
     }
     
     public boolean isParticipant() {
@@ -150,5 +147,59 @@ public class PreferencesManager {
                 .remove(KEY_PARTICIPATION)
                 .remove(KEY_SETUP_COMPLETED)
                 .apply();
+    }
+    
+    // Remember Me functionality
+    public void setSavedUsername(String username) {
+        Logger.prefs(KEY_SAVED_USERNAME, username);
+        if (username == null || username.isEmpty()) {
+            prefs.edit().remove(KEY_SAVED_USERNAME).apply();
+        } else {
+            prefs.edit().putString(KEY_SAVED_USERNAME, username).apply();
+        }
+    }
+    
+    public String getSavedUsername() {
+        return prefs.getString(KEY_SAVED_USERNAME, null);
+    }
+    
+    /**
+     * Save password for "Remember Me" functionality
+     * WARNING: Storing passwords in SharedPreferences is not secure.
+     * For production apps, consider using Android Keystore or token-based authentication.
+     */
+    public void setSavedPassword(String password) {
+        Logger.prefs(KEY_SAVED_PASSWORD, password != null ? "***" : null);
+        if (password == null || password.isEmpty()) {
+            prefs.edit().remove(KEY_SAVED_PASSWORD).apply();
+        } else {
+            // Note: In production, encrypt this password using Android Keystore
+            prefs.edit().putString(KEY_SAVED_PASSWORD, password).apply();
+        }
+    }
+    
+    public String getSavedPassword() {
+        return prefs.getString(KEY_SAVED_PASSWORD, null);
+    }
+    
+    public void setRememberMeEnabled(boolean enabled) {
+        Logger.prefs(KEY_REMEMBER_ME, String.valueOf(enabled));
+        prefs.edit().putBoolean(KEY_REMEMBER_ME, enabled).apply();
+    }
+    
+    public boolean isRememberMeEnabled() {
+        return prefs.getBoolean(KEY_REMEMBER_ME, false);
+    }
+    
+    /**
+     * Clear all saved credentials (username and password)
+     */
+    public void clearSavedCredentials() {
+        prefs.edit()
+                .remove(KEY_SAVED_USERNAME)
+                .remove(KEY_SAVED_PASSWORD)
+                .remove(KEY_REMEMBER_ME)
+                .apply();
+        Logger.d(Logger.TAG_UI, "Cleared saved credentials");
     }
 }

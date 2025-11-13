@@ -64,6 +64,15 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <CheckBox
+            android:id="@+id/checkbox_remember_me"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/login_remember_me"
+            android:textColor="@color/gray_700"
+            android:textSize="14sp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_login"
             style="@style/SemScanButtonPrimary"
@@ -79,6 +88,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="@string/login_skip_auth_button" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_test_email"
+            style="@style/SemScanButtonOutlinedPrimary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/test_email_button" />
 
     </LinearLayout>
 

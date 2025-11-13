@@ -154,7 +154,7 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         Logger.d(TAG, "=== User Preferences Debug ===");
         Logger.d(TAG, "Username: " + (username != null ? username : "NULL"));
         Logger.d(TAG, "User Role: " + (userRole != null ? userRole : "NULL"));
-        Logger.d(TAG, "Is Student: " + preferencesManager.isStudent());
+        Logger.d(TAG, "Is Participant: " + preferencesManager.isParticipant());
         Logger.d(TAG, "Is Presenter: " + preferencesManager.isPresenter());
         Logger.d(TAG, "==============================");
         
@@ -331,14 +331,14 @@ public class ModernQRScannerActivity extends AppCompatActivity {
         Logger.d(TAG, "Session ID: " + sessionId);
         Logger.d(TAG, "Student Username: " + (studentUsername != null ? studentUsername : "NULL"));
         Logger.d(TAG, "User Role: " + (userRole != null ? userRole : "NULL"));
-        Logger.d(TAG, "Is Student: " + preferencesManager.isStudent());
+        Logger.d(TAG, "Is Participant: " + preferencesManager.isParticipant());
         Logger.d(TAG, "Is Presenter: " + preferencesManager.isPresenter());
         Logger.d(TAG, "===================================");
         
         if (TextUtils.isEmpty(studentUsername)) {
             Logger.e(TAG, "Student username not found or invalid");
             Logger.e(TAG, "Current user role: " + userRole);
-            Logger.e(TAG, "Is student check: " + preferencesManager.isStudent());
+            Logger.e(TAG, "Is participant check: " + preferencesManager.isParticipant());
             if (serverLogger != null) {
                 serverLogger.e(ServerLogger.TAG_QR, "Student username not found or invalid - Role: " + userRole);
             }
@@ -346,69 +346,139 @@ public class ModernQRScannerActivity extends AppCompatActivity {
             return;
         }
         
-        // Check if user is actually a student
-        if (!preferencesManager.isStudent()) {
-            Logger.e(TAG, "User is not a student - Role: " + userRole);
+        // Check if user is actually a participant
+        if (!preferencesManager.isParticipant()) {
+            Logger.e(TAG, "User is not a participant - Role: " + userRole);
             if (serverLogger != null) {
-                serverLogger.e(ServerLogger.TAG_QR, "User is not a student - Role: " + userRole);
+                serverLogger.e(ServerLogger.TAG_QR, "User is not a participant - Role: " + userRole);
             }
             showError("Only students can scan QR codes for attendance.\n\nCurrent role: " + userRole);
             return;
         }
 
-        Logger.d(TAG, "Submitting attendance - Session: " + sessionId + ", Student: " + studentUsername);
+        // Skip frontend validation - go directly to backend
+        // The backend will validate the session status correctly
+        // Frontend validation was causing issues when backend doesn't return all open sessions
+        Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+        Logger.d(TAG, "QR CODE SCANNED - ATTENDANCE SUBMISSION STARTING");
+        Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+        Logger.d(TAG, "Session ID: " + sessionId);
+        Logger.d(TAG, "Student Username: " + studentUsername);
+        Logger.d(TAG, "Timestamp: " + System.currentTimeMillis());
+        Logger.d(TAG, "Proceeding directly to backend - no frontend validation");
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_QR, "QR CODE SCANNED - ATTENDANCE SUBMISSION | Session ID: " + sessionId + ", Student: " + studentUsername);
+        }
+        proceedWithAttendanceSubmission(sessionId, studentUsername);
+    }
+    
+    /**
+     * Proceed with attendance submission - backend will validate session status.
+     */
+    private void proceedWithAttendanceSubmission(Long sessionId, String studentUsername) {
+        Logger.d(TAG, "───────────────────────────────────────────────────────────");
+        Logger.d(TAG, "PROCEEDING WITH ATTENDANCE SUBMISSION");
+        Logger.d(TAG, "───────────────────────────────────────────────────────────");
+        Logger.d(TAG, "Session ID: " + sessionId + " (Type: " + (sessionId != null ? sessionId.getClass().getSimpleName() : "NULL") + ")");
+        Logger.d(TAG, "Student Username: '" + studentUsername + "' (Length: " + (studentUsername != null ? studentUsername.length() : 0) + ")");
+        
         if (serverLogger != null) {
             serverLogger.attendance("Submit Attendance", "Session: " + sessionId + ", Student: " + studentUsername);
+            serverLogger.d(ServerLogger.TAG_QR, "PROCEEDING WITH ATTENDANCE SUBMISSION | Session ID: " + sessionId + ", Student: " + studentUsername);
         }
         
         // Debug: Log the API base URL being used
         String apiBaseUrl = ApiClient.getInstance(this).getCurrentBaseUrl();
         Logger.d(TAG, "API Base URL: " + apiBaseUrl);
+        Logger.d(TAG, "Full Endpoint URL: " + apiBaseUrl + "/attendance");
         if (serverLogger != null) {
             serverLogger.api("POST", "api/v1/attendance", "Base URL: " + apiBaseUrl + ", Session: " + sessionId + ", Student: " + studentUsername);
+            serverLogger.d(ServerLogger.TAG_QR, "API Base URL: " + apiBaseUrl);
         }
         
         long timestampMs = System.currentTimeMillis();
+        Logger.d(TAG, "Creating request with timestamp: " + timestampMs + " (" + new java.util.Date(timestampMs) + ")");
+        
         ApiService.SubmitAttendanceRequest request = new ApiService.SubmitAttendanceRequest(
             sessionId, studentUsername, timestampMs
         );
         
         // Log request details
-        Logger.d(TAG, "=== Request Details ===");
-        Logger.d(TAG, "Endpoint: POST /api/v1/attendance");
+        Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+        Logger.d(TAG, "REQUEST DETAILS");
+        Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+        Logger.d(TAG, "Method: POST");
+        Logger.d(TAG, "Endpoint: /api/v1/attendance");
+        Logger.d(TAG, "Full URL: " + apiBaseUrl + "/attendance");
         Logger.d(TAG, "Session ID: " + sessionId);
         Logger.d(TAG, "Student Username: '" + studentUsername + "'");
         Logger.d(TAG, "Timestamp (ms): " + timestampMs);
-        Logger.d(TAG, "Request Body: {sessionId: " + sessionId + ", studentUsername: \"" + studentUsername + "\", timestampMs: " + timestampMs + "}");
-        Logger.d(TAG, "========================");
+        Logger.d(TAG, "Timestamp (readable): " + new java.util.Date(timestampMs));
+        Logger.d(TAG, "Request Object: " + request.toString());
+        Logger.d(TAG, "═══════════════════════════════════════════════════════════");
         
         if (serverLogger != null) {
-            serverLogger.d(ServerLogger.TAG_QR, "Request Body: {sessionId: " + sessionId + ", studentUsername: \"" + studentUsername + "\", timestampMs: " + timestampMs + "}");
+            serverLogger.d(ServerLogger.TAG_QR, "REQUEST DETAILS | Method: POST, Endpoint: /api/v1/attendance, " +
+                "Session ID: " + sessionId + ", Student: " + studentUsername + ", Timestamp: " + timestampMs);
         }
         
         // API key no longer required - removed authentication
         
+        Logger.d(TAG, "Sending HTTP request to backend...");
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_QR, "Sending HTTP request to backend...");
+        }
+        
+        long requestStartTime = System.currentTimeMillis();
         Call<Attendance> call = apiService.submitAttendance(request);
+        
+        Logger.d(TAG, "Request enqueued. Waiting for response...");
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_QR, "Request enqueued. Waiting for response...");
+        }
+        
         call.enqueue(new Callback<Attendance>() {
             @Override
             public void onResponse(Call<Attendance> call, Response<Attendance> response) {
-                Logger.d(TAG, "=== Response Received ===");
+                long requestDuration = System.currentTimeMillis() - requestStartTime;
+                Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+                Logger.d(TAG, "RESPONSE RECEIVED");
+                Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+                Logger.d(TAG, "Request Duration: " + requestDuration + "ms");
                 Logger.d(TAG, "Response Code: " + response.code());
+                Logger.d(TAG, "Response Message: " + response.message());
                 Logger.d(TAG, "Is Successful: " + response.isSuccessful());
                 Logger.d(TAG, "Has Body: " + (response.body() != null));
                 Logger.d(TAG, "Has Error Body: " + (response.errorBody() != null));
+                Logger.d(TAG, "Request URL: " + (call.request() != null ? call.request().url() : "NULL"));
+                Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+                
+                if (serverLogger != null) {
+                    serverLogger.d(ServerLogger.TAG_QR, "RESPONSE RECEIVED | Duration: " + requestDuration + "ms, " +
+                        "Status Code: " + response.code() + ", Is Successful: " + response.isSuccessful() + 
+                        ", Has Body: " + (response.body() != null) + ", Has Error Body: " + (response.errorBody() != null));
+                }
                 
                 if (response.isSuccessful()) {
                     Attendance result = response.body();
                     if (result != null) {
-                        Logger.d(TAG, "=== Success Response Body ===");
+                        Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+                        Logger.d(TAG, "✅ SUCCESS - ATTENDANCE RECORDED");
+                        Logger.d(TAG, "═══════════════════════════════════════════════════════════");
                         Logger.d(TAG, "Attendance ID: " + result.getAttendanceId());
-                        Logger.d(TAG, "Session ID: " + result.getSessionId());
-                        Logger.d(TAG, "Student Username: " + result.getStudentUsername());
+                        Logger.d(TAG, "Session ID: " + result.getSessionId() + " (Expected: " + sessionId + ", Match: " + (result.getSessionId() != null && result.getSessionId().equals(sessionId)) + ")");
+                        Logger.d(TAG, "Student Username: " + result.getStudentUsername() + " (Expected: " + studentUsername + ", Match: " + (result.getStudentUsername() != null && result.getStudentUsername().equals(studentUsername)) + ")");
                         Logger.d(TAG, "Attendance Time: " + result.getAttendanceTime());
                         Logger.d(TAG, "Method: " + result.getMethod());
                         Logger.d(TAG, "Already Present: " + result.isAlreadyPresent());
-                        Logger.d(TAG, "=============================");
+                        Logger.d(TAG, "═══════════════════════════════════════════════════════════");
+                        
+                        if (serverLogger != null) {
+                            serverLogger.d(ServerLogger.TAG_QR, "✅ SUCCESS - ATTENDANCE RECORDED | " +
+                                "Attendance ID: " + result.getAttendanceId() + ", Session ID: " + result.getSessionId() + 
+                                " (Expected: " + sessionId + "), Student: " + result.getStudentUsername() + 
+                                " (Expected: " + studentUsername + "), Method: " + result.getMethod());
+                        }
                         
                         Logger.apiResponse("POST", "api/v1/attendance", response.code(), "Attendance submitted successfully");
                         if (serverLogger != null) {
@@ -432,15 +502,23 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                         resumeScanning();
                     }
                 } else {
-                    Logger.e(TAG, "=== Error Response ===");
+                    Logger.e(TAG, "═══════════════════════════════════════════════════════════");
+                    Logger.e(TAG, "❌ ERROR RESPONSE - ATTENDANCE SUBMISSION FAILED");
+                    Logger.e(TAG, "═══════════════════════════════════════════════════════════");
+                    Logger.e(TAG, "Session ID Submitted: " + sessionId);
+                    Logger.e(TAG, "Student Username: " + studentUsername);
                     Logger.e(TAG, "Response Code: " + response.code());
                     Logger.e(TAG, "Response Message: " + response.message());
-                    Logger.e(TAG, "Request URL: " + call.request().url());
-                    Logger.e(TAG, "Request Method: " + call.request().method());
+                    Logger.e(TAG, "Request URL: " + (call.request() != null ? call.request().url() : "NULL"));
+                    Logger.e(TAG, "Request Method: " + (call.request() != null ? call.request().method() : "NULL"));
+                    Logger.e(TAG, "Has Error Body: " + (response.errorBody() != null));
+                    Logger.e(TAG, "═══════════════════════════════════════════════════════════");
                     
                     Logger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance");
                     if (serverLogger != null) {
                         serverLogger.apiError("POST", "api/v1/attendance", response.code(), "Failed to submit attendance for student " + studentUsername);
+                        serverLogger.e(ServerLogger.TAG_QR, "❌ ERROR RESPONSE - ATTENDANCE SUBMISSION FAILED | " +
+                            "Session ID: " + sessionId + ", Student: " + studentUsername + ", Status Code: " + response.code());
                     }
                     updateStatus("Request failed", R.color.error_red);
                     
@@ -448,58 +526,154 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                     String errorMessage = "Unknown error occurred";
                     try {
                         if (response.errorBody() != null) {
-                            String errorBody = response.errorBody().string();
-                            Logger.e(TAG, "=== Error Response Body ===");
-                            Logger.e(TAG, "Full Error Body: " + errorBody);
-                            Logger.e(TAG, "Error Body Length: " + errorBody.length());
-                            Logger.e(TAG, "============================");
+                            // Create a copy of the error body source to read it
+                            okhttp3.ResponseBody errorBody = response.errorBody();
+                            String errorBodyString = errorBody.string();
                             
-                            // Try to extract the actual error message from the response
-                            if (errorBody.contains("Student already attended this session")) {
-                                errorMessage = "You have already attended this session";
-                            } else if (errorBody.contains("Session not found")) {
-                                errorMessage = "Session not found or not active";
-                            } else if (errorBody.contains("Invalid session")) {
-                                errorMessage = "Invalid session ID";
-                            } else if (errorBody.contains("Server error")) {
-                                errorMessage = "Server error - please try again";
-                            } else if (errorBody.contains("Access denied")) {
-                                errorMessage = "Access denied - insufficient permissions";
-                            } else {
-                                // Try to extract a more specific error message
-                                if (errorBody.contains("message")) {
-                                    // Look for JSON message field
-                                    int messageStart = errorBody.indexOf("\"message\":\"") + 10;
-                                    int messageEnd = errorBody.indexOf("\"", messageStart);
-                                    if (messageStart > 9 && messageEnd > messageStart) {
-                                        errorMessage = errorBody.substring(messageStart, messageEnd);
+                            Logger.e(TAG, "───────────────────────────────────────────────────────────");
+                            Logger.e(TAG, "ERROR RESPONSE BODY");
+                            Logger.e(TAG, "───────────────────────────────────────────────────────────");
+                            Logger.e(TAG, "Full Error Body: " + errorBodyString);
+                            Logger.e(TAG, "Error Body Length: " + errorBodyString.length());
+                            Logger.e(TAG, "Error Body is Empty: " + errorBodyString.trim().isEmpty());
+                            Logger.e(TAG, "───────────────────────────────────────────────────────────");
+                            
+                            // Log to server logger as well
+                            if (serverLogger != null) {
+                                serverLogger.e(ServerLogger.TAG_QR, "ERROR RESPONSE BODY: " + errorBodyString);
+                            }
+                            
+                            if (errorBodyString != null && !errorBodyString.trim().isEmpty()) {
+                                // Try to parse as JSON first
+                                try {
+                                    com.google.gson.JsonObject jsonObject = new com.google.gson.JsonParser().parse(errorBodyString).getAsJsonObject();
+                                    if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
+                                        errorMessage = jsonObject.get("message").getAsString();
+                                        Logger.d(TAG, "Extracted error message from JSON: " + errorMessage);
+                                    } else if (jsonObject.has("error") && jsonObject.get("error").isJsonPrimitive()) {
+                                        errorMessage = jsonObject.get("error").getAsString();
+                                        Logger.d(TAG, "Extracted error from JSON: " + errorMessage);
+                                    }
+                                } catch (Exception jsonEx) {
+                                    Logger.d(TAG, "Error body is not valid JSON, trying string matching");
+                                    
+                                    // Try to extract the actual error message from the response using string matching
+                                    if (errorBodyString.contains("Session is not open") || 
+                                        errorBodyString.contains("status: CLOSED") || 
+                                        errorBodyString.contains("not open") ||
+                                        errorBodyString.contains("session is closed")) {
+                                        // This is likely a backend bug where it's checking the wrong session
+                                        // Log detailed info for debugging
+                                        Logger.e(TAG, "═══════════════════════════════════════════════════════════");
+                                        Logger.e(TAG, "🚨 BACKEND VALIDATION ERROR DETECTED");
+                                        Logger.e(TAG, "═══════════════════════════════════════════════════════════");
+                                        Logger.e(TAG, "Session ID Submitted: " + sessionId);
+                                        Logger.e(TAG, "Student Username: " + studentUsername);
+                                        Logger.e(TAG, "Error: Session reported as 'not open' or 'CLOSED'");
+                                        Logger.e(TAG, "⚠️  POSSIBLE BACKEND BUG:");
+                                        Logger.e(TAG, "   Backend may be checking by slot_id instead of session_id");
+                                        Logger.e(TAG, "   This prevents attendance to second session in same slot");
+                                        Logger.e(TAG, "   See: docs/BACKEND_FIX_MULTIPLE_PRESENTERS_SESSION.md");
+                                        Logger.e(TAG, "═══════════════════════════════════════════════════════════");
+                                        
+                                        if (serverLogger != null) {
+                                            serverLogger.e(ServerLogger.TAG_QR, "🚨 BACKEND VALIDATION ERROR DETECTED | " +
+                                                "Session ID: " + sessionId + ", Student: " + studentUsername + 
+                                                ", Error: Session reported as 'not open', " +
+                                                "⚠️ POSSIBLE BACKEND BUG: Checking wrong session (slot_id vs session_id)");
+                                        }
+                                        errorMessage = "Backend error: Session validation failed. This may be a backend bug where it checks the wrong session. Please contact support with session ID: " + sessionId;
+                                    } else if (errorBodyString.contains("Student already attended this session") || 
+                                        errorBodyString.contains("already attended")) {
+                                        errorMessage = "You have already attended this session";
+                                    } else if (errorBodyString.contains("Session not found") || 
+                                               errorBodyString.contains("session not found")) {
+                                        errorMessage = "Session not found or not active";
+                                    } else if (errorBodyString.contains("Invalid session") || 
+                                               errorBodyString.contains("invalid session")) {
+                                        errorMessage = "Invalid session ID";
+                                    } else if (errorBodyString.contains("Server error") || 
+                                               errorBodyString.contains("Internal Server Error")) {
+                                        errorMessage = "Server error - please try again";
+                                    } else if (errorBodyString.contains("Access denied") || 
+                                               errorBodyString.contains("Forbidden")) {
+                                        errorMessage = "Access denied - insufficient permissions";
+                                    } else if (errorBodyString.contains("Bad Request") || 
+                                               errorBodyString.contains("bad request")) {
+                                        // Try to extract more specific message
+                                        if (errorBodyString.contains("message")) {
+                                            // Look for JSON message field
+                                            int messageStart = errorBodyString.indexOf("\"message\":\"");
+                                            if (messageStart >= 0) {
+                                                messageStart += 10; // Length of "\"message\":\""
+                                                int messageEnd = errorBodyString.indexOf("\"", messageStart);
+                                                if (messageEnd > messageStart) {
+                                                    errorMessage = errorBodyString.substring(messageStart, messageEnd);
+                                                }
+                                            }
+                                        } else {
+                                            errorMessage = "Invalid request - please check your input";
+                                        }
+                                    } else {
+                                        // Use the raw error body as message (truncated if too long)
+                                        if (errorBodyString.length() > 200) {
+                                            errorMessage = errorBodyString.substring(0, 200) + "...";
+                                        } else {
+                                            errorMessage = errorBodyString;
+                                        }
                                     }
                                 }
+                            } else {
+                                Logger.w(TAG, "Error body is null or empty");
+                                // Fall back to HTTP status code message
+                                errorMessage = "Request failed with status " + response.code();
                             }
+                        } else {
+                            Logger.w(TAG, "Response error body is null");
+                            errorMessage = "Request failed with status " + response.code();
                         }
                     } catch (Exception e) {
                         Logger.e(TAG, "=== Exception reading error body ===");
-                        Logger.e(TAG, "Exception: " + e.getClass().getName());
-                        Logger.e(TAG, "Message: " + e.getMessage());
+                        Logger.e(TAG, "Exception Type: " + e.getClass().getName());
+                        Logger.e(TAG, "Exception Message: " + e.getMessage());
                         Logger.e(TAG, "Stack trace:", e);
                         Logger.e(TAG, "====================================");
+                        
+                        if (serverLogger != null) {
+                            serverLogger.e(ServerLogger.TAG_QR, "Exception reading error body", e);
+                        }
+                        
                         // Fall back to generic error handling
                         handleAttendanceError(response.code());
                         return;
                     }
                     
-                    Logger.e(TAG, "Final Error Message: " + errorMessage);
+                    Logger.e(TAG, "───────────────────────────────────────────────────────────");
+                    Logger.e(TAG, "FINAL ERROR MESSAGE FOR USER");
+                    Logger.e(TAG, "───────────────────────────────────────────────────────────");
+                    Logger.e(TAG, "Error Message: " + errorMessage);
+                    Logger.e(TAG, "Session ID: " + sessionId);
+                    Logger.e(TAG, "Student: " + studentUsername);
+                    Logger.e(TAG, "───────────────────────────────────────────────────────────");
+                    
                     // Show the specific error message in a dialog
                     showErrorDialog(errorMessage);
                     if (serverLogger != null) {
                         serverLogger.attendance("Attendance Failed", "Session: " + sessionId + ", Student: " + studentUsername + ", Reason: " + errorMessage);
+                        serverLogger.d(ServerLogger.TAG_QR, "FINAL ERROR MESSAGE: " + errorMessage);
+                        serverLogger.flushLogs();
                     }
+                    resumeScanning();
                 }
             }
             
             @Override
             public void onFailure(Call<Attendance> call, Throwable t) {
-                Logger.e(TAG, "=== Network Failure ===");
+                long requestDuration = System.currentTimeMillis() - requestStartTime;
+                Logger.e(TAG, "═══════════════════════════════════════════════════════════");
+                Logger.e(TAG, "❌ NETWORK FAILURE - REQUEST DID NOT REACH SERVER");
+                Logger.e(TAG, "═══════════════════════════════════════════════════════════");
+                Logger.e(TAG, "Request Duration: " + requestDuration + "ms");
                 Logger.e(TAG, "Exception Type: " + t.getClass().getName());
                 Logger.e(TAG, "Exception Message: " + t.getMessage());
                 Logger.e(TAG, "Request URL: " + (call.request() != null ? call.request().url() : "NULL"));
@@ -507,13 +681,20 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                 Logger.e(TAG, "Session ID: " + sessionId);
                 Logger.e(TAG, "Student Username: '" + studentUsername + "'");
                 Logger.e(TAG, "Stack trace:", t);
-                Logger.e(TAG, "=======================");
+                Logger.e(TAG, "═══════════════════════════════════════════════════════════");
                 
                 if (serverLogger != null) {
-                    serverLogger.e(ServerLogger.TAG_QR, "Network failure - Session: " + sessionId + ", Student: " + studentUsername, t);
+                    serverLogger.e(ServerLogger.TAG_QR, "❌ NETWORK FAILURE | Exception: " + t.getClass().getSimpleName() + 
+                        ", Message: " + t.getMessage() + ", Session ID: " + sessionId + ", Student: " + studentUsername, t);
                 }
                 updateStatus("Network error", R.color.error_red);
-                showError("Network error: " + t.getMessage());
+                String errorMessage = getString(R.string.error_network_connection);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                showError(errorMessage);
                 resumeScanning();
             }
         });
@@ -537,7 +718,7 @@ public class ModernQRScannerActivity extends AppCompatActivity {
                 showError("Access denied - insufficient permissions");
                 break;
             default:
-                showError("Server error (Code: " + responseCode + ")");
+                showError(getString(R.string.error_server_error));
                 break;
         }
         resumeScanning();

@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
@@ -113,7 +115,7 @@ public class PresenterMySlotActivity extends AppCompatActivity {
             public void onResponse(Call<ApiService.PresenterHomeResponse> call, Response<ApiService.PresenterHomeResponse> response) {
                 setLoading(false);
                 if (!response.isSuccessful() || response.body() == null) {
-                    Toast.makeText(PresenterMySlotActivity.this, R.string.error, Toast.LENGTH_LONG).show();
+                    Toast.makeText(PresenterMySlotActivity.this, R.string.error_slot_load_failed, Toast.LENGTH_LONG).show();
                     return;
                 }
                 currentSlot = response.body().mySlot;
@@ -124,7 +126,13 @@ public class PresenterMySlotActivity extends AppCompatActivity {
             public void onFailure(Call<ApiService.PresenterHomeResponse> call, Throwable t) {
                 setLoading(false);
                 Logger.e(Logger.TAG_API, "Failed to load my slot", t);
-                Toast.makeText(PresenterMySlotActivity.this, R.string.error, Toast.LENGTH_LONG).show();
+                String errorMessage = getString(R.string.error_slot_load_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                Toast.makeText(PresenterMySlotActivity.this, errorMessage, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -220,7 +228,37 @@ public class PresenterMySlotActivity extends AppCompatActivity {
                             Toast.makeText(PresenterMySlotActivity.this, R.string.presenter_my_slot_cancel_success, Toast.LENGTH_LONG).show();
                             loadSlot();
                         } else {
-                            Toast.makeText(PresenterMySlotActivity.this, R.string.presenter_my_slot_cancel_error, Toast.LENGTH_LONG).show();
+                            // Try to read error body to get actual error message
+                            String errorMessage = getString(R.string.presenter_my_slot_cancel_error);
+                            if (response.errorBody() != null) {
+                                try {
+                                    String errorBodyString = response.errorBody().string();
+                                    Logger.d(Logger.TAG_API, "Cancel registration error response body: " + errorBodyString);
+                                    
+                                    // Try to parse JSON error body
+                                    try {
+                                        JsonObject jsonObject = new JsonParser().parse(errorBodyString).getAsJsonObject();
+                                        
+                                        // Extract message
+                                        if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
+                                            errorMessage = jsonObject.get("message").getAsString();
+                                        }
+                                    } catch (Exception e) {
+                                        // If JSON parsing fails, try manual extraction
+                                        int messageStart = errorBodyString.indexOf("\"message\":\"");
+                                        if (messageStart >= 0) {
+                                            messageStart += 10; // Length of "\"message\":\""
+                                            int messageEnd = errorBodyString.indexOf("\"", messageStart);
+                                            if (messageEnd > messageStart) {
+                                                errorMessage = errorBodyString.substring(messageStart, messageEnd);
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    Logger.e(Logger.TAG_API, "Failed to read error body", e);
+                                }
+                            }
+                            Toast.makeText(PresenterMySlotActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                         }
                     }
 

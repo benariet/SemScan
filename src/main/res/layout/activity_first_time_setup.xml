@@ -75,6 +75,37 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/input_layout_national_id"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:endIconMode="custom"
+                app:endIconDrawable="@drawable/ic_visibility_off"
+                app:endIconContentDescription="@string/setup_national_id_show_hide">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_national_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/setup_national_id"
+                    android:inputType="numberPassword"
+                    android:maxLength="9"
+                    android:maxLines="1"
+                    android:importantForAutofill="yes" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/checkbox_confirm_national_id"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/setup_national_id_confirm"
+                android:textColor="@color/gray_700"
+                android:textSize="14sp" />
+
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_degree"
                 android:layout_width="match_parent"

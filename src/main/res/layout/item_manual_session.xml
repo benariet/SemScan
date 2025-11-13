@@ -49,6 +49,35 @@
                     android:layout_marginTop="4dp" />
 
                 <TextView
+                    android:id="@+id/text_session_presenter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Presenter"
+                    android:textColor="@color/gray_600"
+                    android:textSize="13sp"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/text_session_time_range"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Time range"
+                    android:textColor="@color/gray_600"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/text_session_duration"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Duration"
+                    android:textColor="@color/gray_600"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"
+                    android:visibility="gone" />
+
+                <TextView
                     android:id="@+id/text_session_description"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

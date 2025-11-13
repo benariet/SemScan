@@ -59,13 +59,21 @@ public class ManualAttendanceService {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Failed to create manual request: " + response.message());
+                    org.example.semscan.utils.Logger.apiError("POST", "api/v1/attendance/manual", response.code(), "Failed to create manual request");
+                    callback.onError(context.getString(org.example.semscan.R.string.error_operation_failed));
                 }
             }
             
             @Override
             public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
-                callback.onError("Network error: " + t.getMessage());
+                org.example.semscan.utils.Logger.e(org.example.semscan.utils.Logger.TAG_API, "Manual request creation failed", t);
+                String errorMessage = context.getString(org.example.semscan.R.string.error_network_connection);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = context.getString(org.example.semscan.R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = context.getString(org.example.semscan.R.string.error_server_unavailable);
+                }
+                callback.onError(errorMessage);
             }
         });
     }
@@ -81,13 +89,21 @@ public class ManualAttendanceService {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Failed to get pending requests: " + response.message());
+                    org.example.semscan.utils.Logger.apiError("GET", "api/v1/attendance/pending-requests", response.code(), "Failed to get pending requests");
+                    callback.onError(context.getString(org.example.semscan.R.string.error_load_failed));
                 }
             }
             
             @Override
             public void onFailure(Call<List<ManualAttendanceResponse>> call, Throwable t) {
-                callback.onError("Network error: " + t.getMessage());
+                org.example.semscan.utils.Logger.e(org.example.semscan.utils.Logger.TAG_API, "Get pending requests failed", t);
+                String errorMessage = context.getString(org.example.semscan.R.string.error_load_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = context.getString(org.example.semscan.R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = context.getString(org.example.semscan.R.string.error_server_unavailable);
+                }
+                callback.onError(errorMessage);
             }
         });
     }
@@ -109,13 +125,21 @@ public class ManualAttendanceService {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Failed to approve request: " + response.message());
+                    org.example.semscan.utils.Logger.apiError("POST", "api/v1/attendance/approve", response.code(), "Failed to approve request");
+                    callback.onError(context.getString(org.example.semscan.R.string.error_operation_failed));
                 }
             }
             
             @Override
             public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
-                callback.onError("Network error: " + t.getMessage());
+                org.example.semscan.utils.Logger.e(org.example.semscan.utils.Logger.TAG_API, "Approve request failed", t);
+                String errorMessage = context.getString(org.example.semscan.R.string.error_network_connection);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = context.getString(org.example.semscan.R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = context.getString(org.example.semscan.R.string.error_server_unavailable);
+                }
+                callback.onError(errorMessage);
             }
         });
     }
@@ -137,13 +161,21 @@ public class ManualAttendanceService {
                 if (response.isSuccessful() && response.body() != null) {
                     callback.onSuccess(response.body());
                 } else {
-                    callback.onError("Failed to reject request: " + response.message());
+                    org.example.semscan.utils.Logger.apiError("POST", "api/v1/attendance/reject", response.code(), "Failed to reject request");
+                    callback.onError(context.getString(org.example.semscan.R.string.error_operation_failed));
                 }
             }
             
             @Override
             public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
-                callback.onError("Network error: " + t.getMessage());
+                org.example.semscan.utils.Logger.e(org.example.semscan.utils.Logger.TAG_API, "Reject request failed", t);
+                String errorMessage = context.getString(org.example.semscan.R.string.error_network_connection);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = context.getString(org.example.semscan.R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = context.getString(org.example.semscan.R.string.error_server_unavailable);
+                }
+                callback.onError(errorMessage);
             }
         });
     }

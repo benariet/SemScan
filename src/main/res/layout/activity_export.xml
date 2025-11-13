@@ -55,8 +55,7 @@
                     android:layout_height="wrap_content"
                     android:text="Loading session..."
                     android:textSize="14sp"
-                    android:textColor="@color/gray_600"
-                    android:fontFamily="monospace" />
+                    android:textColor="@color/gray_600" />
 
             </LinearLayout>
 

@@ -306,7 +306,13 @@ public class QRScannerActivity extends AppCompatActivity {
                 // Forward network failure to server as ERROR with stackTrace
                 serverLogger.e(Logger.TAG_QR, "Attendance submission failed", t);
                 serverLogger.flushLogs();
-                showError("Network error: " + t.getMessage());
+                String errorMessage = getString(R.string.error_network_connection);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                showError(errorMessage);
             }
         });
     }
@@ -329,7 +335,7 @@ public class QRScannerActivity extends AppCompatActivity {
                 showError("Access denied - insufficient permissions");
                 break;
             default:
-                showError("Server error (Code: " + responseCode + ")");
+                showError(getString(R.string.error_server_error));
                 break;
         }
     }

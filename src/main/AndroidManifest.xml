@@ -52,6 +52,11 @@
             android:theme="@style/Theme.SemScan" />
 
         <activity
+            android:name=".ui.auth.TestEmailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan" />
+
+        <activity
             android:name=".ui.RolePickerActivity"
             android:exported="false"
             android:theme="@style/Theme.SemScan" />

@@ -9,6 +9,10 @@ public class ApiConstants {
     // =============================================
     // BASE CONFIGURATION
     // =============================================
+    // Use localhost - works with ADB port forwarding for both emulators and physical devices
+    // For emulators: Run: adb reverse tcp:8080 tcp:8080
+    // For physical devices: Run: adb reverse tcp:8080 tcp:8080
+    // The build scripts (build.ps1, run-install-and-restart.ps1) automatically set up port forwarding
     public static final String SERVER_URL = "http://localhost:8080";
     public static final String API_BASE_URL = "http://localhost:8080/api/v1";
     public static final String API_VERSION = "v1";
@@ -79,9 +83,9 @@ public class ApiConstants {
     // =============================================
     // HTTP CONFIGURATION
     // =============================================
-    public static final int CONNECTION_TIMEOUT_SECONDS = 10;  // Connection timeout
-    public static final int READ_TIMEOUT_SECONDS = 15;        // Read timeout (increased for slow responses)
-    public static final int WRITE_TIMEOUT_SECONDS = 10;       // Write timeout
+    public static final int CONNECTION_TIMEOUT_SECONDS = 10;  // Connection timeout (increased for ADB port forwarding)
+    public static final int READ_TIMEOUT_SECONDS = 10;        // Read timeout (increased for slow responses)
+    public static final int WRITE_TIMEOUT_SECONDS = 10;       // Write timeout (increased for slow responses)
     
     // =============================================
     // ERROR CODES

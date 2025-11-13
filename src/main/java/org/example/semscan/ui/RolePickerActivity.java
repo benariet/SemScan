@@ -38,8 +38,22 @@ public class RolePickerActivity extends AppCompatActivity {
         
         // Check if user already has a role selected
         if (preferencesManager.hasRole()) {
+            // CRITICAL: Validate username before auto-navigation
+            String username = preferencesManager.getUserName();
+            if (username == null || username.isEmpty()) {
+                Logger.e(Logger.TAG_UI, "ERROR: Username is NULL or empty in RolePickerActivity.onCreate()!");
+                Logger.e(Logger.TAG_UI, "User has role but no username. This should not happen. Redirecting to login.");
+                Toast.makeText(this, "Username not found. Please log in again.", Toast.LENGTH_LONG).show();
+                // Navigate back to login
+                Intent intent = new Intent(this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+                return;
+            }
+            
             String currentRole = preferencesManager.getUserRole();
-            Logger.i(Logger.TAG_UI, "User already has role: " + currentRole + ", navigating to home");
+            Logger.i(Logger.TAG_UI, "User already has role: " + currentRole + " with username: " + username + ", navigating to home");
             navigateToHome();
         } else {
             Logger.i(Logger.TAG_UI, "No role selected, showing role picker");
@@ -100,7 +114,7 @@ public class RolePickerActivity extends AppCompatActivity {
         Logger.d(Logger.TAG_UI, "=== Role Selected ===");
         Logger.d(Logger.TAG_UI, "Username: " + preferencesManager.getUserName());
         Logger.d(Logger.TAG_UI, "Role: " + preferencesManager.getUserRole());
-        Logger.d(Logger.TAG_UI, "Is Student: " + preferencesManager.isStudent());
+        Logger.d(Logger.TAG_UI, "Is Participant: " + preferencesManager.isParticipant());
         Logger.d(Logger.TAG_UI, "Is Presenter: " + preferencesManager.isPresenter());
         Logger.d(Logger.TAG_UI, "=====================");
         
@@ -114,7 +128,7 @@ public class RolePickerActivity extends AppCompatActivity {
         if (preferencesManager.isPresenter()) {
             intent = new Intent(this, PresenterHomeActivity.class);
             targetActivity = "PresenterHomeActivity";
-        } else if (preferencesManager.isStudent() || preferencesManager.isParticipant()) {
+        } else if (preferencesManager.isParticipant()) {
             intent = new Intent(this, StudentHomeActivity.class);
             targetActivity = "StudentHomeActivity";
         } else {

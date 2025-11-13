@@ -5,7 +5,6 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
-import android.content.Context;
 
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;

@@ -95,8 +95,8 @@ if ($env:ANDROID_SERIAL) {
         Write-Host "==> Auto-selecting all devices for installation" -ForegroundColor Green
         
         # Automatically select all devices
-        $selectedDevices = $physicalDevs
-        Write-Host "==> Selected all devices: $($selectedDevices -join ', ')" -ForegroundColor Green
+            $selectedDevices = $physicalDevs
+            Write-Host "==> Selected all devices: $($selectedDevices -join ', ')" -ForegroundColor Green
         
         # If multiple devices selected, build once then install on each device
         if ($selectedDevices.Count -gt 1) {
@@ -105,7 +105,7 @@ if ($env:ANDROID_SERIAL) {
             & $GRADLEW assembleDebug
             if ($LASTEXITCODE -ne 0) {
                 throw "Gradle build failed."
-            }
+                    }
             
             # Find built APK
             $apks = Get-ChildItem -Recurse "build\outputs\apk" -Filter "*-debug.apk" | Sort-Object LastWriteTime -Descending
@@ -114,7 +114,7 @@ if ($env:ANDROID_SERIAL) {
             }
             $apkPath = $apks[0].FullName
             Write-Host "  [OK] APK built: $($apks[0].Name)" -ForegroundColor Green
-            
+        
             # Install on each device
             foreach ($device in $selectedDevices) {
                 Write-Host ""
@@ -142,7 +142,7 @@ if ($env:ANDROID_SERIAL) {
 if ($adbArgs.Count -gt 0) {
     InstallAndLaunchOnDevice -DeviceSerial $adbArgs[1]
 } else {
-    InstallAndLaunchOnDevice
+InstallAndLaunchOnDevice
 }
 
 Write-Host "==> Done."

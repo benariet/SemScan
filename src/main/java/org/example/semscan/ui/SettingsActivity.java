@@ -127,7 +127,7 @@ public class SettingsActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.settings_username_saved, Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             Logger.e(Logger.TAG_UI, "Failed to save settings", e);
-            Toast.makeText(this, "Failed to save settings: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.error_save_failed, Toast.LENGTH_LONG).show();
         }
     }
 

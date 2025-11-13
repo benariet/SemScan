@@ -30,6 +30,7 @@ import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.QRUtils;
+import org.example.semscan.utils.ServerLogger;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -51,7 +52,8 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
     public static final String EXTRA_USERNAME = "presenter_attendance_username";
     public static final String EXTRA_SESSION_ID = "presenter_attendance_session_id";
 
-    private static final long REFRESH_INTERVAL_MS = 5000L;
+    private static final long AUTO_CLOSE_CHECK_INTERVAL_MS = 30000L; // Check every 30 seconds
+    private static final long AUTO_CLOSE_DURATION_MS = 15 * 60 * 1000L; // 15 minutes in milliseconds
 
     private ImageView imageQr;
     private TextView textSlotTitle;
@@ -62,8 +64,9 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
     private com.google.android.material.button.MaterialButton btnCancelSession;
 
     private ApiService apiService;
-    private Handler refreshHandler;
-    private Runnable refreshRunnable;
+    private ServerLogger serverLogger;
+    private Handler autoCloseHandler;
+    private Runnable autoCloseRunnable;
 
     private Long slotId;
     private Long sessionId;
@@ -74,6 +77,10 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
     private String slotDate;
     private String slotTimeRange;
     private String presenterName;
+    
+    // Auto-close tracking
+    private long sessionOpenedAtMs; // Timestamp when session was opened (in milliseconds)
+    private boolean isAutoClosing = false; // Flag to prevent multiple auto-close attempts
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -81,12 +88,13 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
         setContentView(R.layout.activity_presenter_attendance_qr);
 
         apiService = ApiClient.getInstance(this).getApiService();
-        refreshHandler = new Handler(Looper.getMainLooper());
+        serverLogger = ServerLogger.getInstance(this);
+        autoCloseHandler = new Handler(Looper.getMainLooper());
 
         setupToolbar();
         initializeViews();
         readExtras();
-        startRefreshLoop();
+        startAutoCloseTimer();
     }
 
     private void setupToolbar() {
@@ -128,6 +136,15 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
 
         if (!TextUtils.isEmpty(openedAt)) {
             textOpenedAt.setText(getString(R.string.presenter_attendance_qr_opened_at, openedAt));
+            // Parse openedAt timestamp to calculate auto-close time
+            sessionOpenedAtMs = parseTimestamp(openedAt);
+            if (sessionOpenedAtMs <= 0) {
+                // If parsing fails, use current time as fallback
+                sessionOpenedAtMs = System.currentTimeMillis();
+            }
+        } else {
+            // If no openedAt provided, use current time
+            sessionOpenedAtMs = System.currentTimeMillis();
         }
         if (!TextUtils.isEmpty(closesAt)) {
             textValidUntil.setText(getString(R.string.presenter_attendance_qr_valid_until, closesAt));
@@ -139,80 +156,33 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
             generateQr(normalizedContent);
         }
     }
-
-    private void startRefreshLoop() {
-        if (slotId == null || TextUtils.isEmpty(username)) {
-            return;
+    
+    /**
+     * Parse timestamp string to milliseconds.
+     * Supports formats like "2025-11-09 14:30:00" or ISO 8601 format.
+     */
+    private long parseTimestamp(String timestamp) {
+        if (TextUtils.isEmpty(timestamp)) {
+            return 0;
         }
-        refreshRunnable = new Runnable() {
-            @Override
-            public void run() {
-                fetchLatestQr();
-                refreshHandler.postDelayed(this, REFRESH_INTERVAL_MS);
+        try {
+            // Try ISO 8601 format first (e.g., "2025-11-09T14:30:00Z" or "2025-11-09T14:30:00+00:00")
+            java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
+            try {
+                return isoFormat.parse(timestamp.replace("Z", "").replaceAll("\\+\\d{2}:\\d{2}$", "")).getTime();
+            } catch (Exception e) {
+                // Try without timezone
             }
-        };
-        refreshHandler.postDelayed(refreshRunnable, REFRESH_INTERVAL_MS);
+            
+            // Try standard format (e.g., "2025-11-09 14:30:00")
+            java.text.SimpleDateFormat standardFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
+            return standardFormat.parse(timestamp).getTime();
+        } catch (Exception e) {
+            Logger.w(Logger.TAG_UI, "Failed to parse timestamp: " + timestamp + " - " + e.getMessage());
+            return 0;
+        }
     }
 
-    private void fetchLatestQr() {
-        progressRefresh.setVisibility(View.VISIBLE);
-        apiService.getPresenterAttendanceQr(username.trim().toLowerCase(Locale.US), slotId)
-                .enqueue(new Callback<ApiService.PresenterAttendanceOpenResponse>() {
-                    @Override
-                    public void onResponse(Call<ApiService.PresenterAttendanceOpenResponse> call, Response<ApiService.PresenterAttendanceOpenResponse> response) {
-                        progressRefresh.setVisibility(View.GONE);
-                        if (!response.isSuccessful()) {
-                            handleQrError(response.code(), response);
-                            return;
-                        }
-                        if (response.body() == null) {
-                            Logger.w(Logger.TAG_API, "QR refresh failed - null response body");
-                            return;
-                        }
-                        ApiService.PresenterAttendanceOpenResponse body = response.body();
-                        if (!TextUtils.isEmpty(body.openedAt)) {
-                            textOpenedAt.setText(getString(R.string.presenter_attendance_qr_opened_at, body.openedAt));
-                        }
-                        if (!TextUtils.isEmpty(body.closesAt)) {
-                            textValidUntil.setText(getString(R.string.presenter_attendance_qr_valid_until, body.closesAt));
-                        }
-                        if (body.sessionId != null) {
-                            sessionId = body.sessionId;
-                        }
-
-                        // Use new qrContent structure if available, otherwise fallback to legacy fields
-                        String qrUrl = body.getQrUrl();
-                        String candidate = normalizeQrContent(qrUrl);
-                        if (candidate != null && !candidate.equals(lastPayload)) {
-                            lastPayload = candidate;
-                            generateQr(candidate);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<ApiService.PresenterAttendanceOpenResponse> call, Throwable t) {
-                        progressRefresh.setVisibility(View.GONE);
-                        Logger.e(Logger.TAG_API, "Failed to refresh attendance QR", t);
-                        
-                        // Handle connection errors gracefully
-                        String errorMessage = getString(R.string.presenter_attendance_qr_error_generic);
-                        if (t instanceof java.net.SocketException || t instanceof java.net.SocketTimeoutException) {
-                            errorMessage = getString(R.string.presenter_attendance_qr_error_connection);
-                        } else if (t instanceof java.net.ConnectException) {
-                            errorMessage = getString(R.string.presenter_attendance_qr_error_server_unavailable);
-                        }
-                        
-                        // Only show error toast if it's a critical connection issue
-                        // Don't spam the user with errors during normal refresh loop
-                        if (t instanceof java.net.ConnectException || 
-                            (t instanceof java.net.SocketException && t.getMessage() != null && 
-                             t.getMessage().contains("Connection refused"))) {
-                            android.widget.Toast.makeText(PresenterAttendanceQrActivity.this, 
-                                    errorMessage, android.widget.Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-    }
 
     private String normalizeQrContent(@Nullable String rawContent) {
         if (TextUtils.isEmpty(rawContent)) {
@@ -239,53 +209,6 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
             return QRUtils.generateQRContent(sessionId);
         }
         return null;
-    }
-
-    private void handleQrError(int code, Response<ApiService.PresenterAttendanceOpenResponse> response) {
-        String errorMessage = getString(R.string.presenter_attendance_qr_error_generic);
-        
-        try {
-            if (response.errorBody() != null) {
-                String errorBody = response.errorBody().string();
-                if (errorBody != null && !errorBody.trim().isEmpty()) {
-                    try {
-                        JsonObject jsonObject = new JsonParser().parse(errorBody).getAsJsonObject();
-                        if (jsonObject.has("error") && jsonObject.get("error").isJsonPrimitive()) {
-                            errorMessage = jsonObject.get("error").getAsString();
-                        }
-                    } catch (Exception e) {
-                        // If JSON parsing fails, try manual extraction
-                        int errorStart = errorBody.indexOf("\"error\":\"");
-                        if (errorStart >= 0) {
-                            errorStart += 9; // Length of "\"error\":\""
-                            int errorEnd = errorBody.indexOf("\"", errorStart);
-                            if (errorEnd > errorStart) {
-                                errorMessage = errorBody.substring(errorStart, errorEnd);
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Logger.e(Logger.TAG_API, "Failed to read error body", e);
-        }
-        
-        switch (code) {
-            case 404:
-                errorMessage = getString(R.string.presenter_attendance_qr_error_not_found);
-                break;
-            case 400:
-                errorMessage = getString(R.string.presenter_attendance_qr_error_not_open);
-                break;
-            case 500:
-                errorMessage = getString(R.string.presenter_attendance_qr_error_server);
-                break;
-        }
-        
-        Logger.w(Logger.TAG_API, "QR refresh failed code=" + code + ", message=" + errorMessage);
-        
-        // Show error to user
-        android.widget.Toast.makeText(PresenterAttendanceQrActivity.this, errorMessage, android.widget.Toast.LENGTH_LONG).show();
     }
 
     private Long parseSessionId(@Nullable String value) {
@@ -316,11 +239,51 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Start the auto-close timer that checks if 15 minutes have passed
+     */
+    private void startAutoCloseTimer() {
+        if (sessionOpenedAtMs <= 0) {
+            // If we don't have a valid open time, use current time
+            sessionOpenedAtMs = System.currentTimeMillis();
+        }
+        
+        autoCloseRunnable = new Runnable() {
+            @Override
+            public void run() {
+                long currentTime = System.currentTimeMillis();
+                long elapsedTime = currentTime - sessionOpenedAtMs;
+                
+                if (elapsedTime >= AUTO_CLOSE_DURATION_MS && !isAutoClosing) {
+                    // 15 minutes have passed - auto-close the session
+                    Logger.i(Logger.TAG_UI, "Auto-closing session after 15 minutes. Elapsed: " + (elapsedTime / 1000) + " seconds");
+                    isAutoClosing = true;
+                    
+                    // Show a toast notification
+                    runOnUiThread(() -> {
+                        Toast.makeText(PresenterAttendanceQrActivity.this, 
+                            getString(R.string.presenter_attendance_qr_auto_close_message), 
+                            Toast.LENGTH_LONG).show();
+                    });
+                    
+                    // Auto-close the session
+                    endSession();
+                } else if (elapsedTime < AUTO_CLOSE_DURATION_MS) {
+                    // Schedule next check
+                    autoCloseHandler.postDelayed(this, AUTO_CLOSE_CHECK_INTERVAL_MS);
+                }
+            }
+        };
+        
+        // Start checking after a short delay
+        autoCloseHandler.postDelayed(autoCloseRunnable, AUTO_CLOSE_CHECK_INTERVAL_MS);
+    }
+    
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (refreshHandler != null && refreshRunnable != null) {
-            refreshHandler.removeCallbacks(refreshRunnable);
+        if (autoCloseHandler != null && autoCloseRunnable != null) {
+            autoCloseHandler.removeCallbacks(autoCloseRunnable);
         }
     }
 
@@ -346,12 +309,57 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.presenter_attendance_qr_cancel_confirm_title)
                 .setMessage(R.string.presenter_attendance_qr_cancel_confirm_message)
-                .setPositiveButton(R.string.presenter_attendance_qr_cancel_session, (dialog, which) -> {
-                    endSession();
-                    finish();
-                })
+                .setPositiveButton(R.string.presenter_attendance_qr_cancel_session, (dialog, which) -> cancelSession())
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+    
+    /**
+     * Cancel session - closes the session and returns to home (does not navigate to export)
+     * This is different from endSession() which navigates to export page
+     */
+    private void cancelSession() {
+        if (sessionId == null) {
+            Toast.makeText(this, R.string.presenter_attendance_qr_end_error, Toast.LENGTH_SHORT).show();
+            finish(); // Still finish even if no session ID
+            return;
+        }
+
+        btnEndSession.setEnabled(false);
+        btnCancelSession.setEnabled(false);
+        progressRefresh.setVisibility(View.VISIBLE);
+
+        apiService.closeSession(sessionId).enqueue(new Callback<org.example.semscan.data.model.Session>() {
+            @Override
+            public void onResponse(Call<org.example.semscan.data.model.Session> call, Response<org.example.semscan.data.model.Session> response) {
+                progressRefresh.setVisibility(View.GONE);
+                btnEndSession.setEnabled(true);
+                btnCancelSession.setEnabled(true);
+                
+                if (response.isSuccessful()) {
+                    Toast.makeText(PresenterAttendanceQrActivity.this, R.string.presenter_attendance_qr_end_success, Toast.LENGTH_SHORT).show();
+                    Logger.userAction("Cancel Session", "Session " + sessionId + " cancelled successfully");
+                    // For cancel, just go back to home - don't navigate to export
+                    finish();
+                } else {
+                    Toast.makeText(PresenterAttendanceQrActivity.this, R.string.presenter_attendance_qr_end_error, Toast.LENGTH_SHORT).show();
+                    Logger.apiError("PATCH", "/api/v1/sessions/" + sessionId + "/close", response.code(), "Failed to cancel session");
+                    // Even on error, allow user to go back
+                    finish();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<org.example.semscan.data.model.Session> call, Throwable t) {
+                progressRefresh.setVisibility(View.GONE);
+                btnEndSession.setEnabled(true);
+                btnCancelSession.setEnabled(true);
+                Toast.makeText(PresenterAttendanceQrActivity.this, R.string.presenter_attendance_qr_end_error, Toast.LENGTH_SHORT).show();
+                Logger.e(Logger.TAG_API, "Failed to cancel session", t);
+                // Even on failure, allow user to go back
+                finish();
+            }
+        });
     }
 
     private void endSession() {

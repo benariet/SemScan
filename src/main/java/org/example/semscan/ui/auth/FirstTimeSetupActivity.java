@@ -3,6 +3,7 @@ package org.example.semscan.ui.auth;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -14,8 +15,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
@@ -45,6 +48,9 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
 
     private TextInputEditText editFirstName;
     private TextInputEditText editLastName;
+    private TextInputEditText editNationalId;
+    private TextInputLayout inputLayoutNationalId;
+    private MaterialCheckBox checkboxConfirmNationalId;
     private MaterialCardView cardDegree;
     private MaterialCardView cardParticipation;
     private TextView textSelectedDegree;
@@ -76,6 +82,7 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
         initViews();
         initActivityResults();
         setupListeners();
+        setupNationalIdValidation();
 
         Logger.i(Logger.TAG_UI, "FirstTimeSetupActivity created for username=" + preferencesManager.getUserName());
         serverLogger.userAction("FirstTimeSetup", "Onboarding started");
@@ -90,6 +97,9 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
 
         editFirstName = findViewById(R.id.edit_first_name);
         editLastName = findViewById(R.id.edit_last_name);
+        editNationalId = findViewById(R.id.edit_national_id);
+        inputLayoutNationalId = findViewById(R.id.input_layout_national_id);
+        checkboxConfirmNationalId = findViewById(R.id.checkbox_confirm_national_id);
         cardDegree = findViewById(R.id.card_degree);
         cardParticipation = findViewById(R.id.card_role_context);
         textSelectedDegree = findViewById(R.id.text_selected_degree);
@@ -147,6 +157,117 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
         cardDegree.setOnClickListener(v -> openDegreeSelection());
         cardParticipation.setOnClickListener(v -> openParticipationSelector());
         btnSubmit.setOnClickListener(v -> submitProfile());
+    }
+
+    private void setupNationalIdValidation() {
+        // Show/hide toggle for national ID
+        if (inputLayoutNationalId != null && editNationalId != null) {
+            // Initialize as hidden (password mode)
+            editNationalId.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+            inputLayoutNationalId.setEndIconDrawable(R.drawable.ic_visibility_off);
+            
+            inputLayoutNationalId.setEndIconOnClickListener(v -> {
+                int inputType = editNationalId.getInputType();
+                boolean isPasswordMode = (inputType & android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD) != 0;
+                
+                if (isPasswordMode) {
+                    // Show - switch to visible number
+                    editNationalId.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+                    inputLayoutNationalId.setEndIconDrawable(R.drawable.ic_visibility);
+                } else {
+                    // Hide - switch to password
+                    editNationalId.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+                    inputLayoutNationalId.setEndIconDrawable(R.drawable.ic_visibility_off);
+                }
+                // Move cursor to end
+                if (editNationalId.getText() != null) {
+                    editNationalId.setSelection(editNationalId.getText().length());
+                }
+            });
+        }
+
+        // Real-time validation as user types
+        if (editNationalId != null) {
+            editNationalId.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    validateNationalIdRealTime(s != null ? s.toString() : "");
+                }
+
+                @Override
+                public void afterTextChanged(android.text.Editable s) {}
+            });
+        }
+    }
+
+    private void validateNationalIdRealTime(String id) {
+        if (id == null || id.trim().isEmpty()) {
+            // Show error if field is empty (required field)
+            if (inputLayoutNationalId != null) {
+                inputLayoutNationalId.setError(getString(R.string.setup_national_id_error_required));
+            }
+            return;
+        }
+
+        String trimmedId = id.trim();
+        
+        // Validate length
+        if (trimmedId.length() != 9) {
+            if (inputLayoutNationalId != null) {
+                inputLayoutNationalId.setError(getString(R.string.setup_national_id_error_length));
+            }
+            return;
+        }
+
+        // Validate all digits
+        if (!trimmedId.matches("\\d{9}")) {
+            if (inputLayoutNationalId != null) {
+                inputLayoutNationalId.setError(getString(R.string.setup_national_id_error_length));
+            }
+            return;
+        }
+
+        // Validate checksum (Israeli ID algorithm)
+        if (!validateIsraeliIdChecksum(trimmedId)) {
+            if (inputLayoutNationalId != null) {
+                inputLayoutNationalId.setError(getString(R.string.setup_national_id_error_checksum));
+            }
+            return;
+        }
+
+        // Valid - clear error
+        if (inputLayoutNationalId != null) {
+            inputLayoutNationalId.setError(null);
+        }
+    }
+
+    /**
+     * Validates Israeli National ID checksum using Luhn-like algorithm
+     * Algorithm: Multiply each digit by 1 or 2 alternately, sum all results, check if mod 10 == 0
+     */
+    private boolean validateIsraeliIdChecksum(String id) {
+        if (id == null || id.length() != 9 || !id.matches("\\d{9}")) {
+            return false;
+        }
+
+        int sum = 0;
+        for (int i = 0; i < 9; i++) {
+            int digit = Character.getNumericValue(id.charAt(i));
+            int multiplier = (i % 2 == 0) ? 1 : 2; // Alternate: 1, 2, 1, 2, ...
+            int product = digit * multiplier;
+            
+            // If product is two digits, add them together (e.g., 12 -> 1+2 = 3)
+            if (product >= 10) {
+                product = (product / 10) + (product % 10);
+            }
+            
+            sum += product;
+        }
+
+        return (sum % 10) == 0;
     }
 
     private void openDegreeSelection() {
@@ -212,6 +333,7 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
     private void submitProfile() {
         String firstName = trim(editFirstName);
         String lastName = trim(editLastName);
+        String nationalIdNumber = trim(editNationalId); // Required field
 
         boolean valid = true;
 
@@ -227,6 +349,49 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
             valid = false;
         } else {
             editLastName.setError(null);
+        }
+
+        // Validate national ID (required field)
+        if (TextUtils.isEmpty(nationalIdNumber)) {
+            if (inputLayoutNationalId != null) {
+                inputLayoutNationalId.setError(getString(R.string.setup_national_id_error_required));
+            }
+            valid = false;
+        } else {
+            String trimmedId = nationalIdNumber.trim();
+            
+            // Validate length
+            if (trimmedId.length() != 9) {
+                if (inputLayoutNationalId != null) {
+                    inputLayoutNationalId.setError(getString(R.string.setup_national_id_error_length));
+                }
+                valid = false;
+            }
+            // Validate all digits
+            else if (!trimmedId.matches("\\d{9}")) {
+                if (inputLayoutNationalId != null) {
+                    inputLayoutNationalId.setError(getString(R.string.setup_national_id_error_length));
+                }
+                valid = false;
+            }
+            // Validate checksum
+            else if (!validateIsraeliIdChecksum(trimmedId)) {
+                if (inputLayoutNationalId != null) {
+                    inputLayoutNationalId.setError(getString(R.string.setup_national_id_error_checksum));
+                }
+                valid = false;
+            }
+            // Require confirmation checkbox
+            else if (checkboxConfirmNationalId != null && !checkboxConfirmNationalId.isChecked()) {
+                Toast.makeText(this, R.string.setup_national_id_error_confirm, Toast.LENGTH_SHORT).show();
+                valid = false;
+            }
+            else {
+                // Valid - clear error
+                if (inputLayoutNationalId != null) {
+                    inputLayoutNationalId.setError(null);
+                }
+            }
         }
 
         if (TextUtils.isEmpty(selectedDegree)) {
@@ -270,7 +435,8 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
                 firstName,
                 lastName,
                 selectedDegree,
-                selectedParticipation
+                selectedParticipation,
+                nationalIdNumber // Optional - can be null or empty
         );
 
         // Create user directly - this is the first time creating the user
@@ -292,11 +458,11 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
                     }
                     Logger.apiError("POST", "/api/v1/users", response.code(), errorMsg);
                     serverLogger.e(ServerLogger.TAG_API, "Failed to create user profile: " + errorMsg);
-                    Toast.makeText(FirstTimeSetupActivity.this, getString(R.string.error) + ": " + errorMsg, Toast.LENGTH_LONG).show();
+                    Toast.makeText(FirstTimeSetupActivity.this, errorMsg != null && !errorMsg.trim().isEmpty() ? errorMsg : getString(R.string.error_operation_failed), Toast.LENGTH_LONG).show();
                     return;
                 }
 
-                persistProfile(firstName, lastName, email, selectedDegree, selectedParticipation);
+                persistProfile(firstName, lastName, email, selectedDegree, selectedParticipation, nationalIdNumber);
                 serverLogger.updateUserContext(preferencesManager.getUserName(), preferencesManager.getUserRole());
                 Toast.makeText(FirstTimeSetupActivity.this, R.string.setup_success, Toast.LENGTH_LONG).show();
                 Logger.userAction("FirstTimeSetup", "Onboarding complete");
@@ -309,12 +475,18 @@ public class FirstTimeSetupActivity extends AppCompatActivity {
                 toggleLoading(false);
                 Logger.e(Logger.TAG_API, "Failed to create user profile", t);
                 serverLogger.e(ServerLogger.TAG_API, "Failed to create user profile", t);
-                Toast.makeText(FirstTimeSetupActivity.this, getString(R.string.network_error_generic, t.getMessage()), Toast.LENGTH_LONG).show();
+                String errorMessage = getString(R.string.error_network_connection);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                Toast.makeText(FirstTimeSetupActivity.this, errorMessage, Toast.LENGTH_LONG).show();
             }
         });
     }
 
-    private void persistProfile(String firstName, String lastName, String email, String degree, String participation) {
+    private void persistProfile(String firstName, String lastName, String email, String degree, String participation, String nationalIdNumber) {
         // CRITICAL: Ensure username is preserved - it should already be set from login
         String username = preferencesManager.getUserName();
         if (username == null || username.isEmpty()) {

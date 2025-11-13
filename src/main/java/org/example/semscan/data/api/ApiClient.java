@@ -12,8 +12,10 @@ public class ApiClient {
     private static ApiClient instance;
     private ApiService apiService;
     private String currentBaseUrl;
+    private Context context;
     
     private ApiClient(Context context) {
+        this.context = context.getApplicationContext();
         currentBaseUrl = normalizeBaseUrl(DEFAULT_BASE_URL);
         
         // Log the current API URL for debugging
@@ -23,11 +25,16 @@ public class ApiClient {
     }
     
     private void createApiService() {
-        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+        // Standard HTTP logging for Android Logcat
+        HttpLoggingInterceptor httpLogging = new HttpLoggingInterceptor();
+        httpLogging.setLevel(HttpLoggingInterceptor.Level.BODY);
+        
+        // Custom interceptor for ServerLogger (app_logs) - logs request/response bodies
+        ApiLoggingInterceptor apiLogging = new ApiLoggingInterceptor(context);
         
         OkHttpClient client = new OkHttpClient.Builder()
-                .addInterceptor(logging)
+                .addInterceptor(httpLogging) // Android Logcat logging
+                .addInterceptor(apiLogging)  // ServerLogger (app_logs) logging
                 .connectTimeout(ApiConstants.CONNECTION_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
                 .readTimeout(ApiConstants.READ_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS)
                 .writeTimeout(ApiConstants.WRITE_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS)

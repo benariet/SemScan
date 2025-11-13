@@ -11,6 +11,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,12 +23,18 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -157,30 +164,11 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
         SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
 
         for (ApiService.SlotCard slot : slots) {
-            // Filter out slots with closed sessions
-            // If a slot has a closed attendance session, it should not be available for registration
-            if (slot.hasClosedSession != null && slot.hasClosedSession) {
-                Logger.d(Logger.TAG_UI, "Filtering out slot " + slot.slotId + " - has closed session");
-                continue; // Skip this slot
-            }
+            // NOTE: We do NOT filter out slots based on hasClosedSession or attendanceClosesAt
+            // because these are slot-level fields that may reflect OTHER presenters' closed sessions.
+            // Each presenter should be able to open their own session independently.
+            // The backend will validate if a presenter can open a session when they try to do so.
             
-            // Also check if attendance was closed by checking attendanceClosesAt
-            // If attendanceClosesAt exists and is in the past, the session is closed
-            if (slot.attendanceClosesAt != null && !slot.attendanceClosesAt.isEmpty()) {
-                try {
-                    // Parse the closesAt timestamp (format: "2025-11-09 13:10:49")
-                    SimpleDateFormat closesAtFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-                    Date closesAt = closesAtFormat.parse(slot.attendanceClosesAt);
-                    if (closesAt != null && closesAt.before(now)) {
-                        // Session closed in the past, filter out this slot
-                        Logger.d(Logger.TAG_UI, "Filtering out slot " + slot.slotId + " - attendance closed at " + slot.attendanceClosesAt);
-                        continue; // Skip this slot
-                    }
-                } catch (ParseException e) {
-                    // If parsing fails, don't filter it out (better to show than hide)
-                    Logger.w(Logger.TAG_UI, "Failed to parse attendanceClosesAt: " + slot.attendanceClosesAt + " - " + e.getMessage());
-                }
-            }
             if (slot.date == null || slot.timeRange == null) {
                 // If we can't parse the date/time, include it (better to show than hide)
                 futureSlots.add(slot);
@@ -248,7 +236,7 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
             public void onResponse(Call<ApiService.PresenterHomeResponse> call, Response<ApiService.PresenterHomeResponse> response) {
                 setLoading(false);
                 if (!response.isSuccessful() || response.body() == null) {
-                    Toast.makeText(PresenterSlotSelectionActivity.this, R.string.error, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(PresenterSlotSelectionActivity.this, R.string.error_slot_load_failed, Toast.LENGTH_SHORT).show();
                     Logger.apiError("GET", "api/v1/presenters/{username}/home", response.code(), response.message());
                     return;
                 }
@@ -258,7 +246,13 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
             @Override
             public void onFailure(Call<ApiService.PresenterHomeResponse> call, Throwable t) {
                 setLoading(false);
-                Toast.makeText(PresenterSlotSelectionActivity.this, R.string.error, Toast.LENGTH_SHORT).show();
+                String errorMessage = getString(R.string.error_slot_load_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                Toast.makeText(PresenterSlotSelectionActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
                 Logger.e(Logger.TAG_API, "Failed to load presenter home", t);
             }
         });
@@ -266,42 +260,21 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
 
     @Override
     public void onRegisterClicked(ApiService.SlotCard slot) {
-        View dialogView = getLayoutInflater().inflate(R.layout.view_register_slot_dialog, null);
-        TextInputLayout layoutTopic = dialogView.findViewById(R.id.input_layout_topic);
-        TextInputEditText inputTopic = dialogView.findViewById(R.id.input_topic);
-        TextInputEditText inputSupervisorName = dialogView.findViewById(R.id.input_supervisor_name);
-        TextInputEditText inputSupervisorEmail = dialogView.findViewById(R.id.input_supervisor_email);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setView(dialogView)
-                .setPositiveButton(R.string.presenter_slot_register_button, null)
+        // Show registration dialog directly - invitation question comes after registration
+        showRegistrationDialog(slot);
+    }
+    
+    private void showRegistrationDialog(ApiService.SlotCard slot) {
+        // Simple confirmation dialog - no fields needed, just confirm registration
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.presenter_home_register_title)
+                .setMessage(R.string.presenter_home_register_description)
+                .setPositiveButton(R.string.presenter_slot_register_button, (d, which) -> {
+                    // Register without any details - topic and supervisor info collected later if needed
+                    performRegistration(slot, null, null, null, null);
+                })
                 .setNegativeButton(R.string.cancel, (d, which) -> d.dismiss())
-                .create();
-
-        dialog.setOnShowListener(d -> {
-            final Button button = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
-            button.setOnClickListener(v -> {
-                String topic = inputTopic.getText() != null ? inputTopic.getText().toString().trim() : null;
-                String supervisorName = inputSupervisorName.getText() != null ? inputSupervisorName.getText().toString().trim() : null;
-                String supervisorEmail = inputSupervisorEmail.getText() != null ? inputSupervisorEmail.getText().toString().trim() : null;
-
-                layoutTopic.setError(null);
-                inputSupervisorEmail.setError(null);
-
-                if (!TextUtils.isEmpty(supervisorEmail) && !Patterns.EMAIL_ADDRESS.matcher(supervisorEmail).matches()) {
-                    inputSupervisorEmail.setError(getString(R.string.presenter_home_supervisor_email_invalid));
-                    return;
-                }
-
-                performRegistration(slot,
-                        TextUtils.isEmpty(topic) ? null : topic,
-                        TextUtils.isEmpty(supervisorName) ? null : supervisorName,
-                        TextUtils.isEmpty(supervisorEmail) ? null : supervisorEmail,
-                        dialog);
-            });
-        });
-
-        dialog.show();
+                .show();
     }
 
     private void performRegistration(ApiService.SlotCard slot,
@@ -315,15 +288,97 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
             return;
         }
 
+        // Get presenter's email from profile (required for sending notification)
+        final String presenterEmail = preferencesManager.getEmail();
+        if (TextUtils.isEmpty(presenterEmail)) {
+            Toast.makeText(this, R.string.presenter_home_presenter_email_required, Toast.LENGTH_LONG).show();
+            return;
+        }
+
         final String normalizedUsername = username.trim().toLowerCase(Locale.US);
-        ApiService.PresenterRegisterRequest request = new ApiService.PresenterRegisterRequest(topic, supervisorName, supervisorEmail);
+        // Supervisor details are NOT needed for registration - they're only used for sending invitation email later
+        // So we send null for supervisorName and supervisorEmail during registration
+        ApiService.PresenterRegisterRequest request = new ApiService.PresenterRegisterRequest(topic, null, null, presenterEmail);
 
         apiService.registerForSlot(normalizedUsername, slot.slotId, request)
                 .enqueue(new Callback<ApiService.PresenterRegisterResponse>() {
                     @Override
                     public void onResponse(Call<ApiService.PresenterRegisterResponse> call, Response<ApiService.PresenterRegisterResponse> response) {
-                        if (!response.isSuccessful() || response.body() == null) {
-                            Toast.makeText(PresenterSlotSelectionActivity.this, R.string.error, Toast.LENGTH_LONG).show();
+                        // Handle unsuccessful HTTP responses (non-200 status codes)
+                        if (!response.isSuccessful()) {
+                            String errorMessage = getString(R.string.error_registration_failed);
+                            String errorCode = null;
+                            
+                            // Try to read error body to get actual error message
+                            if (response.errorBody() != null) {
+                                try {
+                                    String errorBodyString = response.errorBody().string();
+                                    Logger.d(Logger.TAG_API, "Registration error response body: " + errorBodyString);
+                                    
+                                    // Try to parse JSON error body
+                                    try {
+                                        JsonObject jsonObject = new JsonParser().parse(errorBodyString).getAsJsonObject();
+                                        
+                                        // Extract message
+                                        if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
+                                            errorMessage = jsonObject.get("message").getAsString();
+                                        }
+                                        
+                                        // Extract code
+                                        if (jsonObject.has("code") && jsonObject.get("code").isJsonPrimitive()) {
+                                            errorCode = jsonObject.get("code").getAsString();
+                                        }
+                                    } catch (Exception e) {
+                                        // If JSON parsing fails, try manual extraction
+                                        int messageStart = errorBodyString.indexOf("\"message\":\"");
+                                        if (messageStart >= 0) {
+                                            messageStart += 10; // Length of "\"message\":\""
+                                            int messageEnd = errorBodyString.indexOf("\"", messageStart);
+                                            if (messageEnd > messageStart) {
+                                                errorMessage = errorBodyString.substring(messageStart, messageEnd);
+                                            }
+                                        }
+                                        
+                                        int codeStart = errorBodyString.indexOf("\"code\":\"");
+                                        if (codeStart >= 0) {
+                                            codeStart += 8; // Length of "\"code\":\""
+                                            int codeEnd = errorBodyString.indexOf("\"", codeStart);
+                                            if (codeEnd > codeStart) {
+                                                errorCode = errorBodyString.substring(codeStart, codeEnd);
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    Logger.e(Logger.TAG_API, "Failed to read error body", e);
+                                }
+                            }
+                            
+                            // Show appropriate error message based on code
+                            if ("ALREADY_REGISTERED".equals(errorCode) || "ALREADY_IN_SLOT".equals(errorCode)) {
+                                // Use the backend message if available, otherwise use default
+                                if (errorMessage != null && !errorMessage.trim().isEmpty() && 
+                                    !errorMessage.equals(getString(R.string.error_registration_failed))) {
+                                    Toast.makeText(PresenterSlotSelectionActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                                } else {
+                                    Toast.makeText(PresenterSlotSelectionActivity.this, R.string.presenter_home_register_already, Toast.LENGTH_LONG).show();
+                                }
+                            } else if ("SLOT_FULL".equals(errorCode)) {
+                                Toast.makeText(PresenterSlotSelectionActivity.this, R.string.presenter_home_register_full, Toast.LENGTH_LONG).show();
+                            } else {
+                                // Show the actual error message from backend, or fallback to generic
+                                Toast.makeText(PresenterSlotSelectionActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                            }
+                            
+                            if (dialog != null) {
+                                dialog.dismiss();
+                            }
+                            loadSlots();
+                            return;
+                        }
+                        
+                        // Handle successful HTTP response but check response body
+                        if (response.body() == null) {
+                            Toast.makeText(PresenterSlotSelectionActivity.this, R.string.error_registration_failed, Toast.LENGTH_LONG).show();
                             return;
                         }
 
@@ -332,32 +387,269 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
                         switch (code) {
                             case "REGISTERED":
                                 Toast.makeText(PresenterSlotSelectionActivity.this, R.string.presenter_home_register_success, Toast.LENGTH_LONG).show();
-                                dialog.dismiss();
+                                if (dialog != null) {
+                                    dialog.dismiss();
+                                }
+                                
+                                // After successful registration, ask if they want to send invitation to supervisor
+                                // Topic will be collected in the supervisor invitation dialog if user wants to send invitation
+                                showSupervisorInvitationQuestionDialog(slot, null);
+                                
                                 loadSlots();
                                 break;
                             case "ALREADY_IN_SLOT":
                             case "ALREADY_REGISTERED":
-                                Toast.makeText(PresenterSlotSelectionActivity.this, R.string.presenter_home_register_already, Toast.LENGTH_LONG).show();
-                                dialog.dismiss();
+                                // Use backend message if available, otherwise use default
+                                String alreadyRegisteredMsg = body.message != null && !body.message.trim().isEmpty()
+                                    ? body.message
+                                    : getString(R.string.presenter_home_register_already);
+                                Toast.makeText(PresenterSlotSelectionActivity.this, alreadyRegisteredMsg, Toast.LENGTH_LONG).show();
+                                if (dialog != null) {
+                                    dialog.dismiss();
+                                }
                                 loadSlots();
                                 break;
                             case "SLOT_FULL":
                                 Toast.makeText(PresenterSlotSelectionActivity.this, R.string.presenter_home_register_full, Toast.LENGTH_LONG).show();
                                 break;
                             default:
-                                Toast.makeText(PresenterSlotSelectionActivity.this,
-                                        body.message != null ? body.message : getString(R.string.error),
-                                        Toast.LENGTH_LONG).show();
+                                String errorMsg = body.message != null && !body.message.trim().isEmpty() 
+                                    ? body.message 
+                                    : getString(R.string.error_registration_failed);
+                                Toast.makeText(PresenterSlotSelectionActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                                 break;
                         }
                     }
 
                     @Override
                     public void onFailure(Call<ApiService.PresenterRegisterResponse> call, Throwable t) {
-                        Toast.makeText(PresenterSlotSelectionActivity.this, R.string.error, Toast.LENGTH_LONG).show();
-                        Logger.e(Logger.TAG_API, "Slot registration failed", t);
+                        String errorMessage = getString(R.string.error_registration_failed);
+                        if (t instanceof java.net.SocketTimeoutException) {
+                            errorMessage = "Connection timeout. Please check:\n" +
+                                    "1. Backend server is running\n" +
+                                    "2. ADB port forwarding is active\n" +
+                                    "3. Network connection is stable";
+                            Logger.e(Logger.TAG_API, "Slot registration timeout - URL: " + 
+                                    (call.request() != null ? call.request().url() : "unknown"), t);
+                        } else if (t instanceof java.net.ConnectException) {
+                            errorMessage = "Cannot connect to server. Please check ADB port forwarding:\n" +
+                                    "Run: adb reverse tcp:8080 tcp:8080";
+                            Logger.e(Logger.TAG_API, "Slot registration connection failed - URL: " + 
+                                    (call.request() != null ? call.request().url() : "unknown"), t);
+                        } else if (t instanceof java.net.UnknownHostException) {
+                            errorMessage = getString(R.string.error_server_unavailable);
+                            Logger.e(Logger.TAG_API, "Slot registration - server unavailable", t);
+                        } else {
+                            Logger.e(Logger.TAG_API, "Slot registration failed - Error: " + t.getClass().getSimpleName() + 
+                                    ", Message: " + t.getMessage(), t);
+                        }
+                        Toast.makeText(PresenterSlotSelectionActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 });
+    }
+    
+    /**
+     * Show dialog asking if user wants to send supervisor invitation after successful registration
+     */
+    private void showSupervisorInvitationQuestionDialog(ApiService.SlotCard slot, 
+                                                        @Nullable String topic) {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.presenter_slot_supervisor_invitation_title)
+                .setMessage(R.string.presenter_slot_supervisor_invitation_message)
+                .setPositiveButton(R.string.yes, (d, which) -> {
+                    // User wants to send invitation - show form to collect supervisor details
+                    showSupervisorDetailsDialog(slot, topic);
+                })
+                .setNegativeButton(R.string.no, (d, which) -> {
+                    // User doesn't want to send invitation - just dismiss
+                    d.dismiss();
+                })
+                .setCancelable(true)
+                .show();
+    }
+    
+    /**
+     * Show dialog to collect supervisor details (name, email, topic) for sending invitation
+     */
+    private void showSupervisorDetailsDialog(ApiService.SlotCard slot, @Nullable String topic) {
+        View dialogView = getLayoutInflater().inflate(R.layout.view_register_slot_dialog, null);
+        TextInputLayout layoutTopic = dialogView.findViewById(R.id.input_layout_topic);
+        TextInputLayout layoutSupervisorName = dialogView.findViewById(R.id.input_layout_supervisor_name);
+        TextInputLayout layoutSupervisorEmail = dialogView.findViewById(R.id.input_layout_supervisor_email);
+        TextInputEditText inputTopic = dialogView.findViewById(R.id.input_topic);
+        TextInputEditText inputSupervisorName = dialogView.findViewById(R.id.input_supervisor_name);
+        TextInputEditText inputSupervisorEmail = dialogView.findViewById(R.id.input_supervisor_email);
+        
+        // Topic field is empty - user will enter it here if they want to send invitation
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.presenter_slot_supervisor_invitation_title)
+                .setView(dialogView)
+                .setPositiveButton(R.string.presenter_slot_send_invitation_button, null)
+                .setNegativeButton(R.string.cancel, (d, which) -> d.dismiss())
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            final Button button = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+            button.setOnClickListener(v -> {
+                String supervisorTopic = inputTopic.getText() != null ? inputTopic.getText().toString().trim() : null;
+                String supervisorName = inputSupervisorName.getText() != null ? inputSupervisorName.getText().toString().trim() : null;
+                String supervisorEmail = inputSupervisorEmail.getText() != null ? inputSupervisorEmail.getText().toString().trim() : null;
+
+                // Clear previous errors
+                layoutTopic.setError(null);
+                layoutSupervisorName.setError(null);
+                layoutSupervisorEmail.setError(null);
+
+                // Validate supervisor name (required)
+                if (TextUtils.isEmpty(supervisorName)) {
+                    layoutSupervisorName.setError(getString(R.string.presenter_home_supervisor_name_required));
+                    return;
+                }
+
+                // Validate supervisor email (required)
+                if (TextUtils.isEmpty(supervisorEmail)) {
+                    layoutSupervisorEmail.setError(getString(R.string.presenter_home_supervisor_email_required));
+                    return;
+                }
+
+                // Validate email format
+                if (!Patterns.EMAIL_ADDRESS.matcher(supervisorEmail).matches()) {
+                    layoutSupervisorEmail.setError(getString(R.string.presenter_home_supervisor_email_invalid));
+                    return;
+                }
+
+                // All validated - send invitation email
+                dialog.dismiss();
+                sendSupervisorInvitationEmail(slot, supervisorTopic, supervisorName, supervisorEmail);
+            });
+        });
+
+        dialog.show();
+    }
+    
+    private void sendSupervisorInvitationEmail(ApiService.SlotCard slot, 
+                                              @Nullable String topic, 
+                                              @NonNull String supervisorName, 
+                                              @NonNull String supervisorEmail) {
+        Logger.i(Logger.TAG_UI, "Sending supervisor invitation email to: " + supervisorEmail);
+        
+        // Get presenter's name and email
+        String presenterFirstName = preferencesManager.getFirstName();
+        String presenterLastName = preferencesManager.getLastName();
+        String presenterName = (presenterFirstName != null ? presenterFirstName : "") + 
+                              (presenterLastName != null ? " " + presenterLastName : "").trim();
+        String presenterEmail = preferencesManager.getEmail();
+        
+        // Build email content
+        String subject = "SemScan - Presentation Slot Registration Invitation";
+        String htmlContent = buildSupervisorInvitationEmailHtml(slot, topic, supervisorName, presenterName, presenterEmail);
+        
+        // Send email via backend API
+        ApiService.TestEmailRequest request = new ApiService.TestEmailRequest(
+            supervisorEmail,
+            subject,
+            htmlContent
+        );
+        
+        apiService.sendTestEmail(request).enqueue(new Callback<ApiService.TestEmailResponse>() {
+            @Override
+            public void onResponse(Call<ApiService.TestEmailResponse> call, Response<ApiService.TestEmailResponse> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().success) {
+                    Logger.i(Logger.TAG_API, "Supervisor invitation email sent successfully to: " + supervisorEmail);
+                    Toast.makeText(PresenterSlotSelectionActivity.this, 
+                        getString(R.string.presenter_slot_supervisor_email_sent, supervisorEmail), 
+                        Toast.LENGTH_LONG).show();
+                } else {
+                    Logger.e(Logger.TAG_API, "Failed to send supervisor invitation email to: " + supervisorEmail);
+                    Toast.makeText(PresenterSlotSelectionActivity.this, 
+                        getString(R.string.presenter_slot_supervisor_email_failed), 
+                        Toast.LENGTH_SHORT).show();
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<ApiService.TestEmailResponse> call, Throwable t) {
+                Logger.e(Logger.TAG_API, "Error sending supervisor invitation email to: " + supervisorEmail, t);
+                Toast.makeText(PresenterSlotSelectionActivity.this, 
+                    getString(R.string.presenter_slot_supervisor_email_failed), 
+                    Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private String buildSupervisorInvitationEmailHtml(ApiService.SlotCard slot, 
+                                                      @Nullable String topic, 
+                                                      @NonNull String supervisorName,
+                                                      @NonNull String presenterName,
+                                                      @Nullable String presenterEmail) {
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html>");
+        html.append("<head>");
+        html.append("<meta charset=\"UTF-8\">");
+        html.append("<style>");
+        html.append("body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }");
+        html.append(".container { max-width: 600px; margin: 0 auto; padding: 20px; }");
+        html.append(".header { background-color: #2196F3; color: white; padding: 20px; text-align: center; }");
+        html.append(".content { padding: 20px; background-color: #f9f9f9; }");
+        html.append(".details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #2196F3; }");
+        html.append(".footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }");
+        html.append("</style>");
+        html.append("</head>");
+        html.append("<body>");
+        html.append("<div class=\"container\">");
+        html.append("<div class=\"header\">");
+        html.append("<h1>SemScan - Presentation Slot Registration</h1>");
+        html.append("</div>");
+        html.append("<div class=\"content\">");
+        html.append("<p>Dear ").append(escapeHtml(supervisorName)).append(",</p>");
+        html.append("<p>You have been invited as a supervisor for a presentation slot registration.</p>");
+        
+        // Presentation details
+        html.append("<div class=\"details\">");
+        html.append("<h3>Presentation Details:</h3>");
+        html.append("<ul>");
+        html.append("<li><strong>Presenter:</strong> ").append(escapeHtml(presenterName)).append("</li>");
+        if (presenterEmail != null && !presenterEmail.isEmpty()) {
+            html.append("<li><strong>Presenter Email:</strong> ").append(escapeHtml(presenterEmail)).append("</li>");
+        }
+        if (topic != null && !topic.trim().isEmpty()) {
+            html.append("<li><strong>Topic:</strong> ").append(escapeHtml(topic)).append("</li>");
+        }
+        if (slot.date != null) {
+            html.append("<li><strong>Date:</strong> ").append(escapeHtml(slot.date)).append("</li>");
+        }
+        if (slot.timeRange != null) {
+            html.append("<li><strong>Time:</strong> ").append(escapeHtml(slot.timeRange)).append("</li>");
+        }
+        if (slot.room != null && slot.building != null) {
+            html.append("<li><strong>Location:</strong> Building ").append(escapeHtml(slot.building))
+                .append(", Room ").append(escapeHtml(slot.room)).append("</li>");
+        }
+        html.append("</ul>");
+        html.append("</div>");
+        
+        html.append("<p>This is an automated notification from the SemScan system.</p>");
+        html.append("</div>");
+        html.append("<div class=\"footer\">");
+        html.append("<p>This is an automated message from SemScan System.</p>");
+        html.append("<p>Please do not reply to this email.</p>");
+        html.append("</div>");
+        html.append("</div>");
+        html.append("</body>");
+        html.append("</html>");
+        
+        return html.toString();
+    }
+    
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;");
     }
 
     @Override

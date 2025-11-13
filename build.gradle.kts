@@ -6,16 +6,21 @@ plugins {
 
 android {
     namespace = "org.example.semscan"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "org.example.semscan"
         minSdk = 26
-        targetSdk = 30
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // 16 KB page size compatibility
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     buildTypes {
@@ -37,6 +42,13 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    
+    // 16 KB page size compatibility - ensure native libraries are properly aligned
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
 }
 
 dependencies {
@@ -53,14 +65,14 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.5.2")
     
-    // CameraX for modern camera functionality
-    implementation("androidx.camera:camera-core:1.3.1")
-    implementation("androidx.camera:camera-camera2:1.3.1")
-    implementation("androidx.camera:camera-lifecycle:1.3.1")
-    implementation("androidx.camera:camera-view:1.3.1")
+    // CameraX for modern camera functionality (updated for 16 KB compatibility)
+    implementation("androidx.camera:camera-core:1.4.0")
+    implementation("androidx.camera:camera-camera2:1.4.0")
+    implementation("androidx.camera:camera-lifecycle:1.4.0")
+    implementation("androidx.camera:camera-view:1.4.0")
     
-    // ML Kit for barcode scanning
-    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    // ML Kit for barcode scanning (updated for 16 KB page size compatibility)
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
     
     // Network
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

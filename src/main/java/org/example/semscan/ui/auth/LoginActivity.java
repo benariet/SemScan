@@ -8,6 +8,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.widget.CheckBox;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -32,8 +33,10 @@ public class LoginActivity extends AppCompatActivity {
 
     private TextInputEditText editUsername;
     private TextInputEditText editPassword;
+    private CheckBox checkboxRememberMe;
     private MaterialButton btnLogin;
     private MaterialButton btnSkipAuth;
+    private MaterialButton btnTestEmail;
 
     private PreferencesManager preferencesManager;
 
@@ -46,11 +49,20 @@ public class LoginActivity extends AppCompatActivity {
 
         editUsername = findViewById(R.id.edit_username);
         editPassword = findViewById(R.id.edit_password);
+        checkboxRememberMe = findViewById(R.id.checkbox_remember_me);
         btnLogin = findViewById(R.id.btn_login);
         btnSkipAuth = findViewById(R.id.btn_skip_auth);
+        btnTestEmail = findViewById(R.id.btn_test_email);
+
+        // Load saved credentials if "Remember Me" was previously checked
+        loadSavedCredentials();
 
         btnLogin.setOnClickListener(v -> handleLogin());
         btnSkipAuth.setOnClickListener(v -> handleSkipAuth());
+        btnTestEmail.setOnClickListener(v -> {
+            Intent intent = new Intent(LoginActivity.this, TestEmailActivity.class);
+            startActivity(intent);
+        });
 
         Logger.i(Logger.TAG_UI, "LoginActivity created");
     }
@@ -123,6 +135,14 @@ public class LoginActivity extends AppCompatActivity {
                         preferencesManager.setEmail(loginResponse.email);
                     }
                     
+                    // Save credentials if "Remember Me" is checked
+                    if (checkboxRememberMe != null && checkboxRememberMe.isChecked()) {
+                        saveCredentials(normalized, password);
+                    } else {
+                        // Clear saved credentials if "Remember Me" is unchecked
+                        clearSavedCredentials();
+                    }
+                    
                     ServerLogger.getInstance(LoginActivity.this).updateUserContext(
                             username, 
                             loginResponse.isPresenter ? "PRESENTER" : (loginResponse.isParticipant ? "PARTICIPANT" : "UNKNOWN")
@@ -155,7 +175,16 @@ public class LoginActivity extends AppCompatActivity {
                 btnLogin.setEnabled(true);
                 btnLogin.setText(getString(R.string.login_button));
                 Logger.e(Logger.TAG_API, "Authentication API call error", t);
-                Toast.makeText(LoginActivity.this, "Network error: " + (t.getMessage() != null ? t.getMessage() : "Unable to connect to server"), Toast.LENGTH_LONG).show();
+                
+                // Show user-friendly error message based on exception type
+                String errorMessage = getString(R.string.error_network_connection);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                
+                Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -301,7 +330,8 @@ public class LoginActivity extends AppCompatActivity {
                 "Skip",
                 "Tester",
                 FirstTimeSetupActivity.DEGREE_PHD,
-                FirstTimeSetupActivity.PARTICIPATION_PRESENTER_ONLY
+                FirstTimeSetupActivity.PARTICIPATION_PRESENTER_ONLY,
+                null // nationalIdNumber - not provided in skip auth flow
         );
         apiService.upsertUser(request).enqueue(new Callback<User>() {
             @Override
@@ -338,6 +368,54 @@ public class LoginActivity extends AppCompatActivity {
             return null;
         }
         return value.toLowerCase(java.util.Locale.US).replaceAll("\\s+", "");
+    }
+    
+    /**
+     * Load saved credentials if "Remember Me" was previously checked
+     */
+    private void loadSavedCredentials() {
+        String savedUsername = preferencesManager.getSavedUsername();
+        String savedPassword = preferencesManager.getSavedPassword();
+        boolean rememberMeChecked = preferencesManager.isRememberMeEnabled();
+        
+        if (rememberMeChecked && savedUsername != null && !savedUsername.isEmpty()) {
+            // Pre-fill username
+            if (editUsername != null) {
+                editUsername.setText(savedUsername);
+            }
+            
+            // Pre-fill password if available (optional - for security, you might want to skip this)
+            if (savedPassword != null && !savedPassword.isEmpty() && editPassword != null) {
+                editPassword.setText(savedPassword);
+            }
+            
+            // Check the "Remember Me" checkbox
+            if (checkboxRememberMe != null) {
+                checkboxRememberMe.setChecked(true);
+            }
+            
+            Logger.d(Logger.TAG_UI, "Loaded saved credentials for: " + savedUsername);
+        }
+    }
+    
+    /**
+     * Save credentials when "Remember Me" is checked
+     * Note: Storing passwords in SharedPreferences is not secure for production apps.
+     * Consider using Android Keystore or token-based authentication instead.
+     */
+    private void saveCredentials(String username, String password) {
+        preferencesManager.setSavedUsername(username);
+        preferencesManager.setSavedPassword(password);
+        preferencesManager.setRememberMeEnabled(true);
+        Logger.d(Logger.TAG_UI, "Saved credentials for: " + username);
+    }
+    
+    /**
+     * Clear saved credentials when "Remember Me" is unchecked
+     */
+    private void clearSavedCredentials() {
+        preferencesManager.clearSavedCredentials();
+        Logger.d(Logger.TAG_UI, "Cleared saved credentials");
     }
 }
 

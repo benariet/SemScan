@@ -158,6 +158,43 @@
 
             </LinearLayout>
 
+            <!-- Action Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp">
+
+                <!-- Change Role Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_change_role"
+                    style="@style/SemScanButtonOutlinedPrimary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/change_role"
+                    android:drawableStart="@drawable/ic_swap_horiz"
+                    android:drawablePadding="8dp"
+                    android:drawableTint="@color/primary_blue" />
+
+                <!-- Logout Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_logout"
+                    style="@style/SemScanButtonOutlinedPrimary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/logout"
+                    android:drawableStart="@drawable/ic_arrow_back"
+                    android:drawablePadding="8dp"
+                    android:drawableTint="@color/error_red"
+                    android:textColor="@color/error_red"
+                    app:strokeColor="@color/error_red" />
+
+            </LinearLayout>
+
         </LinearLayout>
 
     </ScrollView>

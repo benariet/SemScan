@@ -3,8 +3,6 @@ package org.example.semscan.ui.teacher;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -204,11 +202,44 @@ public class PresenterHomeActivity extends AppCompatActivity {
     }
     
     private void changeRole() {
-        preferencesManager.clearUserData();
-        Logger.userAction("Change Role", "Presenter cleared user data and switched role");
+        Logger.userAction("Change Role", "Presenter clicked change role");
         if (serverLogger != null) {
-            serverLogger.userAction("Change Role", "Presenter cleared user data and switched role");
+            serverLogger.userAction("Change Role", "Presenter clicked change role");
         }
+        
+        // Preserve username when changing roles - only clear the role, not all user data
+        String username = preferencesManager.getUserName();
+        String firstName = preferencesManager.getFirstName();
+        String lastName = preferencesManager.getLastName();
+        String email = preferencesManager.getEmail();
+        String degree = preferencesManager.getDegree();
+        String participation = preferencesManager.getParticipationPreference();
+        
+        // Clear only role-related data
+        preferencesManager.setUserRole(null);
+        preferencesManager.setInitialSetupCompleted(false);
+        
+        // Restore user data (username is critical for role selection)
+        if (username != null && !username.isEmpty()) {
+            preferencesManager.setUserName(username);
+            Logger.d(Logger.TAG_UI, "Preserved username when changing role: " + username);
+        }
+        if (firstName != null && !firstName.isEmpty()) {
+            preferencesManager.setFirstName(firstName);
+        }
+        if (lastName != null && !lastName.isEmpty()) {
+            preferencesManager.setLastName(lastName);
+        }
+        if (email != null && !email.isEmpty()) {
+            preferencesManager.setEmail(email);
+        }
+        if (degree != null && !degree.isEmpty()) {
+            preferencesManager.setDegree(degree);
+        }
+        if (participation != null && !participation.isEmpty()) {
+            preferencesManager.setParticipationPreference(participation);
+        }
+        
         navigateToRolePicker();
     }
     
@@ -219,29 +250,7 @@ public class PresenterHomeActivity extends AppCompatActivity {
         finish();
     }
     
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_presenter_home, menu);
-        Logger.userAction("Open Menu", "Presenter opened home menu");
-        if (serverLogger != null) {
-            serverLogger.userAction("Open Menu", "Presenter opened home menu");
-        }
-        return true;
-    }
-    
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        
-        if (id == R.id.action_settings) {
-            openSettings();
-            return true;
-        } else if (id == R.id.action_change_role) {
-            changeRole();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
+    // Menu removed - no longer showing 3 dots menu
     
     @Override
     public void onBackPressed() {

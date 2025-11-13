@@ -6,35 +6,31 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.text.TextUtils;
-import android.widget.EditText;
 import android.widget.Toast;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
+import com.google.android.material.button.MaterialButton;
 
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
-import org.example.semscan.data.model.Seminar;
-import java.util.List;
 import org.example.semscan.ui.RolePickerActivity;
-import org.example.semscan.ui.SettingsActivity;
+import org.example.semscan.ui.auth.LoginActivity;
 import org.example.semscan.ui.qr.ModernQRScannerActivity;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.utils.ServerLogger;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-
 public class StudentHomeActivity extends AppCompatActivity {
 
     private CardView cardScanAttendance;
     private CardView cardManualAttendance;
+    private MaterialButton btnChangeRole;
+    private MaterialButton btnLogout;
     private TextView textWelcomeMessage;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
@@ -60,9 +56,9 @@ public class StudentHomeActivity extends AppCompatActivity {
         // Test logging to verify student context
         serverLogger.i(ServerLogger.TAG_UI, "StudentHomeActivity created - User: " + username + ", Role: " + userRole);
 
-        // Check if user is actually a student
-        if (!preferencesManager.isStudent()) {
-            Logger.w(Logger.TAG_UI, "User is not a student, navigating to role picker");
+        // Check if user is actually a participant
+        if (!preferencesManager.isParticipant()) {
+            Logger.w(Logger.TAG_UI, "User is not a participant, navigating to role picker");
             navigateToRolePicker();
             return;
         }
@@ -79,6 +75,8 @@ public class StudentHomeActivity extends AppCompatActivity {
     private void initializeViews() {
         cardScanAttendance = findViewById(R.id.card_scan_attendance);
         cardManualAttendance = findViewById(R.id.card_manual_attendance);
+        btnChangeRole = findViewById(R.id.btn_change_role);
+        btnLogout = findViewById(R.id.btn_logout);
         textWelcomeMessage = findViewById(R.id.text_welcome_message);
         
         // Set personalized welcome message
@@ -134,6 +132,28 @@ public class StudentHomeActivity extends AppCompatActivity {
                 openManualAttendanceRequest();
             }
         });
+
+        btnChangeRole.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Logger.userAction("Change Role", "Student clicked change role button");
+                if (serverLogger != null) {
+                    serverLogger.userAction("Change Role", "Student clicked change role button");
+                }
+                changeRole();
+            }
+        });
+
+        btnLogout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Logger.userAction("Logout", "Student clicked logout button");
+                if (serverLogger != null) {
+                    serverLogger.userAction("Logout", "Student clicked logout button");
+                }
+                showLogoutDialog();
+            }
+        });
     }
 
     private void openQRScanner() {
@@ -154,20 +174,75 @@ public class StudentHomeActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    private void openSettings() {
-        Logger.userAction("Navigate", "Launching SettingsActivity from student home");
-        if (serverLogger != null) {
-            serverLogger.userAction("Navigate", "Launching SettingsActivity from student home");
-        }
-        Intent intent = new Intent(this, SettingsActivity.class);
-        startActivity(intent);
-    }
-
     private void changeRole() {
         Logger.userAction("Change Role", "Student clicked change role");
-        serverLogger.userAction("Change Role", "Student clicked change role");
-        preferencesManager.clearUserData();
+        if (serverLogger != null) {
+            serverLogger.userAction("Change Role", "Student clicked change role");
+        }
+        
+        // Preserve username when changing roles - only clear the role, not all user data
+        String username = preferencesManager.getUserName();
+        String firstName = preferencesManager.getFirstName();
+        String lastName = preferencesManager.getLastName();
+        String email = preferencesManager.getEmail();
+        String degree = preferencesManager.getDegree();
+        String participation = preferencesManager.getParticipationPreference();
+        
+        // Clear only role-related data
+        preferencesManager.setUserRole(null);
+        preferencesManager.setInitialSetupCompleted(false);
+        
+        // Restore user data (username is critical for role selection)
+        if (username != null && !username.isEmpty()) {
+            preferencesManager.setUserName(username);
+            Logger.d(Logger.TAG_UI, "Preserved username when changing role: " + username);
+        }
+        if (firstName != null && !firstName.isEmpty()) {
+            preferencesManager.setFirstName(firstName);
+        }
+        if (lastName != null && !lastName.isEmpty()) {
+            preferencesManager.setLastName(lastName);
+        }
+        if (email != null && !email.isEmpty()) {
+            preferencesManager.setEmail(email);
+        }
+        if (degree != null && !degree.isEmpty()) {
+            preferencesManager.setDegree(degree);
+        }
+        if (participation != null && !participation.isEmpty()) {
+            preferencesManager.setParticipationPreference(participation);
+        }
+        
         navigateToRolePicker();
+    }
+
+    private void showLogoutDialog() {
+        Logger.userAction("Logout", "Student tapped logout button");
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.logout_confirm_title)
+                .setMessage(R.string.logout_confirm_message)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    performLogout();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void performLogout() {
+        Logger.i(Logger.TAG_UI, "Performing logout");
+        if (serverLogger != null) {
+            serverLogger.userAction("Logout", "Student logged out");
+        }
+        preferencesManager.clearUserData();
+        preferencesManager.clearSavedCredentials(); // Clear "Remember Me" credentials
+
+        Toast.makeText(this, R.string.logout_success, Toast.LENGTH_SHORT).show();
+
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private void navigateToRolePicker() {
@@ -179,28 +254,13 @@ public class StudentHomeActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_student_home, menu);
-        return true;
+        // Menu removed - Change Role and Logout are now cards on the home screen
+        return false;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            Logger.userAction("Open Settings", "Student selected settings from menu");
-            if (serverLogger != null) {
-                serverLogger.userAction("Open Settings", "Student selected settings from menu");
-            }
-            openSettings();
-            return true;
-        } else if (id == R.id.action_change_role) {
-            Logger.userAction("Change Role", "Student selected change role from menu");
-            if (serverLogger != null) {
-                serverLogger.userAction("Change Role", "Student selected change role from menu");
-            }
-            changeRole();
-            return true;
-        }
+        // Menu removed - Change Role and Logout are now cards on the home screen
         return super.onOptionsItemSelected(item);
     }
 

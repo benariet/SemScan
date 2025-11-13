@@ -76,9 +76,9 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
         // Test logging to verify student context
         serverLogger.i(ServerLogger.TAG_UI, "ManualAttendanceRequestActivity created - User: " + username + ", Role: " + userRole);
 
-        // Check if user is actually a student
-        if (!preferencesManager.isStudent()) {
-            Logger.w(Logger.TAG_UI, "User is not a student, finishing activity");
+        // Check if user is actually a participant
+        if (!preferencesManager.isParticipant()) {
+            Logger.w(Logger.TAG_UI, "User is not a participant, finishing activity");
             finish();
             return;
         }
@@ -122,23 +122,118 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
         // No authentication required
         Logger.d("ManualAttendance", "Checking for active sessions (no authentication required)");
         
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_UI, "REQUESTING OPEN SESSIONS - Endpoint: GET /api/v1/sessions/open - Expected: Backend should return ALL open sessions");
+        }
+        
         Call<List<Session>> call = apiService.getOpenSessions();
         call.enqueue(new Callback<List<Session>>() {
             @Override
             public void onResponse(Call<List<Session>> call, Response<List<Session>> response) {
+                Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                Logger.d(Logger.TAG_UI, "OPEN SESSIONS API RESPONSE");
+                Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                Logger.d(Logger.TAG_UI, "Status Code: " + response.code());
+                Logger.d(Logger.TAG_UI, "Is Successful: " + response.isSuccessful());
+                Logger.d(Logger.TAG_UI, "Has Body: " + (response.body() != null));
+                
+                if (serverLogger != null) {
+                    serverLogger.d(ServerLogger.TAG_UI, "OPEN SESSIONS API RESPONSE - Status Code: " + response.code() + 
+                        ", Is Successful: " + response.isSuccessful() + ", Has Body: " + (response.body() != null));
+                }
+                
                 if (response.isSuccessful() && response.body() != null) {
-                    List<Session> openSessions = response.body();
+                    List<Session> allSessions = response.body();
+                    Logger.d(Logger.TAG_UI, "Total sessions returned by backend: " + allSessions.size());
                     
-                    Logger.session("Sessions Retrieved", "Found " + openSessions.size() + " open sessions");
+                    if (allSessions.isEmpty()) {
+                        Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                        Logger.e(Logger.TAG_UI, "🚨 BACKEND BUG DETECTED - EMPTY SESSIONS ARRAY");
+                        Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                        Logger.e(Logger.TAG_UI, "Backend returned EMPTY array []");
+                        Logger.e(Logger.TAG_UI, "But presenter has an OPEN session visible!");
+                        Logger.e(Logger.TAG_UI, "");
+                        Logger.e(Logger.TAG_UI, "⚠️  ROOT CAUSE:");
+                        Logger.e(Logger.TAG_UI, "   Backend GET /api/v1/sessions/open is NOT returning");
+                        Logger.e(Logger.TAG_UI, "   all open sessions. Possible issues:");
+                        Logger.e(Logger.TAG_UI, "   1. Using DISTINCT/GROUP BY on slot_id (only one per slot)");
+                        Logger.e(Logger.TAG_UI, "   2. Filtering incorrectly (checking wrong status)");
+                        Logger.e(Logger.TAG_UI, "   3. Not checking for second session in same slot");
+                        Logger.e(Logger.TAG_UI, "   4. Query may be filtering by presenter instead of status");
+                        Logger.e(Logger.TAG_UI, "");
+                        Logger.e(Logger.TAG_UI, "   See: docs/BACKEND_FIX_MULTIPLE_PRESENTERS_SESSION.md");
+                        Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                        
+                        if (serverLogger != null) {
+                            String bugMessage = "🚨 BACKEND BUG DETECTED - EMPTY SESSIONS ARRAY | " +
+                                "Backend returned EMPTY array [] but presenter has an OPEN session visible! | " +
+                                "ROOT CAUSE: Backend GET /api/v1/sessions/open is NOT returning all open sessions. " +
+                                "Possible issues: 1) Using DISTINCT/GROUP BY on slot_id (only one per slot), " +
+                                "2) Filtering incorrectly (checking wrong status), " +
+                                "3) Not checking for second session in same slot, " +
+                                "4) Query may be filtering by presenter instead of status. " +
+                                "See: docs/BACKEND_FIX_MULTIPLE_PRESENTERS_SESSION.md";
+                            serverLogger.e(ServerLogger.TAG_UI, bugMessage);
+                            serverLogger.flushLogs(); // Force send critical error logs immediately
+                        }
+                    } else {
+                        if (serverLogger != null) {
+                            serverLogger.d(ServerLogger.TAG_UI, "Total sessions returned by backend: " + allSessions.size());
+                        }
+                    }
+                    
+                    // Filter to show only OPEN sessions (backend might return closed sessions)
+                    List<Session> openSessions = new java.util.ArrayList<>();
+                    StringBuilder sessionDetails = new StringBuilder();
+                    for (Session session : allSessions) {
+                        if (session != null && session.getStatus() != null) {
+                            String status = session.getStatus().toUpperCase();
+                            Logger.d(Logger.TAG_UI, "Session ID: " + session.getSessionId() + ", Status: " + status);
+                            if ("OPEN".equals(status)) {
+                                openSessions.add(session);
+                                Logger.d(Logger.TAG_UI, "  ✓ Added to open sessions list");
+                                if (sessionDetails.length() > 0) sessionDetails.append(" | ");
+                                sessionDetails.append("Session ").append(session.getSessionId()).append(": OPEN");
+                            } else {
+                                Logger.d(Logger.TAG_UI, "  ✗ Filtered out (status: " + session.getStatus() + ")");
+                                if (sessionDetails.length() > 0) sessionDetails.append(" | ");
+                                sessionDetails.append("Session ").append(session.getSessionId()).append(": ").append(session.getStatus());
+                            }
+                        } else {
+                            Logger.w(Logger.TAG_UI, "  ⚠ Invalid session (null or missing status): " + session);
+                            if (sessionDetails.length() > 0) sessionDetails.append(" | ");
+                            sessionDetails.append("Invalid session: ").append(session);
+                        }
+                    }
+                    
+                    Logger.d(Logger.TAG_UI, "Open sessions after filtering: " + openSessions.size());
+                    Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                    
+                    if (serverLogger != null) {
+                        String sessionSummary = "Open sessions after filtering: " + openSessions.size() + 
+                            (sessionDetails.length() > 0 ? " | Details: " + sessionDetails.toString() : "");
+                        serverLogger.d(ServerLogger.TAG_UI, sessionSummary);
+                    }
+                    
+                    Logger.session("Sessions Retrieved", "Found " + openSessions.size() + " open sessions (filtered from " + allSessions.size() + " total)");
                     
                     // Filter to show only recent sessions (last 10) to avoid overwhelming the user
                     if (openSessions.size() > 10) {
                         openSessions = openSessions.subList(0, 10);
-                        Logger.i(Logger.TAG_UI, "Filtered sessions to show only first 10 of " + response.body().size() + " total");
+                        Logger.i(Logger.TAG_UI, "Filtered sessions to show only first 10 of " + openSessions.size() + " open sessions");
                     }
                     
                     handleOpenSessions(openSessions);
                 } else {
+                    Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                    Logger.e(Logger.TAG_UI, "❌ API ERROR - Failed to get open sessions");
+                    Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                    
+                    if (serverLogger != null) {
+                        serverLogger.e(ServerLogger.TAG_UI, "❌ API ERROR - Failed to get open sessions | " +
+                            "Status Code: " + response.code() + ", Has Body: " + (response.body() != null));
+                    }
+                    
                     Logger.apiError("GET", "api/v1/sessions/open", response.code(), "Failed to get open sessions");
                     showError("Failed to get active sessions");
                     progressLoading.setVisibility(View.GONE);
@@ -150,10 +245,22 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<List<Session>> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to check active sessions", t);
-                showError("Network error: " + t.getMessage());
+                
+                if (serverLogger != null) {
+                    serverLogger.e(ServerLogger.TAG_UI, "❌ NETWORK FAILURE - Failed to get open sessions | " +
+                        "Exception: " + t.getClass().getSimpleName() + ", Message: " + t.getMessage(), t);
+                }
+                
+                String errorMessage = getString(R.string.error_load_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                showError(errorMessage);
                 progressLoading.setVisibility(View.GONE);
                 textStatus.setVisibility(View.VISIBLE);
-                textStatus.setText("Network error. Please try again later.");
+                textStatus.setText(errorMessage);
             }
         });
     }
@@ -192,6 +299,10 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
     }
 
     private void submitManualRequest(String reason) {
+        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+        Logger.d(Logger.TAG_UI, "MANUAL ATTENDANCE REQUEST - SUBMISSION STARTING");
+        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+        
         String studentUsername = preferencesManager.getUserName();
         if (TextUtils.isEmpty(studentUsername)) {
             Logger.e(Logger.TAG_UI, "Cannot submit manual request - no student username");
@@ -231,28 +342,89 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
         // Set currentSessionId from the validated selected session
         currentSessionId = selectedSession.getSessionId();
         
+        Logger.d(Logger.TAG_UI, "Session ID: " + currentSessionId);
+        Logger.d(Logger.TAG_UI, "Student Username: " + studentUsername);
+        Logger.d(Logger.TAG_UI, "Reason: " + reason);
+        Logger.d(Logger.TAG_UI, "Session Status: " + selectedSession.getStatus());
+        Logger.d(Logger.TAG_UI, "Session Topic: " + selectedSession.getTopic());
+        Logger.d(Logger.TAG_UI, "Session Presenter: " + selectedSession.getPresenterName());
+        
         String deviceId = android.provider.Settings.Secure.getString(
             getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+        
+        Logger.d(Logger.TAG_UI, "Device ID: " + deviceId);
         
         // Log AFTER validation and setting currentSessionId
         Logger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
             ", Student username: " + studentUsername + ", Reason: " + reason);
         serverLogger.attendance("Submitting Manual Request", "Session ID: " + currentSessionId + 
             ", Student username: " + studentUsername + ", Reason: " + reason);
+        
+        String apiBaseUrl = ApiClient.getInstance(this).getCurrentBaseUrl();
+        Logger.d(Logger.TAG_UI, "API Base URL: " + apiBaseUrl);
+        Logger.d(Logger.TAG_UI, "Full Endpoint URL: " + apiBaseUrl + "/attendance/manual");
+        
+        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+        Logger.d(Logger.TAG_UI, "REQUEST DETAILS");
+        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+        Logger.d(Logger.TAG_UI, "Method: POST");
+        Logger.d(Logger.TAG_UI, "Endpoint: /api/v1/attendance/manual");
+        Logger.d(Logger.TAG_UI, "Full URL: " + apiBaseUrl + "/attendance/manual");
+        Logger.d(Logger.TAG_UI, "Session ID: " + currentSessionId);
+        Logger.d(Logger.TAG_UI, "Student Username: '" + studentUsername + "'");
+        Logger.d(Logger.TAG_UI, "Reason: '" + reason + "'");
+        Logger.d(Logger.TAG_UI, "Device ID: " + deviceId);
+        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+        
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_UI, "MANUAL ATTENDANCE REQUEST - SUBMISSION | Session ID: " + currentSessionId + 
+                ", Student: " + studentUsername + ", Reason: " + reason);
+        }
+        
         Logger.api("POST", "api/v1/attendance/manual", 
             "Session ID: " + currentSessionId + ", Student username: " + studentUsername);
         serverLogger.api("POST", "api/v1/attendance/manual", 
             "Session ID: " + currentSessionId + ", Student username: " + studentUsername);
+        
         ApiService.CreateManualRequestRequest request = new ApiService.CreateManualRequestRequest(
             currentSessionId, studentUsername, reason, deviceId);
+        
+        Logger.d(Logger.TAG_UI, "Sending HTTP request to backend...");
+        long requestStartTime = System.currentTimeMillis();
         
         Call<ManualAttendanceResponse> call = apiService.createManualRequest(request);
         call.enqueue(new Callback<ManualAttendanceResponse>() {
             @Override
             public void onResponse(Call<ManualAttendanceResponse> call, Response<ManualAttendanceResponse> response) {
+                long requestDuration = System.currentTimeMillis() - requestStartTime;
+                Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                Logger.d(Logger.TAG_UI, "RESPONSE RECEIVED");
+                Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                Logger.d(Logger.TAG_UI, "Request Duration: " + requestDuration + "ms");
+                Logger.d(Logger.TAG_UI, "Response Code: " + response.code());
+                Logger.d(Logger.TAG_UI, "Response Message: " + response.message());
+                Logger.d(Logger.TAG_UI, "Is Successful: " + response.isSuccessful());
+                Logger.d(Logger.TAG_UI, "Has Body: " + (response.body() != null));
+                Logger.d(Logger.TAG_UI, "Has Error Body: " + (response.errorBody() != null));
+                Logger.d(Logger.TAG_UI, "Request URL: " + (call.request() != null ? call.request().url() : "NULL"));
+                Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                
+                if (serverLogger != null) {
+                    serverLogger.d(ServerLogger.TAG_UI, "RESPONSE RECEIVED | Duration: " + requestDuration + "ms, " +
+                        "Status Code: " + response.code() + ", Is Successful: " + response.isSuccessful());
+                }
+                
                 if (response.isSuccessful()) {
                     ManualAttendanceResponse attendance = response.body();
                     if (attendance != null) {
+                        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                        Logger.d(Logger.TAG_UI, "✅ SUCCESS - MANUAL REQUEST SUBMITTED");
+                        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                        Logger.d(Logger.TAG_UI, "Session ID: " + attendance.getSessionId() + " (Expected: " + currentSessionId + ", Match: " + (attendance.getSessionId() != null && attendance.getSessionId().equals(currentSessionId)) + ")");
+                        Logger.d(Logger.TAG_UI, "Student: " + attendance.getStudentUsername() + " (Expected: " + studentUsername + ", Match: " + (attendance.getStudentUsername() != null && attendance.getStudentUsername().equals(studentUsername)) + ")");
+                        Logger.d(Logger.TAG_UI, "Response Object: " + attendance.toString());
+                        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                        
                         Logger.attendance("Manual Request Submitted", "Student: " + studentUsername + 
                             ", Session: " + currentSessionId);
                         serverLogger.attendance("Manual Request Submitted", "Student: " + studentUsername + 
@@ -264,47 +436,148 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
                         serverLogger.flushLogs(); // Force send logs after successful submission
                         showSuccess("Manual attendance request submitted. Please wait for approval.");
                     } else {
+                        Logger.e(Logger.TAG_UI, "❌ ERROR: Response body is NULL");
+                        Logger.e(Logger.TAG_UI, "Response Code: " + response.code());
                         Logger.w(Logger.TAG_UI, "Invalid manual request response from server");
                         showError("Invalid response from server");
                     }
                 } else {
+                    Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                    Logger.e(Logger.TAG_UI, "❌ ERROR RESPONSE - MANUAL REQUEST FAILED");
+                    Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                    Logger.e(Logger.TAG_UI, "Session ID Submitted: " + currentSessionId);
+                    Logger.e(Logger.TAG_UI, "Student Username: " + studentUsername);
+                    Logger.e(Logger.TAG_UI, "Response Code: " + response.code());
+                    Logger.e(Logger.TAG_UI, "Response Message: " + response.message());
+                    Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                    
                     Logger.apiError("POST", "api/v1/attendance/manual", 
                         response.code(), "Failed to submit manual request");
                     // Send server-side error as well
                     serverLogger.apiError("POST", "api/v1/attendance/manual", response.code(), "Failed to submit manual request");
-                    handleManualRequestError(response.code());
+                    
+                    if (serverLogger != null) {
+                        serverLogger.e(ServerLogger.TAG_UI, "❌ ERROR RESPONSE - MANUAL REQUEST FAILED | " +
+                            "Session ID: " + currentSessionId + ", Student: " + studentUsername + ", Status Code: " + response.code());
+                    }
+                    
+                    // Try to extract error message from response body
+                    String errorBody = null;
+                    if (response.errorBody() != null) {
+                        try {
+                            errorBody = response.errorBody().string();
+                            Logger.e(Logger.TAG_UI, "───────────────────────────────────────────────────────────");
+                            Logger.e(Logger.TAG_UI, "ERROR RESPONSE BODY");
+                            Logger.e(Logger.TAG_UI, "───────────────────────────────────────────────────────────");
+                            Logger.e(Logger.TAG_UI, "Full Error Body: " + errorBody);
+                            Logger.e(Logger.TAG_UI, "───────────────────────────────────────────────────────────");
+                            
+                            if (serverLogger != null) {
+                                serverLogger.e(ServerLogger.TAG_UI, "ERROR RESPONSE BODY: " + errorBody);
+                                
+                                // Check for backend validation errors
+                                if (errorBody.contains("Session is not open") || 
+                                    errorBody.contains("status: CLOSED") || 
+                                    errorBody.contains("not open") ||
+                                    errorBody.contains("session is closed")) {
+                                    Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                                    Logger.e(Logger.TAG_UI, "🚨 BACKEND VALIDATION ERROR DETECTED");
+                                    Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                                    Logger.e(Logger.TAG_UI, "Session ID Submitted: " + currentSessionId);
+                                    Logger.e(Logger.TAG_UI, "Student Username: " + studentUsername);
+                                    Logger.e(Logger.TAG_UI, "Error: Session reported as 'not open' or 'CLOSED'");
+                                    Logger.e(Logger.TAG_UI, "⚠️  POSSIBLE BACKEND BUG:");
+                                    Logger.e(Logger.TAG_UI, "   Backend may be checking by slot_id instead of session_id");
+                                    Logger.e(Logger.TAG_UI, "   This prevents attendance to second session in same slot");
+                                    Logger.e(Logger.TAG_UI, "   See: docs/BACKEND_FIX_MULTIPLE_PRESENTERS_SESSION.md");
+                                    Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                                    
+                                    serverLogger.e(ServerLogger.TAG_UI, "🚨 BACKEND VALIDATION ERROR DETECTED | " +
+                                        "Session ID: " + currentSessionId + ", Student: " + studentUsername + 
+                                        ", ⚠️ POSSIBLE BACKEND BUG: Checking wrong session (slot_id vs session_id)");
+                                }
+                            }
+                        } catch (Exception e) {
+                            Logger.e(Logger.TAG_UI, "Failed to read error body", e);
+                        }
+                    }
+                    
+                    handleManualRequestError(response.code(), errorBody);
                 }
             }
             
             @Override
             public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
-                Logger.e(Logger.TAG_UI, "Manual request submission failed", t);
+                long requestDuration = System.currentTimeMillis() - requestStartTime;
+                Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                Logger.e(Logger.TAG_UI, "❌ NETWORK FAILURE - REQUEST DID NOT REACH SERVER");
+                Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                Logger.e(Logger.TAG_UI, "Request Duration: " + requestDuration + "ms");
+                Logger.e(Logger.TAG_UI, "Exception Type: " + t.getClass().getName());
+                Logger.e(Logger.TAG_UI, "Exception Message: " + t.getMessage());
+                Logger.e(Logger.TAG_UI, "Request URL: " + (call.request() != null ? call.request().url() : "NULL"));
+                Logger.e(Logger.TAG_UI, "Session ID: " + currentSessionId);
+                Logger.e(Logger.TAG_UI, "Student Username: '" + studentUsername + "'");
+                Logger.e(Logger.TAG_UI, "Stack trace:", t);
+                Logger.e(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                
                 // Forward to server error logger
-                serverLogger.e(Logger.TAG_UI, "Manual request submission failed", t);
-                serverLogger.flushLogs();
-                showError("Network error: " + t.getMessage());
+                if (serverLogger != null) {
+                    serverLogger.e(ServerLogger.TAG_UI, "❌ NETWORK FAILURE | Exception: " + t.getClass().getSimpleName() + 
+                        ", Message: " + t.getMessage() + ", Session ID: " + currentSessionId + ", Student: " + studentUsername, t);
+                    serverLogger.flushLogs();
+                }
+                
+                String errorMessage = getString(R.string.error_operation_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                showError(errorMessage);
             }
         });
     }
 
-    private void handleManualRequestError(int responseCode) {
-        switch (responseCode) {
-            case 400:
-                showError("Invalid request. Please check your information.");
-                break;
-            case 401:
-                showError("Server error. Please try again.");
-                break;
-            case 409:
-                showError("You have already submitted a request for this session.");
-                break;
-            case 404:
-                showError("Session not found or not accepting requests.");
-                break;
-            default:
-                showError("Failed to submit manual request. Please try again.");
-                break;
+    private void handleManualRequestError(int responseCode, String errorBody) {
+        String errorMessage = "Failed to submit manual request. Please try again.";
+        
+        // Check for specific error messages in response body
+        if (errorBody != null) {
+            if (errorBody.contains("Session is not open") || errorBody.contains("status: CLOSED") || errorBody.contains("not open")) {
+                errorMessage = "The selected session is no longer open. Please refresh and select a different session.";
+                // Auto-refresh the session list
+                checkForActiveSessions();
+            } else if (errorBody.contains("already attended") || errorBody.contains("already submitted")) {
+                errorMessage = "You have already submitted a request for this session.";
+            } else if (errorBody.contains("not found")) {
+                errorMessage = "Session not found or not accepting requests.";
+            }
         }
+        
+        // Fallback to status code-based messages
+        if (errorMessage.equals("Failed to submit manual request. Please try again.")) {
+            switch (responseCode) {
+                case 400:
+                    errorMessage = "Invalid request. Please check your information.";
+                    break;
+                case 401:
+                    errorMessage = "Server error. Please try again.";
+                    break;
+                case 409:
+                    errorMessage = "You have already submitted a request for this session.";
+                    break;
+                case 404:
+                    errorMessage = "Session not found or not accepting requests.";
+                    break;
+                case 422:
+                    errorMessage = "The selected session is no longer open. Please refresh and select a different session.";
+                    checkForActiveSessions();
+                    break;
+            }
+        }
+        
+        showError(errorMessage);
     }
 
     private void showSuccess(String message) {
@@ -321,6 +594,14 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         onBackPressed();
         return true;
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh session list when activity resumes to show newly opened sessions
+        Logger.d(Logger.TAG_UI, "ManualAttendanceRequestActivity resumed - refreshing session list");
+        checkForActiveSessions();
     }
     
     @Override
@@ -400,6 +681,9 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
         static class SessionViewHolder extends RecyclerView.ViewHolder {
             private final TextView textTitle;
             private final TextView textDate;
+            private final TextView textPresenter;
+            private final TextView textTimeRange;
+            private final TextView textDuration;
             private final TextView textDescription;
             private final TextView badgeStatus;
 
@@ -407,48 +691,98 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
                 super(itemView);
                 textTitle = itemView.findViewById(R.id.text_session_title);
                 textDate = itemView.findViewById(R.id.text_session_date);
+                textPresenter = itemView.findViewById(R.id.text_session_presenter);
+                textTimeRange = itemView.findViewById(R.id.text_session_time_range);
+                textDuration = itemView.findViewById(R.id.text_session_duration);
                 textDescription = itemView.findViewById(R.id.text_session_description);
                 badgeStatus = itemView.findViewById(R.id.badge_session_status);
             }
 
             void bind(Session session, int position, boolean selected, View.OnClickListener clickListener) {
                 // Format date and time nicely
-                String dateTimeStr = "Unknown date";
+                String dateStr = "Unknown date";
+                String dayOfWeek = "";
+                String timeStr = "Unknown time";
+                String timeRangeStr = "";
+                String durationStr = "";
+                
                 if (session.getStartTime() > 0) {
-                    java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("MMM dd, yyyy • HH:mm", java.util.Locale.getDefault());
-                    dateTimeStr = dateFormat.format(new java.util.Date(session.getStartTime()));
+                    java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault());
+                    java.text.SimpleDateFormat dayFormat = new java.text.SimpleDateFormat("EEEE", java.util.Locale.getDefault());
+                    java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault());
+                    
+                    java.util.Date startDate = new java.util.Date(session.getStartTime());
+                    dateStr = dateFormat.format(startDate);
+                    dayOfWeek = dayFormat.format(startDate);
+                    timeStr = timeFormat.format(startDate);
+                    
+                    // Build time range if end time is available
+                    if (session.getEndTime() != null && session.getEndTime() > 0) {
+                        String endTimeStr = timeFormat.format(new java.util.Date(session.getEndTime()));
+                        timeRangeStr = timeStr + " - " + endTimeStr;
+                        
+                        // Calculate duration
+                        long durationMs = session.getEndTime() - session.getStartTime();
+                        long durationHours = durationMs / (1000 * 60 * 60);
+                        long durationMinutes = (durationMs % (1000 * 60 * 60)) / (1000 * 60);
+                        
+                        if (durationHours > 0) {
+                            durationStr = durationHours + "h " + durationMinutes + "m";
+                        } else {
+                            durationStr = durationMinutes + "m";
+                        }
+                    } else {
+                        timeRangeStr = timeStr;
+                    }
                 }
 
-                // Set title - use seminar name if available, otherwise use a descriptive title
+                // Set title - use topic if available, otherwise use a default title
                 String title = "Seminar Session";
-                if (session.getSeminarId() != null) {
-                    title = "Seminar Session #" + session.getSeminarId();
+                if (session.getTopic() != null && !session.getTopic().trim().isEmpty()) {
+                    title = session.getTopic();
                 }
                 textTitle.setText(title);
 
-                // Set date/time
-                textDate.setText(dateTimeStr);
+                // Set date with day of week and time
+                StringBuilder dateTimeBuilder = new StringBuilder();
+                if (!dayOfWeek.isEmpty()) {
+                    dateTimeBuilder.append(dayOfWeek).append(", ");
+                }
+                dateTimeBuilder.append(dateStr);
+                if (!timeStr.isEmpty()) {
+                    dateTimeBuilder.append(" • ").append(timeStr);
+                }
+                textDate.setText(dateTimeBuilder.toString());
 
-                // Set description - show seminar ID and status if available
-                StringBuilder descriptionBuilder = new StringBuilder();
-                if (session.getSeminarId() != null) {
-                    descriptionBuilder.append("Seminar ID: ").append(session.getSeminarId());
-                }
-                if (session.getEndTime() != null && session.getEndTime() > 0) {
-                    if (descriptionBuilder.length() > 0) {
-                        descriptionBuilder.append(" • ");
-                    }
-                    java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault());
-                    String endTime = timeFormat.format(new java.util.Date(session.getEndTime()));
-                    descriptionBuilder.append("Until ").append(endTime);
-                }
-                
-                if (descriptionBuilder.length() > 0) {
-                    textDescription.setText(descriptionBuilder.toString());
-                    textDescription.setVisibility(View.VISIBLE);
+                // Set presenter name on separate line
+                if (session.getPresenterName() != null && !session.getPresenterName().trim().isEmpty()) {
+                    textPresenter.setText("Presenter: " + session.getPresenterName());
+                    textPresenter.setVisibility(View.VISIBLE);
                 } else {
-                    textDescription.setVisibility(View.GONE);
+                    textPresenter.setVisibility(View.GONE);
                 }
+
+                // Set time range if available
+                if (!timeRangeStr.isEmpty() && session.getEndTime() != null && session.getEndTime() > 0) {
+                    textTimeRange.setText("Time: " + timeRangeStr);
+                    textTimeRange.setVisibility(View.VISIBLE);
+                } else if (!timeStr.isEmpty()) {
+                    textTimeRange.setText("Time: " + timeStr);
+                    textTimeRange.setVisibility(View.VISIBLE);
+                } else {
+                    textTimeRange.setVisibility(View.GONE);
+                }
+
+                // Set duration if available
+                if (!durationStr.isEmpty()) {
+                    textDuration.setText("Duration: " + durationStr);
+                    textDuration.setVisibility(View.VISIBLE);
+                } else {
+                    textDuration.setVisibility(View.GONE);
+                }
+
+                // Hide description
+                textDescription.setVisibility(View.GONE);
 
                 // Set status badge
                 String status = session.getStatus() != null ? session.getStatus() : "OPEN";

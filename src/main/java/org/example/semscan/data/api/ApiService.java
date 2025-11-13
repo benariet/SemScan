@@ -127,6 +127,13 @@ public interface ApiService {
     Call<User> upsertUser(@Body UserProfileUpdateRequest request);
 
     // =============================
+    // Test Email
+    // =============================
+
+    @POST("api/v1/mail/send")
+    Call<TestEmailResponse> sendTestEmail(@Body TestEmailRequest request);
+
+    // =============================
     // Export
     // =============================
 
@@ -254,13 +261,15 @@ public interface ApiService {
         public String topic;
         public String supervisorName;
         public String supervisorEmail;
+        public String presenterEmail; // Presenter's email for sending notification
 
         public PresenterRegisterRequest() {}
 
-        public PresenterRegisterRequest(String topic, String supervisorName, String supervisorEmail) {
+        public PresenterRegisterRequest(String topic, String supervisorName, String supervisorEmail, String presenterEmail) {
             this.topic = topic;
             this.supervisorName = supervisorName;
             this.supervisorEmail = supervisorEmail;
+            this.presenterEmail = presenterEmail;
         }
     }
 
@@ -373,19 +382,57 @@ public interface ApiService {
         public String lastName;
         public String degree;
         public String participationPreference;
+        public String nationalIdNumber; // Optional - National ID number
 
         public UserProfileUpdateRequest(String bguUsername,
                                         String email,
                                         String firstName,
                                         String lastName,
                                         String degree,
-                                        String participationPreference) {
+                                        String participationPreference,
+                                        String nationalIdNumber) {
             this.bguUsername = bguUsername == null ? null : bguUsername.trim().toLowerCase();
             this.email = email;
             this.firstName = firstName;
             this.lastName = lastName;
             this.degree = degree;
             this.participationPreference = participationPreference;
+            this.nationalIdNumber = nationalIdNumber != null && !nationalIdNumber.trim().isEmpty() ? nationalIdNumber.trim() : null;
         }
+    }
+
+    class TestEmailRequest {
+        public String to;
+        public String subject;
+        public String htmlContent;
+        public String plainTextContent;
+        // File attachment support (base64 encoded)
+        public String attachmentFileName;
+        public String attachmentContentType;
+        public String attachmentBase64; // Base64 encoded file content
+
+        public TestEmailRequest() {}
+
+        public TestEmailRequest(String to, String subject, String htmlContent) {
+            this.to = to;
+            this.subject = subject;
+            this.htmlContent = htmlContent;
+        }
+        
+        public TestEmailRequest(String to, String subject, String htmlContent, 
+                               String attachmentFileName, String attachmentContentType, String attachmentBase64) {
+            this.to = to;
+            this.subject = subject;
+            this.htmlContent = htmlContent;
+            this.attachmentFileName = attachmentFileName;
+            this.attachmentContentType = attachmentContentType;
+            this.attachmentBase64 = attachmentBase64;
+        }
+    }
+
+    class TestEmailResponse {
+        public boolean success;
+        public String message;
+        public String code;
     }
 }

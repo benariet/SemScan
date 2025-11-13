@@ -27,6 +27,8 @@ import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.utils.ToastUtils;
 
+import com.google.gson.JsonParser;
+
 import java.util.List;
 
 import java.io.File;
@@ -86,13 +88,41 @@ public class ExportActivity extends AppCompatActivity {
         sessionPresenter = getIntent().getStringExtra("sessionPresenter");
         sessionTopic = getIntent().getStringExtra("sessionTopic");
         
-        // Display the session ID
-        if (currentSessionId != null && currentSessionId > 0) {
-            textSessionId.setText(String.valueOf(currentSessionId));
-            Logger.d(Logger.TAG_UI, "Export activity initialized with session ID: " + currentSessionId);
+        // Display session details (without Session ID)
+        StringBuilder sessionDetails = new StringBuilder();
+        if (sessionDate != null && !sessionDate.isEmpty()) {
+            sessionDetails.append("Date: ").append(sessionDate);
+        }
+        if (sessionTimeSlot != null && !sessionTimeSlot.isEmpty()) {
+            if (sessionDetails.length() > 0) {
+                sessionDetails.append("\n");
+            }
+            // Extract just the time part if it contains date
+            String timePart = sessionTimeSlot;
+            if (sessionTimeSlot.contains(" ")) {
+                timePart = sessionTimeSlot.split(" ")[1]; // Get time part after space
+            }
+            sessionDetails.append("Time: ").append(timePart);
+        }
+        if (sessionPresenter != null && !sessionPresenter.isEmpty()) {
+            if (sessionDetails.length() > 0) {
+                sessionDetails.append("\n");
+            }
+            sessionDetails.append("Presenter: ").append(sessionPresenter);
+        }
+        if (sessionTopic != null && !sessionTopic.isEmpty()) {
+            if (sessionDetails.length() > 0) {
+                sessionDetails.append("\n");
+            }
+            sessionDetails.append("Topic: ").append(sessionTopic);
+        }
+        
+        if (sessionDetails.length() > 0) {
+            textSessionId.setText(sessionDetails.toString());
+            Logger.d(Logger.TAG_UI, "Export activity initialized with session details");
         } else {
             textSessionId.setText("No session data available");
-            Logger.e(Logger.TAG_UI, "No session ID provided in intent");
+            Logger.e(Logger.TAG_UI, "No session details provided in intent");
         }
     }
     
@@ -199,7 +229,13 @@ public class ExportActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<List<ManualAttendanceResponse>> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to check pending requests", t);
-                ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
+                String errorMessage = getString(R.string.error_load_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                ToastUtils.showError(ExportActivity.this, errorMessage);
             }
         });
     }
@@ -352,7 +388,13 @@ public class ExportActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to approve request", t);
-                ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
+                String errorMessage = getString(R.string.error_operation_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                ToastUtils.showError(ExportActivity.this, errorMessage);
             }
         });
     }
@@ -386,7 +428,13 @@ public class ExportActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<ManualAttendanceResponse> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Failed to reject request", t);
-                ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
+                String errorMessage = getString(R.string.error_operation_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                ToastUtils.showError(ExportActivity.this, errorMessage);
             }
         });
     }
@@ -459,9 +507,11 @@ public class ExportActivity extends AppCompatActivity {
                         
                         Logger.i(Logger.TAG_UI, "Export completed successfully - Session: " + sessionId);
                         Toast.makeText(ExportActivity.this, "Export successful", Toast.LENGTH_SHORT).show();
+                        
+                        // Note: Navigation to home happens after email sending completes
                     } catch (IOException e) {
                         Logger.e(Logger.TAG_UI, "Failed to save export file", e);
-                        Toast.makeText(ExportActivity.this, "Failed to save file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(ExportActivity.this, R.string.error_file_save_failed, Toast.LENGTH_SHORT).show();
                     }
                 } else {
                     // Parse error response body for detailed error message
@@ -485,64 +535,359 @@ public class ExportActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 Logger.e(Logger.TAG_UI, "Export network failure", t);
-                ToastUtils.showError(ExportActivity.this, "Network error: " + t.getMessage());
+                String errorMessage = getString(R.string.error_export_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                ToastUtils.showError(ExportActivity.this, errorMessage);
             }
         });
     }
     
     private void shareFile(File file, String mimeType) {
-        Logger.i(Logger.TAG_UI, "Sending export file via email: " + file.getName() + " (" + mimeType + ")");
+        Logger.i(Logger.TAG_UI, "Sending export file via email automatically: " + file.getName() + " (" + mimeType + ")");
         
         try {
-            // Use FileProvider for secure file sharing
-            Uri fileUri = FileProvider.getUriForFile(this, 
-                "org.example.semscan.fileprovider", file);
+            // Read file content using try-with-resources to ensure FileInputStream is always closed
+            byte[] fileBytes = new byte[(int) file.length()];
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(file)) {
+                fis.read(fileBytes);
+            }
             
-            // Create email intent with specific recipients
-            Intent emailIntent = new Intent(Intent.ACTION_SEND);
-            emailIntent.setType("message/rfc822"); // Email MIME type
+            // Build email content
+            String subject = "SemScan Attendance Export - Session " + currentSessionId;
+            String htmlContent = buildExportEmailHtml(file, fileBytes, mimeType);
             
             // Parse multiple email recipients (comma-separated)
             String[] recipients = ApiConstants.EXPORT_EMAIL_RECIPIENTS.split(",");
-            // Trim whitespace from each email address
-            for (int i = 0; i < recipients.length; i++) {
-                recipients[i] = recipients[i].trim();
-            }
-            emailIntent.putExtra(Intent.EXTRA_EMAIL, recipients);
-            emailIntent.putExtra(Intent.EXTRA_SUBJECT, "SemScan Attendance Export - Session " + currentSessionId);
             
-            // Build email body with session details
-            StringBuilder emailBody = new StringBuilder();
-            emailBody.append("Attendance data export from SemScan\n\n");
-            emailBody.append("Session ID: ").append(currentSessionId).append("\n");
-            if (sessionDate != null) {
-                emailBody.append("Date: ").append(sessionDate).append("\n");
-            }
-            if (sessionTimeSlot != null) {
-                emailBody.append("Time Slot: ").append(sessionTimeSlot).append("\n");
-            }
-            if (sessionPresenter != null) {
-                emailBody.append("Presenter: ").append(sessionPresenter).append("\n");
-            }
-            emailBody.append("\nPlease find the attendance export file attached.");
-            
-            emailIntent.putExtra(Intent.EXTRA_TEXT, emailBody.toString());
-            emailIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
-            emailIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            
-            // Only show email apps, not all sharing apps
-            try {
-                startActivity(Intent.createChooser(emailIntent, "Send attendance export via email"));
-                Logger.i(Logger.TAG_UI, "Email intent launched successfully");
-            } catch (android.content.ActivityNotFoundException e) {
-                // No email app found
-                Logger.e(Logger.TAG_UI, "No email app found on device", e);
-                Toast.makeText(this, "No email app found. Please install an email app to send the export.", Toast.LENGTH_LONG).show();
-            }
+            // Send email to each recipient via backend API with file attachment
+            sendExportEmailToRecipients(recipients, subject, htmlContent, file, fileBytes, mimeType);
             
         } catch (Exception e) {
             Logger.e(Logger.TAG_UI, "Failed to send file via email", e);
-            Toast.makeText(this, "Failed to send email: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.error_email_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void sendExportEmailToRecipients(String[] recipients, String subject, String htmlContent, 
+                                            File file, byte[] fileBytes, String mimeType) {
+        ApiService apiService = ApiClient.getInstance(this).getApiService();
+        
+        // Filter out empty recipients
+        java.util.List<String> validRecipients = new java.util.ArrayList<>();
+        for (String recipient : recipients) {
+            String email = recipient.trim();
+            if (!email.isEmpty()) {
+                validRecipients.add(email);
+            }
+        }
+        
+        if (validRecipients.isEmpty()) {
+            Toast.makeText(this, "No email recipients configured", Toast.LENGTH_LONG).show();
+            Logger.w(Logger.TAG_UI, "No valid email recipients found in EXPORT_EMAIL_RECIPIENTS");
+            return;
+        }
+        
+        // Show progress
+        Toast.makeText(this, "Sending export email...", Toast.LENGTH_SHORT).show();
+        
+        // Encode file as base64 for attachment (do this once, outside the loop)
+        final String base64File = android.util.Base64.encodeToString(fileBytes, android.util.Base64.NO_WRAP);
+        final String fileName = file.getName();
+        final String contentType = mimeType;
+        
+        // Track results
+        final int[] successCount = {0};
+        final int[] failCount = {0};
+        final int totalRecipients = validRecipients.size();
+        final int[] completedCount = {0};
+        
+        // Send to each recipient asynchronously
+        for (String recipient : validRecipients) {
+            final String email = recipient;
+            
+            ApiService.TestEmailRequest request = new ApiService.TestEmailRequest(
+                email,
+                subject,
+                htmlContent,
+                fileName,      // attachmentFileName
+                contentType,   // attachmentContentType
+                base64File    // attachmentBase64
+            );
+            
+            apiService.sendTestEmail(request).enqueue(new Callback<ApiService.TestEmailResponse>() {
+                @Override
+                public void onResponse(Call<ApiService.TestEmailResponse> call, Response<ApiService.TestEmailResponse> response) {
+                    completedCount[0]++;
+                    
+                    if (response.isSuccessful() && response.body() != null && response.body().success) {
+                        successCount[0]++;
+                        Logger.i(Logger.TAG_API, "Export email sent successfully to: " + email);
+                    } else {
+                        failCount[0]++;
+                        String errorMessage = "Email sending failed";
+                        
+                        // Try to extract error message from response
+                        if (response.body() != null && response.body().message != null) {
+                            errorMessage = response.body().message;
+                        } else if (response.errorBody() != null) {
+                            try {
+                                String errorBody = response.errorBody().string();
+                                if (errorBody != null && !errorBody.trim().isEmpty()) {
+                                    // Try to parse JSON error response
+                                    try {
+                                        JsonParser parser = new JsonParser();
+                                        com.google.gson.JsonObject jsonObject = parser.parse(errorBody).getAsJsonObject();
+                                        if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
+                                            errorMessage = jsonObject.get("message").getAsString();
+                                        }
+                                    } catch (Exception e) {
+                                        // If JSON parsing fails, use raw error body (truncated)
+                                        errorMessage = errorBody.length() > 150 ? errorBody.substring(0, 150) + "..." : errorBody;
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Logger.e(Logger.TAG_API, "Failed to read error body", e);
+                            }
+                        }
+                        
+                        // Check for authentication errors specifically
+                        if (errorMessage.toLowerCase().contains("authentication") || 
+                            errorMessage.toLowerCase().contains("username and password not accepted") ||
+                            errorMessage.toLowerCase().contains("badcredentials")) {
+                            errorMessage = "Email server authentication failed. Please check SMTP credentials in backend configuration.";
+                        }
+                        
+                        Logger.e(Logger.TAG_API, "Failed to send export email to: " + email + ", code: " + response.code() + ", error: " + errorMessage);
+                        
+                        // Store error message for final toast
+                        final String finalErrorMessage = errorMessage;
+                        if (completedCount[0] >= totalRecipients) {
+                            runOnUiThread(() -> {
+                                if (failCount[0] == totalRecipients) {
+                                    // All failed - show specific error
+                                    Toast.makeText(ExportActivity.this, 
+                                        "Email sending failed: " + finalErrorMessage, 
+                                        Toast.LENGTH_LONG).show();
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Show result when all emails are sent
+                    if (completedCount[0] >= totalRecipients) {
+                        runOnUiThread(() -> {
+                            if (successCount[0] > 0 && failCount[0] == 0) {
+                                Toast.makeText(ExportActivity.this, 
+                                    "Export email sent successfully to " + successCount[0] + " recipient(s)", 
+                                    Toast.LENGTH_LONG).show();
+                            } else if (successCount[0] > 0) {
+                                Toast.makeText(ExportActivity.this, 
+                                    "Export email sent to " + successCount[0] + " recipient(s), " + failCount[0] + " failed", 
+                                    Toast.LENGTH_LONG).show();
+                            }
+                            // If all failed, error message was already shown above
+                            
+                            // Navigate to home after email sending completes (regardless of success/failure)
+                            navigateToHome();
+                        });
+                    }
+                }
+                
+                @Override
+                public void onFailure(Call<ApiService.TestEmailResponse> call, Throwable t) {
+                    completedCount[0]++;
+                    failCount[0]++;
+                    Logger.e(Logger.TAG_API, "Error sending export email to: " + email, t);
+                    
+                    // Show result when all emails are sent
+                    if (completedCount[0] >= totalRecipients) {
+                        runOnUiThread(() -> {
+                            if (successCount[0] > 0 && failCount[0] == 0) {
+                                Toast.makeText(ExportActivity.this, 
+                                    "Export email sent successfully to " + successCount[0] + " recipient(s)", 
+                                    Toast.LENGTH_LONG).show();
+                            } else if (successCount[0] > 0) {
+                                Toast.makeText(ExportActivity.this, 
+                                    "Export email sent to " + successCount[0] + " recipient(s), " + failCount[0] + " failed", 
+                                    Toast.LENGTH_LONG).show();
+                            } else {
+                                String errorMsg = getString(R.string.error_email_failed);
+                                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                                    errorMsg = getString(R.string.error_network_timeout);
+                                } else if (t instanceof java.net.UnknownHostException) {
+                                    errorMsg = getString(R.string.error_server_unavailable);
+                                }
+                                Toast.makeText(ExportActivity.this, 
+                                    "Failed to send export email: " + errorMsg, 
+                                    Toast.LENGTH_LONG).show();
+                            }
+                            
+                            // Navigate to home after email sending completes (regardless of success/failure)
+                            navigateToHome();
+                        });
+                    }
+                }
+            });
+        }
+    }
+    
+    private String buildExportEmailHtml(File file, byte[] fileBytes, String mimeType) {
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html>");
+        html.append("<head>");
+        html.append("<meta charset=\"UTF-8\">");
+        html.append("<style>");
+        html.append("body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }");
+        html.append(".container { max-width: 800px; margin: 0 auto; padding: 20px; }");
+        html.append(".header { background-color: #2196F3; color: white; padding: 20px; text-align: center; }");
+        html.append(".content { padding: 20px; background-color: #f9f9f9; }");
+        html.append(".details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #2196F3; }");
+        html.append(".data-table { width: 100%; border-collapse: collapse; margin: 20px 0; background-color: white; }");
+        html.append(".data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }");
+        html.append(".data-table th { background-color: #2196F3; color: white; }");
+        html.append(".data-table tr:nth-child(even) { background-color: #f2f2f2; }");
+        html.append(".footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }");
+        html.append("</style>");
+        html.append("</head>");
+        html.append("<body>");
+        html.append("<div class=\"container\">");
+        html.append("<div class=\"header\">");
+        html.append("<h1>SemScan Attendance Export</h1>");
+        html.append("</div>");
+        html.append("<div class=\"content\">");
+        html.append("<p>Hello,</p>");
+        html.append("<p>Please find the attendance data export below.</p>");
+        
+        // Session details
+        html.append("<div class=\"details\">");
+        html.append("<h3>Session Details:</h3>");
+        html.append("<ul>");
+        html.append("<li><strong>Session ID:</strong> ").append(currentSessionId).append("</li>");
+        if (sessionDate != null) {
+            html.append("<li><strong>Date:</strong> ").append(sessionDate).append("</li>");
+        }
+        if (sessionTimeSlot != null) {
+            html.append("<li><strong>Time Slot:</strong> ").append(sessionTimeSlot).append("</li>");
+        }
+        if (sessionPresenter != null) {
+            html.append("<li><strong>Presenter:</strong> ").append(sessionPresenter).append("</li>");
+        }
+        html.append("<li><strong>File:</strong> ").append(file.getName()).append("</li>");
+        html.append("<li><strong>Format:</strong> ").append(mimeType.contains("csv") ? "CSV" : "Excel (XLSX)").append("</li>");
+        html.append("</ul>");
+        html.append("</div>");
+        
+        // File attachment note
+        html.append("<div class=\"details\">");
+        html.append("<h3>File Attachment:</h3>");
+        html.append("<p>The attendance export file is attached to this email.</p>");
+        html.append("<p style=\"color: #666; font-size: 12px;\">File: ").append(escapeHtml(file.getName())).append(" (").append(formatFileSize(fileBytes.length)).append(")</p>");
+        html.append("</div>");
+        
+        // File content preview (for CSV only)
+        if (mimeType.contains("csv")) {
+            // Convert CSV to HTML table for preview
+            String csvContent = new String(fileBytes, java.nio.charset.StandardCharsets.UTF_8);
+            html.append("<h3>Attendance Data Preview:</h3>");
+            html.append("<p style=\"color: #666; font-size: 12px;\">(Full data available in attached file)</p>");
+            html.append(convertCsvToHtmlTable(csvContent));
+        } else {
+            // For XLSX, just show a note
+            html.append("<div class=\"details\">");
+            html.append("<p><strong>Note:</strong> Excel file (XLSX) export is available. The file contains ").append(formatFileSize(fileBytes.length)).append(" of data.</p>");
+            html.append("<p>Please download the attached file to view the complete attendance data.</p>");
+            html.append("</div>");
+        }
+        
+        html.append("</div>");
+        html.append("<div class=\"footer\">");
+        html.append("<p>This is an automated message from SemScan System.</p>");
+        html.append("<p>Please do not reply to this email.</p>");
+        html.append("</div>");
+        html.append("</div>");
+        html.append("</body>");
+        html.append("</html>");
+        
+        return html.toString();
+    }
+    
+    private String convertCsvToHtmlTable(String csvContent) {
+        if (csvContent == null || csvContent.trim().isEmpty()) {
+            return "<p>No data available.</p>";
+        }
+        
+        StringBuilder table = new StringBuilder();
+        table.append("<table class=\"data-table\">");
+        
+        String[] lines = csvContent.split("\n");
+        boolean isFirstLine = true;
+        
+        for (String line : lines) {
+            if (line.trim().isEmpty()) continue;
+            
+            table.append("<tr>");
+            
+            // Split by comma (handle quoted values)
+            String[] cells = parseCsvLine(line);
+            
+            for (String cell : cells) {
+                String tag = isFirstLine ? "th" : "td";
+                // Escape HTML and trim
+                String cellContent = escapeHtml(cell.trim());
+                table.append("<").append(tag).append(">").append(cellContent).append("</").append(tag).append(">");
+            }
+            
+            table.append("</tr>");
+            isFirstLine = false;
+        }
+        
+        table.append("</table>");
+        return table.toString();
+    }
+    
+    private String[] parseCsvLine(String line) {
+        java.util.List<String> cells = new java.util.ArrayList<>();
+        boolean inQuotes = false;
+        StringBuilder currentCell = new StringBuilder();
+        
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                cells.add(currentCell.toString());
+                currentCell = new StringBuilder();
+            } else {
+                currentCell.append(c);
+            }
+        }
+        cells.add(currentCell.toString());
+        
+        return cells.toArray(new String[0]);
+    }
+    
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("'", "&#39;");
+    }
+    
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " bytes";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.2f KB", bytes / 1024.0);
+        } else {
+            return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
         }
     }
     
@@ -567,6 +912,16 @@ public class ExportActivity extends AppCompatActivity {
             Logger.d("ExportActivity", "Pending request - ID: " + req.getAttendanceId() + 
                       ", Student: " + req.getStudentUsername() + ", Reason: " + req.getReason());
         }
+    }
+    
+    /**
+     * Navigate to presenter home page
+     */
+    private void navigateToHome() {
+        Intent intent = new Intent(ExportActivity.this, PresenterHomeActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
     
     /**

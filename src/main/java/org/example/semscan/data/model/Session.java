@@ -62,6 +62,12 @@ public class Session {
     
     private String status; // "open" or "closed"
     
+    @SerializedName(value = "topic", alternate = {"seminarTopic"})
+    private String topic;
+    
+    @SerializedName(value = "presenter_name", alternate = {"presenterName", "presenter"})
+    private String presenterName;
+    
     public Session() {}
     
     public Session(Long sessionId, Long seminarId, long startTime, Long endTime, String status) {
@@ -111,6 +117,22 @@ public class Session {
     
     public void setStatus(String status) {
         this.status = status;
+    }
+    
+    public String getTopic() {
+        return topic;
+    }
+    
+    public void setTopic(String topic) {
+        this.topic = topic;
+    }
+    
+    public String getPresenterName() {
+        return presenterName;
+    }
+    
+    public void setPresenterName(String presenterName) {
+        this.presenterName = presenterName;
     }
     
     public boolean isOpen() {

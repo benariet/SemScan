@@ -32,15 +32,6 @@
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="@color/gray_800"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/role_description"
-        android:textSize="16sp"
-        android:textColor="@color/gray_600"
-        android:gravity="center"
         android:layout_marginBottom="48dp" />
 
     <!-- Role Selection Cards -->

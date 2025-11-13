@@ -58,6 +58,9 @@ public class Attendance {
     @SerializedName("topic")
     private String topic; // Seminar topic
     
+    @SerializedName("nationalId")
+    private String nationalId; // National ID number
+    
     public Attendance() {}
     
     public Attendance(Long attendanceId, Long sessionId, String studentUsername, String attendanceTime, String method) {
@@ -229,6 +232,14 @@ public class Attendance {
     
     public void setTopic(String topic) {
         this.topic = topic;
+    }
+    
+    public String getNationalId() {
+        return nationalId;
+    }
+    
+    public void setNationalId(String nationalId) {
+        this.nationalId = nationalId;
     }
     
     // Utility methods for manual requests

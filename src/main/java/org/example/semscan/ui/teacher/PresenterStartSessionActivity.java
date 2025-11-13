@@ -19,8 +19,12 @@ import com.google.android.material.button.MaterialButton;
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
+import org.example.semscan.data.model.Session;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.ServerLogger;
+
+import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -45,6 +49,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
 
     private PreferencesManager preferencesManager;
     private ApiService apiService;
+    private ServerLogger serverLogger;
 
     private ApiService.MySlotSummary currentSlot;
     private ApiService.AttendancePanel currentAttendance;
@@ -57,6 +62,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
 
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
+        serverLogger = ServerLogger.getInstance(this);
 
         setupToolbar();
         initializeViews();
@@ -174,13 +180,157 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
             return;
         }
 
-        if (currentAttendance != null && currentAttendance.alreadyOpen && !TextUtils.isEmpty(currentAttendance.openQrUrl)) {
-            openAttendanceQr(currentAttendance.openQrUrl, currentAttendance.qrPayload,
-                    currentAttendance.openedAt, currentAttendance.closesAt, currentAttendance.sessionId);
-            return;
+        // Frontend validation: Check if another presenter has an open session for this slot
+        // This is a workaround for backend bug where it doesn't properly check for other presenters' sessions
+        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+        Logger.d(Logger.TAG_UI, "ATTEMPTING TO OPEN SESSION");
+        Logger.d(Logger.TAG_UI, "Presenter: " + normalizedUsername);
+        Logger.d(Logger.TAG_UI, "Slot ID: " + currentSlot.slotId);
+        Logger.d(Logger.TAG_UI, "Slot Time: " + currentSlot.timeRange);
+        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+        
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_UI, "ATTEMPTING TO OPEN SESSION | Presenter: " + normalizedUsername + 
+                ", Slot ID: " + currentSlot.slotId + ", Slot Time: " + currentSlot.timeRange);
         }
 
+        // Check for other presenters' open sessions before opening
+        checkForOtherPresentersSessions();
+    }
+    
+    private void checkForOtherPresentersSessions() {
+        // Query all open sessions to check if another presenter has an open session for this slot
+        apiService.getOpenSessions().enqueue(new Callback<List<Session>>() {
+            @Override
+            public void onResponse(Call<List<Session>> call, Response<List<Session>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Session> openSessions = response.body();
+                    String currentPresenterName = preferencesManager.getUserName();
+                    
+                    Logger.d(Logger.TAG_UI, "Checking " + openSessions.size() + " open sessions for conflicts");
+                    
+                    // Check if any open session has the same time range and different presenter
+                    boolean foundConflict = false;
+                    Session conflictingSession = null;
+                    
+                    for (Session session : openSessions) {
+                        if (session == null || !"OPEN".equalsIgnoreCase(session.getStatus())) {
+                            continue;
+                        }
+                        
+                        // Check if session time matches slot time (same slot)
+                        boolean timeMatches = false;
+                        if (currentSlot.timeRange != null && session.getStartTime() > 0) {
+                            // Parse slot time range (e.g., "00:01-23:59")
+                            String[] slotTimes = currentSlot.timeRange.split("-");
+                            if (slotTimes.length == 2) {
+                                try {
+                                    java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault());
+                                    java.text.SimpleDateFormat dateTimeFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault());
+                                    
+                                    // Get session start time
+                                    java.util.Date sessionDate = new java.util.Date(session.getStartTime());
+                                    String sessionTime = timeFormat.format(sessionDate);
+                                    
+                                    // Check if session time is within slot time range
+                                    String slotStart = slotTimes[0].trim();
+                                    String slotEnd = slotTimes[1].trim();
+                                    
+                                    // Simple time comparison (HH:mm format)
+                                    if (sessionTime.compareTo(slotStart) >= 0 && sessionTime.compareTo(slotEnd) <= 0) {
+                                        timeMatches = true;
+                                    }
+                                } catch (Exception e) {
+                                    Logger.w(Logger.TAG_UI, "Failed to parse time for conflict check: " + e.getMessage());
+                                }
+                            }
+                        }
+                        
+                        // Check if presenter is different
+                        boolean differentPresenter = false;
+                        if (session.getPresenterName() != null && currentPresenterName != null) {
+                            String sessionPresenter = session.getPresenterName().trim().toLowerCase();
+                            String currentPresenter = currentPresenterName.trim().toLowerCase();
+                            differentPresenter = !sessionPresenter.equals(currentPresenter);
+                        }
+                        
+                        if (timeMatches && differentPresenter) {
+                            foundConflict = true;
+                            conflictingSession = session;
+                            Logger.e(Logger.TAG_UI, "⚠️ CONFLICT DETECTED: Another presenter has an open session!");
+                            Logger.e(Logger.TAG_UI, "  Conflicting Session ID: " + session.getSessionId());
+                            Logger.e(Logger.TAG_UI, "  Conflicting Presenter: " + session.getPresenterName());
+                            Logger.e(Logger.TAG_UI, "  Current Presenter: " + currentPresenterName);
+                            Logger.e(Logger.TAG_UI, "  Slot ID: " + currentSlot.slotId);
+                            
+                            if (serverLogger != null) {
+                                serverLogger.e(ServerLogger.TAG_UI, "🚨 FRONTEND VALIDATION: CONFLICT DETECTED | " +
+                                    "Another presenter (" + session.getPresenterName() + ") has an OPEN session (ID: " + 
+                                    session.getSessionId() + ") for the same slot (Slot ID: " + currentSlot.slotId + 
+                                    "). Backend should return IN_PROGRESS but may not. Proceeding with backend call for validation.");
+                            }
+                            break;
+                        }
+                    }
+                    
+                    if (foundConflict && conflictingSession != null) {
+                        // BLOCK: Another presenter has an open session - don't allow opening
+                        final Session conflictSession = conflictingSession; // Make final for lambda
+                        final String conflictPresenterName = conflictSession.getPresenterName() != null ? 
+                            conflictSession.getPresenterName() : "Unknown";
+                        final Long conflictSessionId = conflictSession.getSessionId();
+                        
+                        Logger.e(Logger.TAG_UI, "❌ BLOCKED: Frontend detected conflict - another presenter has open session");
+                        if (serverLogger != null) {
+                            serverLogger.e(ServerLogger.TAG_UI, "🚨 FRONTEND BLOCKED SESSION OPEN | " +
+                                "Another presenter (" + conflictPresenterName + ") has an OPEN session (ID: " + 
+                                conflictSessionId + ") for this slot. Backend should have returned IN_PROGRESS but didn't. " +
+                                "Frontend is blocking to prevent duplicate sessions.");
+                        }
+                        
+                        // Show error dialog and block
+                        runOnUiThread(() -> {
+                            showErrorDialog(
+                                getString(R.string.presenter_start_session_error_in_progress),
+                                getString(R.string.presenter_start_session_error_in_progress_message) + 
+                                    "\n\nDetected open session by: " + conflictPresenterName + 
+                                    " (Session ID: " + conflictSessionId + ")"
+                            );
+                        });
+                        return; // Don't proceed to backend
+                    }
+                } else {
+                    Logger.w(Logger.TAG_UI, "Failed to check for conflicting sessions: " + (response.code()));
+                }
+                
+                // No conflict detected - proceed to backend call
+                proceedWithOpenSession();
+            }
+            
+            @Override
+            public void onFailure(Call<List<Session>> call, Throwable t) {
+                Logger.w(Logger.TAG_UI, "Failed to check for conflicting sessions, proceeding anyway: " + t.getMessage());
+                // Proceed anyway - backend should validate
+                proceedWithOpenSession();
+            }
+        });
+    }
+    
+    private void proceedWithOpenSession() {
+        // Always call the API to open/create session - don't rely on cached attendance data
+        // because it might be from another presenter's session in the same slot.
+        // The backend will return the correct state (OPENED, ALREADY_OPEN for this presenter, or IN_PROGRESS for another presenter)
         setLoading(true);
+        
+        Logger.d(Logger.TAG_UI, "Calling backend to open session: POST /api/v1/presenters/" + normalizedUsername + 
+            "/home/slots/" + currentSlot.slotId + "/attendance/open");
+        
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_UI, "CALLING BACKEND: POST /api/v1/presenters/" + normalizedUsername + 
+                "/home/slots/" + currentSlot.slotId + "/attendance/open | " +
+                "Expected: Backend should return IN_PROGRESS if another presenter has open session");
+        }
+        
         apiService.openPresenterAttendance(normalizedUsername, currentSlot.slotId)
                 .enqueue(new Callback<ApiService.PresenterAttendanceOpenResponse>() {
                     @Override
@@ -235,6 +385,29 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
 
                         ApiService.PresenterAttendanceOpenResponse body = response.body();
                         String code = body.code != null ? body.code : "";
+                        
+                        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                        Logger.d(Logger.TAG_UI, "BACKEND RESPONSE RECEIVED");
+                        Logger.d(Logger.TAG_UI, "Response Code: " + code);
+                        Logger.d(Logger.TAG_UI, "Session ID: " + body.sessionId);
+                        Logger.d(Logger.TAG_UI, "Message: " + body.message);
+                        Logger.d(Logger.TAG_UI, "═══════════════════════════════════════════════════════════");
+                        
+                        if (serverLogger != null) {
+                            serverLogger.d(ServerLogger.TAG_UI, "BACKEND RESPONSE | Code: " + code + 
+                                ", Session ID: " + body.sessionId + ", Message: " + body.message);
+                        }
+                        
+                        // CRITICAL: If backend returns OPENED when it should return IN_PROGRESS, log it
+                        if ("OPENED".equals(code)) {
+                            // Check if we detected a conflict earlier - if so, this is a backend bug
+                            Logger.w(Logger.TAG_UI, "Backend returned OPENED - checking if this conflicts with another presenter's session");
+                            if (serverLogger != null) {
+                                serverLogger.w(ServerLogger.TAG_UI, "Backend returned OPENED for session " + body.sessionId + 
+                                    ". If another presenter has an open session for this slot, this is a BACKEND BUG.");
+                            }
+                        }
+                        
                         switch (code) {
                             case "OPENED":
                             case "ALREADY_OPEN":
