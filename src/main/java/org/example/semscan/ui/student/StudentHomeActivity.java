@@ -18,12 +18,18 @@ import com.google.android.material.button.MaterialButton;
 import org.example.semscan.R;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
+import org.example.semscan.data.model.Session;
 import org.example.semscan.ui.RolePickerActivity;
 import org.example.semscan.ui.auth.LoginActivity;
 import org.example.semscan.ui.qr.ModernQRScannerActivity;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
 import org.example.semscan.utils.ServerLogger;
+
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class StudentHomeActivity extends AppCompatActivity {
 
@@ -157,12 +163,100 @@ public class StudentHomeActivity extends AppCompatActivity {
     }
 
     private void openQRScanner() {
-        Logger.userAction("Navigate", "Launching ModernQRScannerActivity");
+        Logger.userAction("Open QR Scanner", "Checking for open sessions before opening scanner");
         if (serverLogger != null) {
-            serverLogger.userAction("Navigate", "Launching ModernQRScannerActivity");
+            serverLogger.userAction("Open QR Scanner", "Checking for open sessions before opening scanner");
         }
-        Intent intent = new Intent(this, ModernQRScannerActivity.class);
-        startActivity(intent);
+        
+        // Check if there are any open sessions before allowing QR scanner to open
+        checkForOpenSessions();
+    }
+    
+    private void checkForOpenSessions() {
+        Logger.d(Logger.TAG_UI, "Checking for open sessions before opening QR scanner");
+        
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_UI, "CHECKING OPEN SESSIONS - Before opening QR scanner");
+        }
+        
+        Call<List<Session>> call = apiService.getOpenSessions();
+        call.enqueue(new Callback<List<Session>>() {
+            @Override
+            public void onResponse(Call<List<Session>> call, Response<List<Session>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<Session> allSessions = response.body();
+                    
+                    // Filter to only OPEN sessions
+                    List<Session> openSessions = new java.util.ArrayList<>();
+                    for (Session session : allSessions) {
+                        if (session != null && session.getStatus() != null) {
+                            String status = session.getStatus().toUpperCase();
+                            if ("OPEN".equals(status)) {
+                                openSessions.add(session);
+                            }
+                        }
+                    }
+                    
+                    Logger.d(Logger.TAG_UI, "Found " + openSessions.size() + " open sessions");
+                    
+                    if (serverLogger != null) {
+                        serverLogger.d(ServerLogger.TAG_UI, "OPEN SESSIONS CHECK - Found " + openSessions.size() + " open sessions");
+                    }
+                    
+                    if (openSessions.isEmpty()) {
+                        // No open sessions - show error and don't open scanner
+                        Logger.w(Logger.TAG_UI, "No open sessions available - preventing QR scanner from opening");
+                        
+                        if (serverLogger != null) {
+                            serverLogger.w(ServerLogger.TAG_UI, "QR SCANNER BLOCKED - No open sessions available");
+                        }
+                        
+                        showNoSessionsError();
+                    } else {
+                        // Open sessions available - proceed to open scanner
+                        Logger.d(Logger.TAG_UI, "Open sessions available - opening QR scanner");
+                        
+                        if (serverLogger != null) {
+                            serverLogger.userAction("Navigate", "Launching ModernQRScannerActivity - " + openSessions.size() + " open sessions available");
+                        }
+                        
+                        Intent intent = new Intent(StudentHomeActivity.this, ModernQRScannerActivity.class);
+                        startActivity(intent);
+                    }
+                } else {
+                    // API error - show error message
+                    Logger.e(Logger.TAG_UI, "Failed to check for open sessions - Status: " + response.code());
+                    
+                    if (serverLogger != null) {
+                        serverLogger.e(ServerLogger.TAG_UI, "FAILED TO CHECK OPEN SESSIONS - Status Code: " + response.code());
+                    }
+                    
+                    showNoSessionsError();
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<List<Session>> call, Throwable t) {
+                Logger.e(Logger.TAG_UI, "Failed to check for open sessions", t);
+                
+                if (serverLogger != null) {
+                    serverLogger.e(ServerLogger.TAG_UI, "NETWORK FAILURE - Failed to check open sessions: " + t.getMessage());
+                }
+                
+                // On network failure, show error but don't block (could be temporary network issue)
+                // However, for security, we should still block if we can't verify sessions exist
+                showNoSessionsError();
+            }
+        });
+    }
+    
+    private void showNoSessionsError() {
+        new AlertDialog.Builder(this)
+                .setTitle("No Active Sessions")
+                .setMessage("There are no active sessions available right now. Please wait for a presenter to open a session before scanning a QR code.")
+                .setPositiveButton(android.R.string.ok, null)
+                .setCancelable(true)
+                .show();
     }
 
     private void openManualAttendanceRequest() {

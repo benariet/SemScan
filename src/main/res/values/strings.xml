@@ -185,6 +185,7 @@
     <string name="network_error_generic">Unable to connect. Check your internet and try again.</string>
     <string name="about">About</string>
     <string name="version">Version %s</string>
+    <string name="report_bug_or_problems">Report a bug or having problems?</string>
 
     <!-- Presenter Home (revamped) -->
     <string name="presenter_home_welcome_default">Welcome, Presenter!</string>

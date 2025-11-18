@@ -31,6 +31,7 @@ import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
+import org.example.semscan.utils.ServerLogger;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -62,6 +63,7 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
     private PresenterSlotsAdapter slotAdapter;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
+    private ServerLogger serverLogger;
 
     private boolean shouldScrollToMySlot;
 
@@ -72,6 +74,7 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
 
         preferencesManager = PreferencesManager.getInstance(this);
         apiService = ApiClient.getInstance(this).getApiService();
+        serverLogger = ServerLogger.getInstance(this);
 
         if (!preferencesManager.isPresenter()) {
             finish();
@@ -260,21 +263,50 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
 
     @Override
     public void onRegisterClicked(ApiService.SlotCard slot) {
-        // Show registration dialog directly - invitation question comes after registration
+        // Show registration dialog with topic field
         showRegistrationDialog(slot);
     }
     
     private void showRegistrationDialog(ApiService.SlotCard slot) {
-        // Simple confirmation dialog - no fields needed, just confirm registration
-        new AlertDialog.Builder(this)
+        View dialogView = getLayoutInflater().inflate(R.layout.view_register_slot_dialog, null);
+        TextInputLayout layoutTopic = dialogView.findViewById(R.id.input_layout_topic);
+        TextInputEditText inputTopic = dialogView.findViewById(R.id.input_topic);
+        
+        // Hide supervisor fields - they're only needed for invitation email
+        TextInputLayout layoutSupervisorName = dialogView.findViewById(R.id.input_layout_supervisor_name);
+        TextInputLayout layoutSupervisorEmail = dialogView.findViewById(R.id.input_layout_supervisor_email);
+        layoutSupervisorName.setVisibility(View.GONE);
+        layoutSupervisorEmail.setVisibility(View.GONE);
+        
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.presenter_home_register_title)
                 .setMessage(R.string.presenter_home_register_description)
-                .setPositiveButton(R.string.presenter_slot_register_button, (d, which) -> {
-                    // Register without any details - topic and supervisor info collected later if needed
-                    performRegistration(slot, null, null, null, null);
-                })
+                .setView(dialogView)
+                .setPositiveButton(R.string.presenter_slot_register_button, null)
                 .setNegativeButton(R.string.cancel, (d, which) -> d.dismiss())
-                .show();
+                .create();
+        
+        dialog.setOnShowListener(d -> {
+            final Button button = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+            button.setOnClickListener(v -> {
+                String topic = inputTopic.getText() != null ? inputTopic.getText().toString().trim() : null;
+                
+                // Clear previous errors
+                layoutTopic.setError(null);
+                
+                // Topic is optional, so we can proceed with null or empty topic
+                // But if user entered something, use it
+                if (topic != null && topic.isEmpty()) {
+                    topic = null; // Convert empty string to null
+                }
+                
+                // All validated - proceed with registration
+                dialog.dismiss();
+                performRegistration(slot, topic, null, null, null);
+            });
+        });
+        
+        dialog.show();
     }
 
     private void performRegistration(ApiService.SlotCard slot,
@@ -296,9 +328,11 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
         }
 
         final String normalizedUsername = username.trim().toLowerCase(Locale.US);
+        // Make topic final for use in lambda
+        final String finalTopic = topic;
         // Supervisor details are NOT needed for registration - they're only used for sending invitation email later
         // So we send null for supervisorName and supervisorEmail during registration
-        ApiService.PresenterRegisterRequest request = new ApiService.PresenterRegisterRequest(topic, null, null, presenterEmail);
+        ApiService.PresenterRegisterRequest request = new ApiService.PresenterRegisterRequest(finalTopic, null, null, presenterEmail);
 
         apiService.registerForSlot(normalizedUsername, slot.slotId, request)
                 .enqueue(new Callback<ApiService.PresenterRegisterResponse>() {
@@ -310,6 +344,7 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
                             String errorCode = null;
                             
                             // Try to read error body to get actual error message
+                            String rawErrorMessage = null;
                             if (response.errorBody() != null) {
                                 try {
                                     String errorBodyString = response.errorBody().string();
@@ -321,12 +356,21 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
                                         
                                         // Extract message
                                         if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
-                                            errorMessage = jsonObject.get("message").getAsString();
+                                            rawErrorMessage = jsonObject.get("message").getAsString();
+                                            errorMessage = rawErrorMessage;
                                         }
                                         
                                         // Extract code
                                         if (jsonObject.has("code") && jsonObject.get("code").isJsonPrimitive()) {
                                             errorCode = jsonObject.get("code").getAsString();
+                                        }
+                                        
+                                        // Check error field for database lock timeout
+                                        if (jsonObject.has("error") && jsonObject.get("error").isJsonPrimitive()) {
+                                            String errorField = jsonObject.get("error").getAsString();
+                                            if (errorField != null && errorField.toLowerCase().contains("lock wait timeout")) {
+                                                rawErrorMessage = errorField;
+                                            }
                                         }
                                     } catch (Exception e) {
                                         // If JSON parsing fails, try manual extraction
@@ -335,7 +379,8 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
                                             messageStart += 10; // Length of "\"message\":\""
                                             int messageEnd = errorBodyString.indexOf("\"", messageStart);
                                             if (messageEnd > messageStart) {
-                                                errorMessage = errorBodyString.substring(messageStart, messageEnd);
+                                                rawErrorMessage = errorBodyString.substring(messageStart, messageEnd);
+                                                errorMessage = rawErrorMessage;
                                             }
                                         }
                                         
@@ -347,10 +392,46 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
                                                 errorCode = errorBodyString.substring(codeStart, codeEnd);
                                             }
                                         }
+                                        
+                                        // Check for "error" field with lock timeout
+                                        int errorStart = errorBodyString.indexOf("\"error\":\"");
+                                        if (errorStart >= 0) {
+                                            errorStart += 9; // Length of "\"error\":\""
+                                            int errorEnd = errorBodyString.indexOf("\"", errorStart);
+                                            if (errorEnd > errorStart) {
+                                                String errorField = errorBodyString.substring(errorStart, errorEnd);
+                                                if (errorField.toLowerCase().contains("lock wait timeout")) {
+                                                    rawErrorMessage = errorField;
+                                                }
+                                            }
+                                        }
                                     }
                                 } catch (Exception e) {
                                     Logger.e(Logger.TAG_API, "Failed to read error body", e);
                                 }
+                            }
+                            
+                            // Check if this is a database lock timeout error
+                            boolean isLockTimeout = rawErrorMessage != null && 
+                                (rawErrorMessage.toLowerCase().contains("lock wait timeout") ||
+                                 rawErrorMessage.toLowerCase().contains("database lock") ||
+                                 rawErrorMessage.toLowerCase().contains("deadlock"));
+                            
+                            if (isLockTimeout) {
+                                // Log database lock timeout to app_logs
+                                Logger.e(Logger.TAG_API, "🚨 DATABASE LOCK TIMEOUT DETECTED | Response Code: " + response.code() + 
+                                    ", Error: " + rawErrorMessage);
+                                if (serverLogger != null) {
+                                    String username = preferencesManager.getUserName();
+                                    serverLogger.e(ServerLogger.TAG_API, "🚨 DATABASE LOCK TIMEOUT | " +
+                                        "Response Code: " + response.code() + 
+                                        ", Error Message: " + rawErrorMessage + 
+                                        ", Presenter: " + (username != null ? username : "unknown") + 
+                                        ", Slot ID: " + (slot != null ? slot.slotId : "unknown") +
+                                        " | This indicates a database-level issue. Check for stuck transactions.");
+                                    serverLogger.flushLogs(); // Force send critical error immediately
+                                }
+                                errorMessage = "Database lock timeout. Please try again in a few moments.";
                             }
                             
                             // Show appropriate error message based on code
@@ -392,8 +473,8 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
                                 }
                                 
                                 // After successful registration, ask if they want to send invitation to supervisor
-                                // Topic will be collected in the supervisor invitation dialog if user wants to send invitation
-                                showSupervisorInvitationQuestionDialog(slot, null);
+                                // Pass the topic that was entered during registration
+                                showSupervisorInvitationQuestionDialog(slot, finalTopic);
                                 
                                 loadSlots();
                                 break;
@@ -480,7 +561,10 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
         TextInputEditText inputSupervisorName = dialogView.findViewById(R.id.input_supervisor_name);
         TextInputEditText inputSupervisorEmail = dialogView.findViewById(R.id.input_supervisor_email);
         
-        // Topic field is empty - user will enter it here if they want to send invitation
+        // Pre-fill topic if it was entered during registration
+        if (topic != null && !topic.trim().isEmpty()) {
+            inputTopic.setText(topic);
+        }
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.presenter_slot_supervisor_invitation_title)

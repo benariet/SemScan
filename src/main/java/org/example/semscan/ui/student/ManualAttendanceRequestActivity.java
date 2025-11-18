@@ -111,7 +111,13 @@ public class ManualAttendanceRequestActivity extends AppCompatActivity {
 
         btnSubmitRequest.setOnClickListener(v -> {
             if (validateInput()) {
-                submitManualRequest(editReason.getText().toString().trim());
+                String reason = editReason.getText().toString().trim();
+                // Truncate to 200 characters if longer (safety measure, maxLength in XML should prevent this)
+                if (reason.length() > 200) {
+                    reason = reason.substring(0, 200);
+                    Logger.w(Logger.TAG_UI, "Reason truncated from " + editReason.getText().toString().trim().length() + " to 200 characters");
+                }
+                submitManualRequest(reason);
             }
         });
     }

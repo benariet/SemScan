@@ -339,8 +339,10 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                         if (!response.isSuccessful()) {
                             // Try to get error message from response body
                             String errorMessage = getString(R.string.presenter_start_session_error_generic_message);
+                            String rawErrorMessage = null;
                             if (response.body() != null && response.body().message != null && !response.body().message.trim().isEmpty()) {
-                                errorMessage = response.body().message;
+                                rawErrorMessage = response.body().message;
+                                errorMessage = formatErrorMessage(rawErrorMessage);
                             } else if (response.errorBody() != null) {
                                 try {
                                     String errorBodyString = response.errorBody().string();
@@ -350,7 +352,15 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                                             JsonParser parser = new JsonParser();
                                             JsonObject jsonObject = parser.parse(errorBodyString).getAsJsonObject();
                                             if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
-                                                errorMessage = jsonObject.get("message").getAsString();
+                                                rawErrorMessage = jsonObject.get("message").getAsString();
+                                                errorMessage = formatErrorMessage(rawErrorMessage);
+                                            }
+                                            // Also check error field for database lock timeout
+                                            if (jsonObject.has("error") && jsonObject.get("error").isJsonPrimitive()) {
+                                                String errorField = jsonObject.get("error").getAsString();
+                                                if (errorField != null && errorField.toLowerCase().contains("lock wait timeout")) {
+                                                    rawErrorMessage = errorField;
+                                                }
                                             }
                                         } catch (Exception e) {
                                             // If JSON parsing fails, try manual extraction
@@ -359,7 +369,20 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                                                 messageStart += 11; // Length of "\"message\":\""
                                                 int messageEnd = errorBodyString.indexOf("\"", messageStart);
                                                 if (messageEnd > messageStart) {
-                                                    errorMessage = errorBodyString.substring(messageStart, messageEnd);
+                                                    rawErrorMessage = errorBodyString.substring(messageStart, messageEnd);
+                                                    errorMessage = formatErrorMessage(rawErrorMessage);
+                                                }
+                                            }
+                                            // Check for "error" field with lock timeout
+                                            int errorStart = errorBodyString.indexOf("\"error\":\"");
+                                            if (errorStart >= 0) {
+                                                errorStart += 9; // Length of "\"error\":\""
+                                                int errorEnd = errorBodyString.indexOf("\"", errorStart);
+                                                if (errorEnd > errorStart) {
+                                                    String errorField = errorBodyString.substring(errorStart, errorEnd);
+                                                    if (errorField.toLowerCase().contains("lock wait timeout")) {
+                                                        rawErrorMessage = errorField;
+                                                    }
                                                 }
                                             }
                                         }
@@ -368,6 +391,30 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                                     Logger.e(Logger.TAG_API, "Failed to read error body", e);
                                 }
                             }
+                            
+                            // Check if this is a database lock timeout error
+                            boolean isLockTimeout = rawErrorMessage != null && 
+                                (rawErrorMessage.toLowerCase().contains("lock wait timeout") ||
+                                 rawErrorMessage.toLowerCase().contains("database lock") ||
+                                 rawErrorMessage.toLowerCase().contains("deadlock"));
+                            
+                            if (isLockTimeout) {
+                                // Log database lock timeout to app_logs
+                                Logger.e(Logger.TAG_API, "🚨 DATABASE LOCK TIMEOUT DETECTED | Response Code: " + response.code() + 
+                                    ", Error: " + rawErrorMessage);
+                                if (serverLogger != null) {
+                                    serverLogger.e(ServerLogger.TAG_API, "🚨 DATABASE LOCK TIMEOUT | " +
+                                        "Response Code: " + response.code() + 
+                                        ", Error Message: " + rawErrorMessage + 
+                                        ", Presenter: " + normalizedUsername + 
+                                        ", Slot ID: " + (currentSlot != null ? currentSlot.slotId : "unknown") +
+                                        " | This indicates a database-level issue. Check for stuck transactions.");
+                                    serverLogger.flushLogs(); // Force send critical error immediately
+                                }
+                                // Show user-friendly message
+                                errorMessage = "Database lock timeout. Please try again in a few moments.";
+                            }
+                            
                             showErrorDialog(
                                     getString(R.string.presenter_start_session_error_generic),
                                     errorMessage
@@ -432,7 +479,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                                 }
                                 showErrorDialog(
                                         getString(R.string.presenter_start_session_error_too_early),
-                                        tooEarlyMessage
+                                        formatErrorMessage(tooEarlyMessage)
                                 );
                                 break;
                             case "IN_PROGRESS":
@@ -440,7 +487,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                                         extractMessageFromJson(body.message) : getString(R.string.presenter_start_session_error_in_progress_message);
                                 showErrorDialog(
                                         getString(R.string.presenter_start_session_error_in_progress),
-                                        inProgressMessage
+                                        formatErrorMessage(inProgressMessage)
                                 );
                                 break;
                             default:
@@ -449,7 +496,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                                         extractMessageFromJson(body.message) : getString(R.string.presenter_start_session_error_generic_message);
                                 showErrorDialog(
                                         getString(R.string.presenter_start_session_error_generic),
-                                        defaultMessage
+                                        formatErrorMessage(defaultMessage)
                                 );
                                 break;
                         }
@@ -508,7 +555,7 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                 JsonParser parser = new JsonParser();
                 JsonObject jsonObject = parser.parse(message).getAsJsonObject();
                 if (jsonObject.has("message") && jsonObject.get("message").isJsonPrimitive()) {
-                    return jsonObject.get("message").getAsString();
+                    return formatErrorMessage(jsonObject.get("message").getAsString());
                 }
             } catch (Exception e) {
                 // If parsing fails, try manual extraction
@@ -517,14 +564,70 @@ public class PresenterStartSessionActivity extends AppCompatActivity {
                     messageStart += 11; // Length of "\"message\":\""
                     int messageEnd = message.indexOf("\"", messageStart);
                     if (messageEnd > messageStart) {
-                        return message.substring(messageStart, messageEnd);
+                        return formatErrorMessage(message.substring(messageStart, messageEnd));
                     }
                 }
             }
         }
         
-        // Return message as-is if it's not JSON
-        return message;
+        // Return message as-is if it's not JSON, but format it
+        return formatErrorMessage(message);
+    }
+    
+    /**
+     * Formats error messages to make them more user-friendly.
+     * Converts ISO 8601 datetime strings to readable format.
+     * Example: "2025-11-16T15:00:00" -> "November 16, 2025 at 3:00 PM"
+     */
+    private String formatErrorMessage(String message) {
+        if (message == null || message.trim().isEmpty()) {
+            return message;
+        }
+        
+        // Pattern to match ISO 8601 datetime: YYYY-MM-DDTHH:mm:ss or YYYY-MM-DDTHH:mm:ss.SSS
+        java.util.regex.Pattern isoPattern = java.util.regex.Pattern.compile(
+            "(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?)"
+        );
+        java.util.regex.Matcher matcher = isoPattern.matcher(message);
+        
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            String isoDateTime = matcher.group(1);
+            String formattedDateTime = formatIsoDateTime(isoDateTime);
+            matcher.appendReplacement(result, formattedDateTime);
+        }
+        matcher.appendTail(result);
+        
+        return result.toString();
+    }
+    
+    /**
+     * Converts ISO 8601 datetime string to readable format.
+     * Example: "2025-11-16T15:00:00" -> "November 16, 2025 at 3:00 PM"
+     */
+    private String formatIsoDateTime(String isoDateTime) {
+        try {
+            // Parse ISO 8601 format
+            java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault());
+            // Try with milliseconds if needed
+            if (isoDateTime.contains(".")) {
+                isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", java.util.Locale.getDefault());
+            }
+            
+            java.util.Date date = isoFormat.parse(isoDateTime);
+            
+            // Format to readable date and time
+            java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("MMMM d, yyyy", java.util.Locale.getDefault());
+            java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault());
+            
+            String formattedDate = dateFormat.format(date);
+            String formattedTime = timeFormat.format(date);
+            
+            return formattedDate + " at " + formattedTime;
+        } catch (Exception e) {
+            Logger.w(Logger.TAG_UI, "Failed to format datetime: " + isoDateTime + " - " + e.getMessage());
+            return isoDateTime; // Return original if parsing fails
+        }
     }
 
     private void showErrorDialog(String title, String message) {

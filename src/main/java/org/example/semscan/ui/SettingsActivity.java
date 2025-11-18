@@ -2,6 +2,7 @@ package org.example.semscan.ui;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
@@ -24,6 +25,7 @@ public class SettingsActivity extends AppCompatActivity {
     private MaterialButton btnSave;
     private MaterialButton btnClearData;
     private MaterialButton btnLogout;
+    private MaterialButton btnReportBug;
 
     private PreferencesManager preferencesManager;
 
@@ -54,6 +56,7 @@ public class SettingsActivity extends AppCompatActivity {
         btnSave = findViewById(R.id.btn_save);
         btnClearData = findViewById(R.id.btn_clear_data);
         btnLogout = findViewById(R.id.btn_logout);
+        btnReportBug = findViewById(R.id.btn_report_bug);
     }
 
     private void setupToolbar() {
@@ -84,6 +87,13 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 showLogoutDialog();
+            }
+        });
+
+        btnReportBug.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                reportBugOrProblem();
             }
         });
     }
@@ -182,6 +192,56 @@ public class SettingsActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private void reportBugOrProblem() {
+        Logger.userAction("Report Bug", "User clicked report bug button");
+
+        try {
+            // Pre-fill body with user info if available
+            String username = preferencesManager.getUserName();
+            String userRole = preferencesManager.getUserRole();
+            StringBuilder body = new StringBuilder();
+            body.append("Hello,\n\n");
+            body.append("I'm reporting a bug or having a problem with SemScan.\n\n");
+            if (username != null && !username.isEmpty()) {
+                body.append("Username: ").append(username).append("\n");
+            }
+            if (userRole != null && !userRole.isEmpty()) {
+                body.append("Role: ").append(userRole).append("\n");
+            }
+            body.append("\n");
+            body.append("Description of the issue:\n");
+            body.append("[Please describe the bug or problem here]\n\n");
+            body.append("Steps to reproduce:\n");
+            body.append("[Please describe the steps]\n\n");
+            body.append("Expected behavior:\n");
+            body.append("[What should happen?]\n\n");
+            body.append("Actual behavior:\n");
+            body.append("[What actually happens?]\n");
+            
+            // Build mailto URI with recipient, subject, and body
+            String subject = "SemScan - Bug Report or Problem";
+            String bodyText = body.toString();
+            String mailtoUri = "mailto:benariet@bgu.ac.il" +
+                    "?subject=" + Uri.encode(subject) +
+                    "&body=" + Uri.encode(bodyText);
+            
+            // Create email intent with mailto URI
+            Intent emailIntent = new Intent(Intent.ACTION_SENDTO);
+            emailIntent.setData(Uri.parse(mailtoUri));
+
+            // Check if there's an app that can handle this intent
+            if (emailIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(Intent.createChooser(emailIntent, "Send email via..."));
+            } else {
+                // No email app available - show message
+                Toast.makeText(this, "No email app found. Please send an email to benariet@bgu.ac.il", Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Logger.e(Logger.TAG_UI, "Failed to open email intent", e);
+            Toast.makeText(this, "Failed to open email. Please send an email to benariet@bgu.ac.il", Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override

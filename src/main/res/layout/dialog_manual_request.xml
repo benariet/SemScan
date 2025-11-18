@@ -36,7 +36,8 @@
             android:hint="Reason (e.g., Camera broken, Phone issues)"
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="3"
-            android:minLines="1" />
+            android:minLines="1"
+            android:maxLength="200" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

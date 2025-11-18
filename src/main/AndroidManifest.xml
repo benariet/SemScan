@@ -24,7 +24,8 @@
         <activity
             android:name=".ui.auth.LoginActivity"
             android:exported="true"
-            android:theme="@style/Theme.SemScan">
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -34,57 +35,68 @@
         <activity
             android:name=".ui.auth.FirstTimeSetupActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.auth.DegreeSelectionActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.auth.MScRoleSelectionActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.auth.RoleContextActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.auth.TestEmailActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.RolePickerActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
         
         <activity
             android:name=".ui.student.StudentHomeActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".ui.student.ManualAttendanceRequestActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".ui.teacher.PresenterHomeActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".ui.teacher.PresenterSlotSelectionActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".ui.teacher.PresenterMySlotActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".ui.teacher.PresenterStartSessionActivity"
@@ -103,12 +115,14 @@
         <activity
             android:name=".ui.qr.QRScannerActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".ui.qr.ModernQRScannerActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".ui.qr.QRDisplayActivity"
@@ -120,12 +134,14 @@
         <activity
             android:name=".ui.SettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
             
         <activity
             android:name=".ui.teacher.ExportActivity"
             android:exported="false"
-            android:theme="@style/Theme.SemScan" />
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
 
         <!-- FileProvider for secure file sharing -->
         <provider
