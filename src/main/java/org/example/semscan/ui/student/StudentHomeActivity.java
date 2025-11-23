@@ -328,8 +328,9 @@ public class StudentHomeActivity extends AppCompatActivity {
         if (serverLogger != null) {
             serverLogger.userAction("Logout", "Student logged out");
         }
+        // Clear session/user data but KEEP "Remember Me" username so login screen can pre-fill it.
+        // SECURITY: Passwords are never stored (see PreferencesManager), so this does not leak credentials.
         preferencesManager.clearUserData();
-        preferencesManager.clearSavedCredentials(); // Clear "Remember Me" credentials
 
         Toast.makeText(this, R.string.logout_success, Toast.LENGTH_SHORT).show();
 

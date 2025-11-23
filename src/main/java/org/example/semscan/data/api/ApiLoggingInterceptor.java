@@ -75,8 +75,11 @@ public class ApiLoggingInterceptor implements Interceptor {
             requestBody = new String(bodyBytes, charset);
             
             if (requestBody != null && !requestBody.isEmpty()) {
-                // Always log to Android Logcat
-                String requestLog = String.format("Request Body: %s", requestBody);
+                // Sanitize sensitive data (passwords) before logging
+                String sanitizedBody = sanitizeSensitiveData(requestBody, path);
+                
+                // Always log to Android Logcat (with sanitized data)
+                String requestLog = String.format("Request Body: %s", sanitizedBody);
                 Log.d(TAG, method + " " + url + " - " + requestLog);
                 
                 // Only log to ServerLogger if NOT the logs endpoint (to avoid recursion)
@@ -95,7 +98,8 @@ public class ApiLoggingInterceptor implements Interceptor {
         // Log request details
         String requestDetails = String.format("Request: %s %s", method, path);
         if (requestBody != null && !requestBody.isEmpty()) {
-            requestDetails += " - Body: " + requestBody;
+            String sanitizedBody = sanitizeSensitiveData(requestBody, path);
+            requestDetails += " - Body: " + sanitizedBody;
         }
         
         // Only log to ServerLogger if NOT the logs endpoint
@@ -129,9 +133,10 @@ public class ApiLoggingInterceptor implements Interceptor {
             
             responseBodyString = buffer.clone().readString(charset);
             
-            // Always log to Android Logcat
+            // Always log to Android Logcat (with sanitized data)
             if (responseBodyString != null && !responseBodyString.isEmpty()) {
-                String responseLog = String.format("Response Body: %s", responseBodyString);
+                String sanitizedResponse = sanitizeSensitiveData(responseBodyString, path);
+                String responseLog = String.format("Response Body: %s", sanitizedResponse);
                 Log.d(TAG, method + " " + url + " - " + responseLog);
                 
                 // Only log to ServerLogger if NOT the logs endpoint
@@ -156,7 +161,8 @@ public class ApiLoggingInterceptor implements Interceptor {
         int statusCode = response.code();
         String responseDetails = String.format("Status: %d, Duration: %dms", statusCode, duration);
         if (responseBodyString != null && !responseBodyString.isEmpty()) {
-            responseDetails += " - Body: " + responseBodyString;
+            String sanitizedResponse = sanitizeSensitiveData(responseBodyString, path);
+            responseDetails += " - Body: " + sanitizedResponse;
         }
         
         // Only log to ServerLogger if NOT the logs endpoint
@@ -176,6 +182,44 @@ public class ApiLoggingInterceptor implements Interceptor {
         }
         
         return response;
+    }
+    
+    /**
+     * Sanitize sensitive data (passwords) from JSON request/response bodies before logging
+     * This prevents passwords from appearing in logs
+     */
+    private String sanitizeSensitiveData(String body, String path) {
+        if (body == null || body.isEmpty()) {
+            return body;
+        }
+        
+        // Only sanitize login endpoint to avoid false positives
+        if (!"/api/v1/auth/login".equals(path)) {
+            return body;
+        }
+        
+        try {
+            // Use regex to replace password field values with "***"
+            // Matches: "password":"any_value" or "password": "any_value"
+            // Handles both quoted and unquoted values
+            String sanitized = body.replaceAll(
+                "(?i)(\"password\"\\s*:\\s*\")([^\"]*)(\")",
+                "$1***$3"
+            );
+            
+            // Also handle unquoted values (though JSON should have quotes)
+            sanitized = sanitized.replaceAll(
+                "(?i)(\"password\"\\s*:\\s*)([^,\\}]+)",
+                "$1\"***\""
+            );
+            
+            return sanitized;
+        } catch (Exception e) {
+            // If sanitization fails, return original body (better than crashing)
+            // But log a warning
+            Log.w(TAG, "Failed to sanitize sensitive data: " + e.getMessage());
+            return body;
+        }
     }
     
 }

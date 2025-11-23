@@ -9,13 +9,39 @@ public class ApiConstants {
     // =============================================
     // BASE CONFIGURATION
     // =============================================
-    // Use localhost - works with ADB port forwarding for both emulators and physical devices
-    // For emulators: Run: adb reverse tcp:8080 tcp:8080
-    // For physical devices: Run: adb reverse tcp:8080 tcp:8080
-    // The build scripts (build.ps1, run-install-and-restart.ps1) automatically set up port forwarding
-    public static final String SERVER_URL = "http://localhost:8080";
-    public static final String API_BASE_URL = "http://localhost:8080/api/v1";
+    // API URL is configured via BuildConfig.API_SERVER_URL
+    // For development: Uses http://localhost:8080 (with ADB port forwarding)
+    // For production: Set API_SERVER_URL in gradle.properties or environment variable
+    // SECURITY: Production builds should use HTTPS (https://your-server.com)
+    private static final String DEFAULT_SERVER_URL = getServerUrl();
+    public static final String SERVER_URL = DEFAULT_SERVER_URL;
+    public static final String API_BASE_URL = DEFAULT_SERVER_URL + "/api/v1";
     public static final String API_VERSION = "v1";
+    
+    /**
+     * Get server URL from BuildConfig or use default
+     * SECURITY: Validates HTTPS for production builds (non-localhost URLs)
+     */
+    private static String getServerUrl() {
+        String url;
+        try {
+            // Try to get from BuildConfig (set in build.gradle.kts)
+            url = org.example.semscan.BuildConfig.API_SERVER_URL;
+        } catch (Exception e) {
+            // Fallback to default for development
+            url = "http://localhost:8080";
+        }
+        
+        // SECURITY: Enforce HTTPS for production URLs (non-localhost)
+        if (url != null && !url.startsWith("http://localhost") && !url.startsWith("https://")) {
+            android.util.Log.w("ApiConstants", 
+                "WARNING: Production API URL should use HTTPS! Current: " + url);
+            // Don't auto-convert to avoid breaking existing setups
+            // But log a warning
+        }
+        
+        return url != null ? url : "http://localhost:8080";
+    }
     // =============================================
     // API ENDPOINTS
     // =============================================

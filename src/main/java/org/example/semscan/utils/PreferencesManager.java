@@ -165,21 +165,23 @@ public class PreferencesManager {
     
     /**
      * Save password for "Remember Me" functionality
-     * WARNING: Storing passwords in SharedPreferences is not secure.
-     * For production apps, consider using Android Keystore or token-based authentication.
+     * SECURITY: Password storage is DISABLED for production builds.
+     * Passwords are never stored to protect user security.
+     * Only username is saved for "Remember Me" functionality.
      */
     public void setSavedPassword(String password) {
-        Logger.prefs(KEY_SAVED_PASSWORD, password != null ? "***" : null);
-        if (password == null || password.isEmpty()) {
-            prefs.edit().remove(KEY_SAVED_PASSWORD).apply();
-        } else {
-            // Note: In production, encrypt this password using Android Keystore
-            prefs.edit().putString(KEY_SAVED_PASSWORD, password).apply();
-        }
+        // SECURITY FIX: Do not store passwords in SharedPreferences
+        // Even in encrypted form, storing passwords is a security risk.
+        // Only store username for "Remember Me" functionality.
+        Logger.prefs(KEY_SAVED_PASSWORD, "*** (not stored for security)");
+        // Always remove any existing password
+        prefs.edit().remove(KEY_SAVED_PASSWORD).apply();
+        Logger.d(Logger.TAG_UI, "Password storage disabled for security - only username will be saved");
     }
     
     public String getSavedPassword() {
-        return prefs.getString(KEY_SAVED_PASSWORD, null);
+        // SECURITY FIX: Always return null - passwords are not stored
+        return null;
     }
     
     public void setRememberMeEnabled(boolean enabled) {

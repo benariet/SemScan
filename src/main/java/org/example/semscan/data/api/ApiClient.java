@@ -25,8 +25,8 @@ public class ApiClient {
     }
     
     private void createApiService() {
-        // Standard HTTP logging for Android Logcat
-        HttpLoggingInterceptor httpLogging = new HttpLoggingInterceptor();
+        // Standard HTTP logging for Android Logcat with password sanitization
+        HttpLoggingInterceptor httpLogging = new HttpLoggingInterceptor(new PasswordSanitizingLogger());
         httpLogging.setLevel(HttpLoggingInterceptor.Level.BODY);
         
         // Custom interceptor for ServerLogger (app_logs) - logs request/response bodies
@@ -80,5 +80,39 @@ public class ApiClient {
             trimmed += "/";
         }
         return trimmed;
+    }
+    
+    /**
+     * Custom logger for HttpLoggingInterceptor that sanitizes passwords before logging
+     */
+    private static class PasswordSanitizingLogger implements HttpLoggingInterceptor.Logger {
+        @Override
+        public void log(String message) {
+            // Sanitize passwords in the log message
+            String sanitized = sanitizePasswordInLog(message);
+            android.util.Log.d("OkHttp", sanitized);
+        }
+        
+        private String sanitizePasswordInLog(String message) {
+            if (message == null || message.isEmpty()) {
+                return message;
+            }
+            
+            // Check if this is a login request
+            if (message.contains("/api/v1/auth/login") || message.contains("password")) {
+                // Replace password values with ***
+                // Matches: "password":"value" or "password": "value" or password=value
+                message = message.replaceAll(
+                    "(?i)(\"password\"\\s*:\\s*\")([^\"]*)(\")",
+                    "$1***$3"
+                );
+                message = message.replaceAll(
+                    "(?i)(password\\s*=\\s*)([^&\\s]+)",
+                    "$1***"
+                );
+            }
+            
+            return message;
+        }
     }
 }

@@ -372,42 +372,40 @@ public class LoginActivity extends AppCompatActivity {
     
     /**
      * Load saved credentials if "Remember Me" was previously checked
+     * SECURITY: Only username is saved, passwords are never stored
      */
     private void loadSavedCredentials() {
         String savedUsername = preferencesManager.getSavedUsername();
-        String savedPassword = preferencesManager.getSavedPassword();
         boolean rememberMeChecked = preferencesManager.isRememberMeEnabled();
         
         if (rememberMeChecked && savedUsername != null && !savedUsername.isEmpty()) {
-            // Pre-fill username
+            // Pre-fill username only (passwords are not stored for security)
             if (editUsername != null) {
                 editUsername.setText(savedUsername);
             }
             
-            // Pre-fill password if available (optional - for security, you might want to skip this)
-            if (savedPassword != null && !savedPassword.isEmpty() && editPassword != null) {
-                editPassword.setText(savedPassword);
-            }
+            // SECURITY: Password is never pre-filled - it's not stored
+            // User must enter password each time for security
             
             // Check the "Remember Me" checkbox
             if (checkboxRememberMe != null) {
                 checkboxRememberMe.setChecked(true);
             }
             
-            Logger.d(Logger.TAG_UI, "Loaded saved credentials for: " + savedUsername);
+            Logger.d(Logger.TAG_UI, "Loaded saved username for: " + savedUsername + " (password not stored for security)");
         }
     }
     
     /**
      * Save credentials when "Remember Me" is checked
-     * Note: Storing passwords in SharedPreferences is not secure for production apps.
-     * Consider using Android Keystore or token-based authentication instead.
+     * SECURITY: Only username is saved. Passwords are never stored to protect user security.
      */
     private void saveCredentials(String username, String password) {
         preferencesManager.setSavedUsername(username);
-        preferencesManager.setSavedPassword(password);
+        // SECURITY: Do not store password - it's handled securely by PreferencesManager
+        preferencesManager.setSavedPassword(password); // This method now does nothing (security fix)
         preferencesManager.setRememberMeEnabled(true);
-        Logger.d(Logger.TAG_UI, "Saved credentials for: " + username);
+        Logger.d(Logger.TAG_UI, "Saved username for Remember Me (password not stored for security): " + username);
     }
     
     /**

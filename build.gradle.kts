@@ -1,7 +1,7 @@
 import java.io.ByteArrayOutputStream
 
 plugins {
-    id("com.android.application") version "8.13.0"
+    id("com.android.application") version "8.13.1"
 }
 
 android {
@@ -21,6 +21,14 @@ android {
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
+        
+        // API URL configuration - can be overridden via gradle.properties
+        // For production: Set API_SERVER_URL in gradle.properties or environment variable
+        val apiServerUrl = project.findProperty("API_SERVER_URL") as String?
+            ?: System.getenv("API_SERVER_URL")
+            ?: "http://localhost:8080"
+        
+        buildConfigField("String", "API_SERVER_URL", "\"$apiServerUrl\"")
     }
 
     buildTypes {
@@ -41,6 +49,7 @@ android {
     
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
     
     // 16 KB page size compatibility - ensure native libraries are properly aligned
