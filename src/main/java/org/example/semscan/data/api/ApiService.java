@@ -136,12 +136,24 @@ public interface ApiService {
     // =============================
     // Export
     // =============================
-
+    
     @GET("api/v1/export/xlsx")
     Call<ResponseBody> exportXlsx(@Query("sessionId") Long sessionId);
-
+    
     @GET("api/v1/export/csv")
     Call<ResponseBody> exportCsv(@Query("sessionId") Long sessionId);
+    
+    /**
+     * Trigger server-side export + upload flow.
+     *
+     * The backend will generate the export file and upload it to the configured upload server.
+     * The mobile app only triggers this process and displays the result; it does not handle the file bytes.
+     *
+     * Example: POST /api/v1/export/upload?sessionId=123&format=csv
+     */
+    @POST("api/v1/export/upload")
+    Call<UploadResponse> uploadExport(@Query("sessionId") Long sessionId,
+                                      @Query("format") String format);
 
     // =============================
     // Request/Response DTOs
@@ -434,5 +446,35 @@ public interface ApiService {
         public boolean success;
         public String message;
         public String code;
+    }
+    
+    /**
+     * Response for export upload endpoint.
+     *
+     * Example JSON:
+     * {
+     *   "success": true,
+     *   "message": "Export file uploaded successfully",
+     *   "sessionId": 123,
+     *   "format": "csv",
+     *   "filename": "9_11_2025_john_doe_13-15.csv",
+     *   "records": 25,
+     *   "fileSize": 2048,
+     *   "verified": true,
+     *   "uploadUrl": "http://132.73.167.231:8080/api/v1/upload",
+     *   "uploadResponse": { ... }
+     * }
+     */
+    class UploadResponse {
+        public boolean success;
+        public String message;
+        public Long sessionId;
+        public String format;
+        public String filename;
+        public Integer records;
+        public Long fileSize;
+        public Boolean verified;
+        public String uploadUrl;
+        public Object uploadResponse;
     }
 }

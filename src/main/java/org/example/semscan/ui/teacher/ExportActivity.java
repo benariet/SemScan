@@ -461,12 +461,93 @@ public class ExportActivity extends AppCompatActivity {
         }
         
         boolean isExcel = radioGroupFormat.getCheckedRadioButtonId() == R.id.radio_excel;
-        String format = isExcel ? "Excel (.xlsx)" : "CSV (.csv)";
+        String formatLabel = isExcel ? "Excel (.xlsx)" : "CSV (.csv)";
         
-        Logger.i(Logger.TAG_UI, "Starting export - Session ID: " + currentSessionId + ", Format: " + format);
-        exportSessionData(currentSessionId, isExcel);
+        Logger.i(Logger.TAG_UI, "Starting export upload - Session ID: " + currentSessionId + ", Format: " + formatLabel);
+        uploadSessionData(currentSessionId, isExcel);
     }
     
+    /**
+     * New flow: trigger server-side export + upload.
+     *
+     * The backend will generate the export file and upload it to the configured upload server.
+     * The mobile app only triggers this process and shows the result; it no longer handles raw file bytes here.
+     */
+    private void uploadSessionData(Long sessionId, boolean isExcel) {
+        String formatParam = isExcel ? "xlsx" : "csv";
+        String endpoint = "api/v1/export/upload";
+        
+        Logger.api("POST", endpoint, "Session ID: " + sessionId + ", format=" + formatParam);
+        
+        Call<ApiService.UploadResponse> call = apiService.uploadExport(sessionId, formatParam);
+        call.enqueue(new Callback<ApiService.UploadResponse>() {
+            @Override
+            public void onResponse(Call<ApiService.UploadResponse> call, Response<ApiService.UploadResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    ApiService.UploadResponse body = response.body();
+                    Logger.apiResponse("POST", endpoint, response.code(),
+                            "Upload success=" + body.success + ", message=" + body.message);
+                    
+                    if (Boolean.TRUE.equals(body.success)) {
+                        String msg = body.message;
+                        if (msg == null || msg.trim().isEmpty()) {
+                            msg = "Export uploaded successfully";
+                        }
+                        // Include record count if available
+                        if (body.records != null && body.records > 0) {
+                            msg += " (" + body.records + " records)";
+                        }
+                        Toast.makeText(ExportActivity.this, msg, Toast.LENGTH_LONG).show();
+                    } else {
+                        String errorMessage = body.message != null && !body.message.trim().isEmpty()
+                                ? body.message
+                                : getString(R.string.error_export_failed);
+                        ToastUtils.showError(ExportActivity.this, errorMessage);
+                    }
+                } else {
+                    String errorBody = null;
+                    if (response.errorBody() != null) {
+                        try {
+                            errorBody = response.errorBody().string();
+                        } catch (Exception e) {
+                            Logger.e(Logger.TAG_UI, "Error reading export upload response body", e);
+                        }
+                    }
+                    
+                    Logger.apiError("POST", endpoint, response.code(),
+                            errorBody != null ? errorBody : "Export upload request failed");
+                    
+                    String errorMessage;
+                    if (response.code() == ApiConstants.HTTP_CONFLICT) {
+                        // Should normally be prevented by pending-requests check, but handle defensively
+                        errorMessage = "Cannot upload while manual attendance requests are pending. Please review and approve/reject them first.";
+                    } else if (response.code() == ApiConstants.HTTP_BAD_REQUEST) {
+                        errorMessage = "Export format is invalid. Please try again.";
+                    } else if (response.code() >= 500) {
+                        errorMessage = "Server error while uploading export. Please try again later.";
+                    } else {
+                        errorMessage = getString(R.string.error_export_failed);
+                    }
+                    
+                    ToastUtils.showError(ExportActivity.this, errorMessage);
+                }
+            }
+            
+            @Override
+            public void onFailure(Call<ApiService.UploadResponse> call, Throwable t) {
+                Logger.e(Logger.TAG_UI, "Export upload network failure", t);
+                String errorMessage = getString(R.string.error_export_failed);
+                if (t instanceof java.net.SocketTimeoutException || t instanceof java.net.ConnectException) {
+                    errorMessage = getString(R.string.error_network_timeout);
+                } else if (t instanceof java.net.UnknownHostException) {
+                    errorMessage = getString(R.string.error_server_unavailable);
+                }
+                ToastUtils.showError(ExportActivity.this, errorMessage);
+            }
+        });
+    }
+    
+    // Legacy local-file export kept for reference, no longer used by the main flow.
     private void exportSessionData(Long sessionId, boolean isExcel) {
         Call<ResponseBody> call;
         String filename;
