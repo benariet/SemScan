@@ -8,6 +8,8 @@ import org.example.semscan.utils.ServerLogger;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -46,6 +48,28 @@ public class ApiLoggingInterceptor implements Interceptor {
         return serverLogger;
     }
     
+    /**
+     * Sanitize passwords from JSON strings to prevent logging sensitive data.
+     * Replaces password values with "***" while preserving JSON structure.
+     */
+    private String sanitizePasswords(String jsonString) {
+        if (jsonString == null || jsonString.trim().isEmpty()) {
+            return jsonString;
+        }
+        
+        // Pattern to match "password":"value" or "password": "value" in JSON
+        // Handles escaped quotes and any characters in the password value
+        // CASE_INSENSITIVE handles "password", "Password", "PASSWORD", etc.
+        // Matches: "password":"any value here" or "password": "any value here"
+        Pattern passwordPattern = Pattern.compile(
+            "\"password\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"",
+            Pattern.CASE_INSENSITIVE
+        );
+        
+        Matcher matcher = passwordPattern.matcher(jsonString);
+        return matcher.replaceAll("\"password\":\"***\"");
+    }
+    
     @Override
     public Response intercept(Chain chain) throws IOException {
         Request originalRequest = chain.request();
@@ -75,8 +99,11 @@ public class ApiLoggingInterceptor implements Interceptor {
             requestBody = new String(bodyBytes, charset);
             
             if (requestBody != null && !requestBody.isEmpty()) {
-                // Always log to Android Logcat
-                String requestLog = String.format("Request Body: %s", requestBody);
+                // Sanitize passwords before logging
+                String sanitizedRequestBody = sanitizePasswords(requestBody);
+                
+                // Always log to Android Logcat (with sanitized password)
+                String requestLog = String.format("Request Body: %s", sanitizedRequestBody);
                 Log.d(TAG, method + " " + url + " - " + requestLog);
                 
                 // Only log to ServerLogger if NOT the logs endpoint (to avoid recursion)
@@ -92,10 +119,11 @@ public class ApiLoggingInterceptor implements Interceptor {
                 .build();
         }
         
-        // Log request details
+        // Log request details (with sanitized password)
         String requestDetails = String.format("Request: %s %s", method, path);
         if (requestBody != null && !requestBody.isEmpty()) {
-            requestDetails += " - Body: " + requestBody;
+            String sanitizedRequestBody = sanitizePasswords(requestBody);
+            requestDetails += " - Body: " + sanitizedRequestBody;
         }
         
         // Only log to ServerLogger if NOT the logs endpoint
@@ -129,9 +157,11 @@ public class ApiLoggingInterceptor implements Interceptor {
             
             responseBodyString = buffer.clone().readString(charset);
             
-            // Always log to Android Logcat
+            // Always log to Android Logcat (with sanitized password if present)
             if (responseBodyString != null && !responseBodyString.isEmpty()) {
-                String responseLog = String.format("Response Body: %s", responseBodyString);
+                // Sanitize passwords from response body as well (in case server returns password)
+                String sanitizedResponseBody = sanitizePasswords(responseBodyString);
+                String responseLog = String.format("Response Body: %s", sanitizedResponseBody);
                 Log.d(TAG, method + " " + url + " - " + responseLog);
                 
                 // Only log to ServerLogger if NOT the logs endpoint
@@ -152,11 +182,12 @@ public class ApiLoggingInterceptor implements Interceptor {
                 .build();
         }
         
-        // Log response details
+        // Log response details (with sanitized password if present)
         int statusCode = response.code();
         String responseDetails = String.format("Status: %d, Duration: %dms", statusCode, duration);
         if (responseBodyString != null && !responseBodyString.isEmpty()) {
-            responseDetails += " - Body: " + responseBodyString;
+            String sanitizedResponseBody = sanitizePasswords(responseBodyString);
+            responseDetails += " - Body: " + sanitizedResponseBody;
         }
         
         // Only log to ServerLogger if NOT the logs endpoint
