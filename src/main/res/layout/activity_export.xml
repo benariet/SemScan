@@ -60,39 +60,14 @@
             </LinearLayout>
 
 
-            <!-- Export Format -->
+            <!-- Export Format - Excel only -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Export Format"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/gray_800"
-                android:layout_marginBottom="8dp" />
-
-            <RadioGroup
-                android:id="@+id/radio_group_format"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp">
-
-                <RadioButton
-                    android:id="@+id/radio_csv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="CSV (Comma Separated Values)"
-                    android:textSize="16sp"
-                    android:checked="true"
-                    android:layout_marginBottom="8dp" />
-
-                <RadioButton
-                    android:id="@+id/radio_excel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Excel (XLSX)"
-                    android:textSize="16sp" />
-
-            </RadioGroup>
+                android:text="Export Format: Excel (XLSX)"
+                android:textSize="16sp"
+                android:textColor="@color/gray_600"
+                android:layout_marginBottom="32dp" />
 
             <!-- Export Button -->
             <Button

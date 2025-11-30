@@ -8,7 +8,6 @@ import androidx.core.content.FileProvider;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -42,7 +41,6 @@ import retrofit2.Response;
 
 public class ExportActivity extends AppCompatActivity {
     
-    private RadioGroup radioGroupFormat;
     private Button btnExport;
     private TextView textSessionId;
     
@@ -75,7 +73,7 @@ public class ExportActivity extends AppCompatActivity {
     }
     
     private void initializeViews() {
-        radioGroupFormat = findViewById(R.id.radio_group_format);
+        // RadioGroup removed - only Excel export is available
         btnExport = findViewById(R.id.btn_export);
         textSessionId = findViewById(R.id.text_session_id);
         
@@ -460,8 +458,9 @@ public class ExportActivity extends AppCompatActivity {
             return;
         }
         
-        boolean isExcel = radioGroupFormat.getCheckedRadioButtonId() == R.id.radio_excel;
-        String formatLabel = isExcel ? "Excel (.xlsx)" : "CSV (.csv)";
+        // Only Excel export is available (CSV option removed)
+        boolean isExcel = true;
+        String formatLabel = "Excel (.xlsx)";
         
         Logger.i(Logger.TAG_UI, "Starting export upload - Session ID: " + currentSessionId + ", Format: " + formatLabel);
         uploadSessionData(currentSessionId, isExcel);

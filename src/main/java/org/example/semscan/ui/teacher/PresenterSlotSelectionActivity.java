@@ -832,3 +832,4 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
         return super.onOptionsItemSelected(item);
     }
 }
+5

@@ -88,6 +88,10 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_presenter_attendance_qr);
 
+        // Keep screen on so QR code remains visible for scanning
+        // This prevents the screen from dimming or locking during the session
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         apiService = ApiClient.getInstance(this).getApiService();
         serverLogger = ServerLogger.getInstance(this);
         autoCloseHandler = new Handler(Looper.getMainLooper());
@@ -295,8 +299,8 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
                             Toast.LENGTH_LONG).show();
                     });
                     
-                    // Auto-close the session
-                    endSession();
+                    // Auto-close the session (but keep the QR page open)
+                    closeSessionOnly(false);
                 } else if (currentTime < sessionClosesAtMs) {
                     // Calculate time until close and schedule next check
                     long timeUntilClose = sessionClosesAtMs - currentTime;
@@ -316,6 +320,9 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        // Clear screen wake lock when activity is destroyed
+        getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        
         if (autoCloseHandler != null && autoCloseRunnable != null) {
             autoCloseHandler.removeCallbacks(autoCloseRunnable);
         }
@@ -396,7 +403,13 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
         });
     }
 
-    private void endSession() {
+    /**
+     * Close session only (without navigating away).
+     * Used for auto-close to keep the QR page visible.
+     * 
+     * @param navigateToExport If true, navigate to export after closing. If false, stay on QR page.
+     */
+    private void closeSessionOnly(boolean navigateToExport) {
         if (sessionId == null) {
             Toast.makeText(this, R.string.presenter_attendance_qr_end_error, Toast.LENGTH_SHORT).show();
             return;
@@ -414,11 +427,17 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
                 btnCancelSession.setEnabled(true);
                 
                 if (response.isSuccessful()) {
-                    Toast.makeText(PresenterAttendanceQrActivity.this, R.string.presenter_attendance_qr_end_success, Toast.LENGTH_SHORT).show();
+                    String message = navigateToExport 
+                        ? getString(R.string.presenter_attendance_qr_end_success)
+                        : getString(R.string.presenter_attendance_qr_auto_close_message);
+                    Toast.makeText(PresenterAttendanceQrActivity.this, message, Toast.LENGTH_LONG).show();
                     Logger.userAction("End Session", "Session " + sessionId + " ended successfully");
                     
-                    // Fetch slot details for export filename before navigating
-                    fetchSlotDetailsForExport();
+                    if (navigateToExport) {
+                        // Fetch slot details for export filename before navigating
+                        fetchSlotDetailsForExport();
+                    }
+                    // If navigateToExport is false, stay on QR page - don't navigate away
                 } else {
                     Toast.makeText(PresenterAttendanceQrActivity.this, R.string.presenter_attendance_qr_end_error, Toast.LENGTH_SHORT).show();
                     Logger.apiError("PATCH", "/api/v1/sessions/" + sessionId + "/close", response.code(), "Failed to end session");
@@ -434,6 +453,14 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
                 Logger.e(Logger.TAG_API, "Failed to end session", t);
             }
         });
+    }
+    
+    /**
+     * End session - closes the session and navigates to export page
+     * Called when user manually clicks "End Session" button
+     */
+    private void endSession() {
+        closeSessionOnly(true);
     }
     
     private void fetchSlotDetailsForExport() {
