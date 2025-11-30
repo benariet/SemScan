@@ -149,6 +149,9 @@ public interface ApiService {
      * The backend will generate the export file and upload it to the configured upload server.
      * The mobile app only triggers this process and displays the result; it does not handle the file bytes.
      *
+     * Note: The upload server URL is configured on the backend side. It should typically be
+     * the same server (e.g., http://132.72.50.53:8080/api/v1/upload) or the backend's own endpoint.
+     *
      * Example: POST /api/v1/export/upload?sessionId=123&format=csv
      */
     @POST("api/v1/export/upload")
@@ -461,9 +464,13 @@ public interface ApiService {
      *   "records": 25,
      *   "fileSize": 2048,
      *   "verified": true,
-     *   "uploadUrl": "http://132.73.167.231:8080/api/v1/upload",
+     *   "uploadUrl": "http://132.72.50.53:8080/api/v1/upload",
      *   "uploadResponse": { ... }
      * }
+     * 
+     * Note: The uploadUrl is returned by the backend and should point to the same server
+     * (or the backend's own upload endpoint). The backend configuration determines where
+     * files are actually uploaded.
      */
     class UploadResponse {
         public boolean success;

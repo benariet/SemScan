@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="SamScan">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-11-10T11:27:29.491453300Z">
+        <DropdownSelection timestamp="2025-11-26T07:41:22.988761500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\benariet\.android\avd\Medium_Phone.avd" />
@@ -15,17 +15,12 @@
           <targets>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=9b7bf207" />
-              </handle>
-            </Target>
-            <Target type="DEFAULT_BOOT">
-              <handle>
                 <DeviceId pluginId="PhysicalDevice" identifier="serial=HGAJ74G6" />
               </handle>
             </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=R58N3598ATD" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=9b7bf207" />
               </handle>
             </Target>
           </targets>

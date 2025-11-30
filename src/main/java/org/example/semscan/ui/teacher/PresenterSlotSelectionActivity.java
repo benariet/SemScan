@@ -27,6 +27,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import org.example.semscan.R;
+import org.example.semscan.constants.ApiConstants;
 import org.example.semscan.data.api.ApiClient;
 import org.example.semscan.data.api.ApiService;
 import org.example.semscan.utils.Logger;
@@ -263,11 +264,19 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
 
     @Override
     public void onRegisterClicked(ApiService.SlotCard slot) {
+        Logger.userAction("Register Slot", "User clicked register for slot=" + (slot != null ? slot.slotId : "null"));
+        if (serverLogger != null) {
+            serverLogger.userAction("Register Slot", "User clicked register for slot=" + (slot != null ? slot.slotId : "null"));
+        }
         // Show registration dialog with topic field
         showRegistrationDialog(slot);
     }
     
     private void showRegistrationDialog(ApiService.SlotCard slot) {
+        Logger.d(Logger.TAG_UI, "Showing registration dialog for slot=" + (slot != null ? slot.slotId : "null"));
+        if (serverLogger != null) {
+            serverLogger.d(ServerLogger.TAG_UI, "Showing registration dialog for slot=" + (slot != null ? slot.slotId : "null"));
+        }
         View dialogView = getLayoutInflater().inflate(R.layout.view_register_slot_dialog, null);
         TextInputLayout layoutTopic = dialogView.findViewById(R.id.input_layout_topic);
         TextInputEditText inputTopic = dialogView.findViewById(R.id.input_topic);
@@ -314,8 +323,17 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
                                      @Nullable String supervisorName,
                                      @Nullable String supervisorEmail,
                                      AlertDialog dialog) {
+        Logger.userAction("Register Slot", "Starting registration for slot=" + (slot != null ? slot.slotId : "null"));
+        if (serverLogger != null) {
+            serverLogger.userAction("Register Slot", "Starting registration for slot=" + (slot != null ? slot.slotId : "null"));
+        }
+        
         final String username = preferencesManager.getUserName();
         if (TextUtils.isEmpty(username)) {
+            Logger.e(Logger.TAG_UI, "Registration failed - username is empty");
+            if (serverLogger != null) {
+                serverLogger.e(ServerLogger.TAG_UI, "Registration failed - username is empty");
+            }
             Toast.makeText(this, R.string.presenter_start_session_error_no_user, Toast.LENGTH_LONG).show();
             return;
         }
@@ -323,6 +341,10 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
         // Get presenter's email from profile (required for sending notification)
         final String presenterEmail = preferencesManager.getEmail();
         if (TextUtils.isEmpty(presenterEmail)) {
+            Logger.e(Logger.TAG_UI, "Registration failed - presenter email is empty");
+            if (serverLogger != null) {
+                serverLogger.e(ServerLogger.TAG_UI, "Registration failed - presenter email is empty");
+            }
             Toast.makeText(this, R.string.presenter_home_presenter_email_required, Toast.LENGTH_LONG).show();
             return;
         }
@@ -334,12 +356,29 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
         // So we send null for supervisorName and supervisorEmail during registration
         ApiService.PresenterRegisterRequest request = new ApiService.PresenterRegisterRequest(finalTopic, null, null, presenterEmail);
 
+        String apiEndpoint = "api/v1/presenters/" + normalizedUsername + "/home/slots/" + slot.slotId + "/register";
+        String apiMessage = "Registering for slot=" + slot.slotId + ", topic=" + (finalTopic != null ? finalTopic : "null");
+        Logger.api("POST", apiEndpoint, apiMessage);
+        if (serverLogger != null) {
+            serverLogger.api("POST", apiEndpoint, apiMessage);
+        }
+        
         apiService.registerForSlot(normalizedUsername, slot.slotId, request)
                 .enqueue(new Callback<ApiService.PresenterRegisterResponse>() {
                     @Override
                     public void onResponse(Call<ApiService.PresenterRegisterResponse> call, Response<ApiService.PresenterRegisterResponse> response) {
+                        String apiEndpoint = "api/v1/presenters/" + normalizedUsername + "/home/slots/" + slot.slotId + "/register";
+                        Logger.apiResponse("POST", apiEndpoint, response.code(), "Registration response received");
+                        if (serverLogger != null) {
+                            serverLogger.apiResponse("POST", apiEndpoint, response.code(), "Registration response received");
+                        }
+                        
                         // Handle unsuccessful HTTP responses (non-200 status codes)
                         if (!response.isSuccessful()) {
+                            Logger.apiError("POST", apiEndpoint, response.code(), "Registration failed with HTTP " + response.code());
+                            if (serverLogger != null) {
+                                serverLogger.apiError("POST", apiEndpoint, response.code(), "Registration failed with HTTP " + response.code());
+                            }
                             String errorMessage = getString(R.string.error_registration_failed);
                             String errorCode = null;
                             
@@ -465,8 +504,17 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
 
                         ApiService.PresenterRegisterResponse body = response.body();
                         String code = body.code != null ? body.code : "";
+                        if (serverLogger != null) {
+                            serverLogger.i(ServerLogger.TAG_API, "Registration response code: " + code + 
+                                    ", message: " + (body.message != null ? body.message : "null"));
+                        }
                         switch (code) {
                             case "REGISTERED":
+                                Logger.i(Logger.TAG_API, "Registration successful for slot=" + slot.slotId);
+                                if (serverLogger != null) {
+                                    serverLogger.i(ServerLogger.TAG_API, "Registration successful for slot=" + slot.slotId + 
+                                            ", presenter=" + normalizedUsername);
+                                }
                                 Toast.makeText(PresenterSlotSelectionActivity.this, R.string.presenter_home_register_success, Toast.LENGTH_LONG).show();
                                 if (dialog != null) {
                                     dialog.dismiss();
@@ -504,26 +552,52 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
 
                     @Override
                     public void onFailure(Call<ApiService.PresenterRegisterResponse> call, Throwable t) {
-                        String errorMessage = getString(R.string.error_registration_failed);
+                        String requestUrl = call.request() != null ? call.request().url().toString() : "unknown";
+                        String errorDetails = "Slot registration network failure - URL: " + requestUrl + 
+                                ", Error: " + t.getClass().getSimpleName() + ", Message: " + t.getMessage();
+                        Logger.e(Logger.TAG_API, errorDetails, t);
+                        if (serverLogger != null) {
+                            serverLogger.e(ServerLogger.TAG_API, errorDetails, t);
+                        }
+                        
+                        String errorMessage;
                         if (t instanceof java.net.SocketTimeoutException) {
                             errorMessage = "Connection timeout. Please check:\n" +
-                                    "1. Backend server is running\n" +
-                                    "2. ADB port forwarding is active\n" +
-                                    "3. Network connection is stable";
-                            Logger.e(Logger.TAG_API, "Slot registration timeout - URL: " + 
-                                    (call.request() != null ? call.request().url() : "unknown"), t);
+                                    "1. Backend server is running at " + ApiConstants.SERVER_URL + "\n" +
+                                    "2. Network connection is stable\n" +
+                                    "3. Server is accessible from your device";
+                            Logger.e(Logger.TAG_API, "Slot registration timeout - URL: " + requestUrl, t);
+                            if (serverLogger != null) {
+                                serverLogger.e(ServerLogger.TAG_API, "Slot registration timeout - URL: " + requestUrl, t);
+                            }
                         } else if (t instanceof java.net.ConnectException) {
-                            errorMessage = "Cannot connect to server. Please check ADB port forwarding:\n" +
-                                    "Run: adb reverse tcp:8080 tcp:8080";
-                            Logger.e(Logger.TAG_API, "Slot registration connection failed - URL: " + 
-                                    (call.request() != null ? call.request().url() : "unknown"), t);
+                            errorMessage = "Cannot connect to server at " + ApiConstants.SERVER_URL + 
+                                    ". Please check:\n" +
+                                    "1. Server is running\n" +
+                                    "2. Device can reach the server IP\n" +
+                                    "3. Firewall allows connections";
+                            Logger.e(Logger.TAG_API, "Slot registration connection failed - URL: " + requestUrl, t);
+                            if (serverLogger != null) {
+                                serverLogger.e(ServerLogger.TAG_API, "Slot registration connection failed - URL: " + requestUrl, t);
+                            }
                         } else if (t instanceof java.net.UnknownHostException) {
-                            errorMessage = getString(R.string.error_server_unavailable);
-                            Logger.e(Logger.TAG_API, "Slot registration - server unavailable", t);
+                            errorMessage = "Server unavailable: " + ApiConstants.SERVER_URL + 
+                                    "\nPlease check the server address.";
+                            Logger.e(Logger.TAG_API, "Slot registration - server unavailable: " + requestUrl, t);
+                            if (serverLogger != null) {
+                                serverLogger.e(ServerLogger.TAG_API, "Slot registration - server unavailable: " + requestUrl, t);
+                            }
                         } else {
+                            errorMessage = "Registration failed: " + t.getMessage() + 
+                                    "\nURL: " + requestUrl;
                             Logger.e(Logger.TAG_API, "Slot registration failed - Error: " + t.getClass().getSimpleName() + 
                                     ", Message: " + t.getMessage(), t);
+                            if (serverLogger != null) {
+                                serverLogger.e(ServerLogger.TAG_API, "Slot registration failed - Error: " + t.getClass().getSimpleName() + 
+                                        ", Message: " + t.getMessage(), t);
+                            }
                         }
+                        
                         Toast.makeText(PresenterSlotSelectionActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 });

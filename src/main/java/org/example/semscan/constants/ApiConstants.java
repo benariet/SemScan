@@ -9,12 +9,9 @@ public class ApiConstants {
     // =============================================
     // BASE CONFIGURATION
     // =============================================
-    // Use localhost - works with ADB port forwarding for both emulators and physical devices
-    // For emulators: Run: adb reverse tcp:8080 tcp:8080
-    // For physical devices: Run: adb reverse tcp:8080 tcp:8080
-    // The build scripts (build.ps1, run-install-and-restart.ps1) automatically set up port forwarding
-    public static final String SERVER_URL = "http://localhost:8080";
-    public static final String API_BASE_URL = "http://localhost:8080/api/v1";
+    // Production server URL (HTTP)
+    public static final String SERVER_URL = "http://132.72.50.53:8080";
+    public static final String API_BASE_URL = "http://132.72.50.53:8080/api/v1";
     public static final String API_VERSION = "v1";
     // =============================================
     // API ENDPOINTS

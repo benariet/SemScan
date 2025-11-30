@@ -1,7 +1,7 @@
 import java.io.ByteArrayOutputStream
 
 plugins {
-    id("com.android.application") version "8.13.0"
+    id("com.android.application") version "8.13.1"
 }
 
 android {
