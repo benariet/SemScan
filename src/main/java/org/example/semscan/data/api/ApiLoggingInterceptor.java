@@ -195,11 +195,8 @@ public class ApiLoggingInterceptor implements Interceptor {
             if (response.isSuccessful()) {
                 getServerLogger().apiResponse(method, path, statusCode, responseDetails);
             } else {
-                String errorDetails = responseDetails;
-                if (responseBodyString != null && !responseBodyString.isEmpty()) {
-                    errorDetails = responseDetails;
-                }
-                getServerLogger().apiError(method, path, statusCode, errorDetails);
+                // responseDetails already includes sanitized response body (if present)
+                getServerLogger().apiError(method, path, statusCode, responseDetails);
             }
         } else {
             // Still log to Android Logcat for debugging

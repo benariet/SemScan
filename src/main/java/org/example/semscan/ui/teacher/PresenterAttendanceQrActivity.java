@@ -80,6 +80,7 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
     
     // Auto-close tracking
     private long sessionOpenedAtMs; // Timestamp when session was opened (in milliseconds)
+    private long sessionClosesAtMs; // Timestamp when session should close (in milliseconds)
     private boolean isAutoClosing = false; // Flag to prevent multiple auto-close attempts
 
     @Override
@@ -148,6 +149,23 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
         }
         if (!TextUtils.isEmpty(closesAt)) {
             textValidUntil.setText(getString(R.string.presenter_attendance_qr_valid_until, closesAt));
+            // Parse closesAt timestamp to determine when to auto-close
+            sessionClosesAtMs = parseTimestamp(closesAt);
+            if (sessionClosesAtMs <= 0) {
+                // If parsing fails, calculate from openedAt + 15 minutes
+                if (sessionOpenedAtMs > 0) {
+                    sessionClosesAtMs = sessionOpenedAtMs + AUTO_CLOSE_DURATION_MS;
+                } else {
+                    sessionClosesAtMs = System.currentTimeMillis() + AUTO_CLOSE_DURATION_MS;
+                }
+            }
+        } else {
+            // If no closesAt provided, calculate from openedAt + 15 minutes
+            if (sessionOpenedAtMs > 0) {
+                sessionClosesAtMs = sessionOpenedAtMs + AUTO_CLOSE_DURATION_MS;
+            } else {
+                sessionClosesAtMs = System.currentTimeMillis() + AUTO_CLOSE_DURATION_MS;
+            }
         }
 
         String normalizedContent = normalizeQrContent(!TextUtils.isEmpty(qrPayload) ? qrPayload : qrUrl);
@@ -160,6 +178,7 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
     /**
      * Parse timestamp string to milliseconds.
      * Supports formats like "2025-11-09 14:30:00" or ISO 8601 format.
+     * Note: Timestamps without timezone are assumed to be in UTC to match server time.
      */
     private long parseTimestamp(String timestamp) {
         if (TextUtils.isEmpty(timestamp)) {
@@ -168,14 +187,19 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
         try {
             // Try ISO 8601 format first (e.g., "2025-11-09T14:30:00Z" or "2025-11-09T14:30:00+00:00")
             java.text.SimpleDateFormat isoFormat = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
+            // Set timezone to UTC for timestamps without timezone info (to match server time)
+            isoFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
             try {
-                return isoFormat.parse(timestamp.replace("Z", "").replaceAll("\\+\\d{2}:\\d{2}$", "")).getTime();
+                String cleanedTimestamp = timestamp.replace("Z", "").replaceAll("\\+\\d{2}:\\d{2}$", "");
+                return isoFormat.parse(cleanedTimestamp).getTime();
             } catch (Exception e) {
                 // Try without timezone
             }
             
             // Try standard format (e.g., "2025-11-09 14:30:00")
             java.text.SimpleDateFormat standardFormat = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US);
+            // Set timezone to UTC for timestamps without timezone info (to match server time)
+            standardFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
             return standardFormat.parse(timestamp).getTime();
         } catch (Exception e) {
             Logger.w(Logger.TAG_UI, "Failed to parse timestamp: " + timestamp + " - " + e.getMessage());
@@ -240,23 +264,28 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
     }
 
     /**
-     * Start the auto-close timer that checks if 15 minutes have passed
+     * Start the auto-close timer that checks if the session close time has been reached.
+     * Uses the server's closesAt timestamp to avoid timezone issues.
      */
     private void startAutoCloseTimer() {
-        if (sessionOpenedAtMs <= 0) {
-            // If we don't have a valid open time, use current time
-            sessionOpenedAtMs = System.currentTimeMillis();
+        if (sessionClosesAtMs <= 0) {
+            // Fallback: if no close time, calculate from openedAt + 15 minutes
+            if (sessionOpenedAtMs <= 0) {
+                sessionOpenedAtMs = System.currentTimeMillis();
+            }
+            sessionClosesAtMs = sessionOpenedAtMs + AUTO_CLOSE_DURATION_MS;
         }
         
         autoCloseRunnable = new Runnable() {
             @Override
             public void run() {
                 long currentTime = System.currentTimeMillis();
-                long elapsedTime = currentTime - sessionOpenedAtMs;
                 
-                if (elapsedTime >= AUTO_CLOSE_DURATION_MS && !isAutoClosing) {
-                    // 15 minutes have passed - auto-close the session
-                    Logger.i(Logger.TAG_UI, "Auto-closing session after 15 minutes. Elapsed: " + (elapsedTime / 1000) + " seconds");
+                // Check if current time has reached or passed the session close time
+                if (currentTime >= sessionClosesAtMs && !isAutoClosing) {
+                    // Session close time has been reached - auto-close the session
+                    long elapsedTime = currentTime - (sessionClosesAtMs - AUTO_CLOSE_DURATION_MS);
+                    Logger.i(Logger.TAG_UI, "Auto-closing session. Close time reached. Elapsed: " + (elapsedTime / 1000) + " seconds");
                     isAutoClosing = true;
                     
                     // Show a toast notification
@@ -268,15 +297,20 @@ public class PresenterAttendanceQrActivity extends AppCompatActivity {
                     
                     // Auto-close the session
                     endSession();
-                } else if (elapsedTime < AUTO_CLOSE_DURATION_MS) {
-                    // Schedule next check
-                    autoCloseHandler.postDelayed(this, AUTO_CLOSE_CHECK_INTERVAL_MS);
+                } else if (currentTime < sessionClosesAtMs) {
+                    // Calculate time until close and schedule next check
+                    long timeUntilClose = sessionClosesAtMs - currentTime;
+                    long nextCheckDelay = Math.min(timeUntilClose, AUTO_CLOSE_CHECK_INTERVAL_MS);
+                    autoCloseHandler.postDelayed(this, nextCheckDelay);
                 }
             }
         };
         
-        // Start checking after a short delay
-        autoCloseHandler.postDelayed(autoCloseRunnable, AUTO_CLOSE_CHECK_INTERVAL_MS);
+        // Calculate initial delay - check at the close time or every 30 seconds, whichever comes first
+        long currentTime = System.currentTimeMillis();
+        long timeUntilClose = sessionClosesAtMs - currentTime;
+        long initialDelay = Math.min(Math.max(timeUntilClose, 0), AUTO_CLOSE_CHECK_INTERVAL_MS);
+        autoCloseHandler.postDelayed(autoCloseRunnable, initialDelay);
     }
     
     @Override

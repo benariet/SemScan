@@ -328,6 +328,19 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
             serverLogger.userAction("Register Slot", "Starting registration for slot=" + (slot != null ? slot.slotId : "null"));
         }
         
+        // Null check for slot parameter to prevent NullPointerException
+        if (slot == null) {
+            Logger.e(Logger.TAG_UI, "Registration failed - slot is null");
+            if (serverLogger != null) {
+                serverLogger.e(ServerLogger.TAG_UI, "Registration failed - slot is null");
+            }
+            Toast.makeText(this, R.string.error_registration_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
+        
+        // Extract slotId to final variable for safe use in lambda
+        final Long slotId = slot.slotId;
+        
         final String username = preferencesManager.getUserName();
         if (TextUtils.isEmpty(username)) {
             Logger.e(Logger.TAG_UI, "Registration failed - username is empty");
@@ -356,18 +369,18 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
         // So we send null for supervisorName and supervisorEmail during registration
         ApiService.PresenterRegisterRequest request = new ApiService.PresenterRegisterRequest(finalTopic, null, null, presenterEmail);
 
-        String apiEndpoint = "api/v1/presenters/" + normalizedUsername + "/home/slots/" + slot.slotId + "/register";
-        String apiMessage = "Registering for slot=" + slot.slotId + ", topic=" + (finalTopic != null ? finalTopic : "null");
+        String apiEndpoint = "api/v1/presenters/" + normalizedUsername + "/home/slots/" + slotId + "/register";
+        String apiMessage = "Registering for slot=" + slotId + ", topic=" + (finalTopic != null ? finalTopic : "null");
         Logger.api("POST", apiEndpoint, apiMessage);
         if (serverLogger != null) {
             serverLogger.api("POST", apiEndpoint, apiMessage);
         }
         
-        apiService.registerForSlot(normalizedUsername, slot.slotId, request)
+        apiService.registerForSlot(normalizedUsername, slotId, request)
                 .enqueue(new Callback<ApiService.PresenterRegisterResponse>() {
                     @Override
                     public void onResponse(Call<ApiService.PresenterRegisterResponse> call, Response<ApiService.PresenterRegisterResponse> response) {
-                        String apiEndpoint = "api/v1/presenters/" + normalizedUsername + "/home/slots/" + slot.slotId + "/register";
+                        String apiEndpoint = "api/v1/presenters/" + normalizedUsername + "/home/slots/" + slotId + "/register";
                         Logger.apiResponse("POST", apiEndpoint, response.code(), "Registration response received");
                         if (serverLogger != null) {
                             serverLogger.apiResponse("POST", apiEndpoint, response.code(), "Registration response received");
