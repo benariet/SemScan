@@ -85,12 +85,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="144dp"
                 android:gravity="top|start"
+                android:textColor="@color/gray_900"
+                android:textColorHint="@color/gray_600"
                 android:background="@drawable/edittext_background"
                 android:hint="Explain why you need manual attendance"
                 android:padding="12dp"
                 android:inputType="textMultiLine"
                 android:maxLines="6"
-                android:textColor="@color/gray_900"
                 android:overScrollMode="never"
                 android:layout_marginBottom="24dp" />
 

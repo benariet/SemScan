@@ -37,7 +37,9 @@
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="3"
             android:minLines="1"
-            android:maxLength="200" />
+            android:maxLength="200"
+            android:textColor="@color/gray_900"
+            android:textColorHint="@color/gray_600" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

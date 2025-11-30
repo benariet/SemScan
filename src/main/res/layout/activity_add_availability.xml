@@ -92,7 +92,10 @@
                     android:background="@drawable/edittext_background"
                     android:hint="Enter seminar name"
                     android:padding="12dp"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="12dp"
+                    android:textColor="@color/gray_900"
+                    android:textColorHint="@color/gray_600"
+ />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -109,7 +112,10 @@
                     android:gravity="top"
                     android:background="@drawable/edittext_background"
                     android:hint="Enter seminar description"
-                    android:padding="12dp" />
+                    android:padding="12dp"
+                    android:textColor="@color/gray_900"
+                    android:textColorHint="@color/gray_600"
+ />
             </LinearLayout>
 
             <TextView
@@ -136,7 +142,9 @@
                 android:background="@drawable/edittext_background"
                 android:hint="e.g. Wednesday Morning Lab"
                 android:padding="12dp"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="12dp"
+                android:textColor="@color/gray_900"
+                android:textColorHint="@color/gray_600" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -154,7 +162,9 @@
                 android:background="@drawable/edittext_background"
                 android:hint="Describe this availability"
                 android:padding="12dp"
-                android:layout_marginBottom="20dp" />
+                android:layout_marginBottom="20dp"
+                android:textColor="@color/gray_900"
+                android:textColorHint="@color/gray_600" />
 
             <TextView
                 android:id="@+id/label_slots"

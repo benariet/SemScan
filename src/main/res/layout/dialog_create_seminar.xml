@@ -57,7 +57,10 @@
         android:background="@drawable/edittext_background"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+        android:textColor="@color/gray_900"
+        android:textColorHint="@color/gray_600"
+ />
 
     <!-- Description -->
     <TextView
@@ -81,7 +84,10 @@
         android:paddingEnd="16dp"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="24dp"
+        android:textColor="@color/gray_900"
+        android:textColorHint="@color/gray_600"
+ />
 
     <!-- Buttons -->
     <LinearLayout

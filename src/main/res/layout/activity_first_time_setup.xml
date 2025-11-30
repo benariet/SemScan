@@ -55,7 +55,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/setup_first_name"
-                    android:maxLines="1" />
+                    android:maxLines="1"
+                    android:textColor="@color/gray_900"
+                    android:textColorHint="@color/gray_600" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -71,7 +73,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/setup_last_name"
-                    android:maxLines="1" />
+                    android:maxLines="1"
+                    android:textColor="@color/gray_900"
+                    android:textColorHint="@color/gray_600" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -91,6 +95,8 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/setup_national_id"
                     android:inputType="numberPassword"
+                    android:textColor="@color/gray_900"
+                    android:textColorHint="@color/gray_600"
                     android:maxLength="9"
                     android:maxLines="1"
                     android:importantForAutofill="yes" />
@@ -113,7 +119,8 @@
                 android:layout_marginTop="24dp"
                 android:foreground="?attr/selectableItemBackground"
                 app:cardCornerRadius="@dimen/onboarding_card_corner_radius"
-                app:cardElevation="@dimen/onboarding_card_elevation">
+                app:cardElevation="@dimen/onboarding_card_elevation"
+                app:cardBackgroundColor="@color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -145,7 +152,8 @@
                 android:layout_marginTop="16dp"
                 android:foreground="?attr/selectableItemBackground"
                 app:cardCornerRadius="@dimen/onboarding_card_corner_radius"
-                app:cardElevation="@dimen/onboarding_card_elevation">
+                app:cardElevation="@dimen/onboarding_card_elevation"
+                app:cardBackgroundColor="@color/white">
 
                 <LinearLayout
                     android:layout_width="match_parent"

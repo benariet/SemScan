@@ -51,6 +51,8 @@
         <item name="boxStrokeWidth">1dp</item>
         <item name="boxStrokeWidthFocused">2dp</item>
         <item name="hintTextColor">@color/gray_600</item>
+        <item name="android:textColorHint">@color/gray_600</item>
+        <item name="android:textColor">@color/gray_900</item>
     </style>
 
 </resources>

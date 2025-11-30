@@ -34,7 +34,10 @@
                 android:layout_marginBottom="16dp"
                 android:hint="Enter seminar name"
                 android:background="@drawable/edittext_background"
-                android:padding="12dp" />
+                android:padding="12dp"
+                android:textColor="@color/gray_900"
+                android:textColorHint="@color/gray_600"
+ />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -50,7 +53,10 @@
                 android:layout_marginBottom="16dp"
                 android:hint="Enter seminar code"
                 android:background="@drawable/edittext_background"
-                android:padding="12dp" />
+                android:padding="12dp"
+                android:textColor="@color/gray_900"
+                android:textColorHint="@color/gray_600"
+ />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -67,6 +73,8 @@
                 android:gravity="top"
                 android:layout_marginBottom="16dp"
                 android:hint="Describe the seminar"
+                android:textColor="@color/gray_900"
+                android:textColorHint="@color/gray_600"
                 android:background="@drawable/edittext_background"
                 android:padding="12dp"
                 android:inputType="textMultiLine" />

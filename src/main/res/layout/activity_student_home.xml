@@ -57,6 +57,7 @@
                     app:cardCornerRadius="16dp"
                     app:cardElevation="2dp"
                     app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@color/white"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?android:attr/selectableItemBackground">
@@ -112,6 +113,7 @@
                     app:cardCornerRadius="16dp"
                     app:cardElevation="2dp"
                     app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@color/white"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?android:attr/selectableItemBackground">

@@ -39,7 +39,9 @@
             android:id="@+id/input_topic"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapSentences" />
+            android:inputType="textCapSentences"
+            android:textColor="@color/gray_900"
+            android:textColorHint="@color/gray_600" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -55,7 +57,9 @@
             android:id="@+id/input_supervisor_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapWords" />
+            android:inputType="textCapWords"
+            android:textColor="@color/gray_900"
+            android:textColorHint="@color/gray_600" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -71,7 +75,9 @@
             android:id="@+id/input_supervisor_email"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textEmailAddress" />
+            android:inputType="textEmailAddress"
+            android:textColor="@color/gray_900"
+            android:textColorHint="@color/gray_600" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
