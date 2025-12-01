@@ -51,18 +51,23 @@ public class LoginActivity extends AppCompatActivity {
         editPassword = findViewById(R.id.edit_password);
         checkboxRememberMe = findViewById(R.id.checkbox_remember_me);
         btnLogin = findViewById(R.id.btn_login);
-        btnSkipAuth = findViewById(R.id.btn_skip_auth);
-        btnTestEmail = findViewById(R.id.btn_test_email);
+        // Buttons removed from layout but keeping references for potential future use
+        btnSkipAuth = null; // findViewById(R.id.btn_skip_auth); // Button removed from layout
+        btnTestEmail = null; // findViewById(R.id.btn_test_email); // Button removed from layout
 
         // Load saved credentials if "Remember Me" was previously checked
         loadSavedCredentials();
 
         btnLogin.setOnClickListener(v -> handleLogin());
-        btnSkipAuth.setOnClickListener(v -> handleSkipAuth());
-        btnTestEmail.setOnClickListener(v -> {
-            Intent intent = new Intent(LoginActivity.this, TestEmailActivity.class);
-            startActivity(intent);
-        });
+        if (btnSkipAuth != null) {
+            btnSkipAuth.setOnClickListener(v -> handleSkipAuth());
+        }
+        if (btnTestEmail != null) {
+            btnTestEmail.setOnClickListener(v -> {
+                Intent intent = new Intent(LoginActivity.this, TestEmailActivity.class);
+                startActivity(intent);
+            });
+        }
 
         Logger.i(Logger.TAG_UI, "LoginActivity created");
     }

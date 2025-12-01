@@ -85,22 +85,6 @@
             android:layout_marginTop="24dp"
             android:text="@string/login_button" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_skip_auth"
-            style="@style/SemScanButtonOutlinedPrimary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/login_skip_auth_button" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_test_email"
-            style="@style/SemScanButtonOutlinedPrimary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/test_email_button" />
-
     </LinearLayout>
 
 </ScrollView>

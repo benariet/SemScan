@@ -12,7 +12,7 @@
 
 ### ✅ **Complete Android Lean MVP Application**
 - **Role-based system**: Teacher and Student roles only
-- **QR Code functionality**: Generation and scanning (sessionId only)
+- **QR Code functionality**: Generation and scanning (sessionId only)api
 - **Core Attendance**: Student scan QR → submit attendance → get feedback
 - **Session Management**: Teacher start session → display QR → export data
 - **Simplified Export**: Session-based CSV/Excel export only
@@ -26,7 +26,6 @@
 - **Network security**: Cleartext traffic configured for development
 - **Localization**: English and Hebrew support (RTL)
 
----
 
 ## 📁 **Project Structure**
 
