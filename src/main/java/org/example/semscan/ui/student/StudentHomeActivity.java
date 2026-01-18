@@ -29,6 +29,7 @@ import org.example.semscan.ui.RolePickerActivity;
 import org.example.semscan.ui.SettingsActivity;
 import org.example.semscan.ui.auth.LoginActivity;
 import org.example.semscan.ui.qr.ModernQRScannerActivity;
+import org.example.semscan.ui.student.AttendanceHistoryActivity;
 import org.example.semscan.utils.ConfigManager;
 import org.example.semscan.utils.Logger;
 import org.example.semscan.utils.PreferencesManager;
@@ -45,6 +46,7 @@ public class StudentHomeActivity extends AppCompatActivity {
 
     private MaterialCardView cardScanAttendance;
     private MaterialCardView cardManualAttendance;
+    private MaterialCardView cardAttendanceHistory;
     private MaterialCardView btnChangeRole;
     private PreferencesManager preferencesManager;
     private ApiService apiService;
@@ -92,6 +94,7 @@ public class StudentHomeActivity extends AppCompatActivity {
     private void initializeViews() {
         cardScanAttendance = findViewById(R.id.card_scan_attendance);
         cardManualAttendance = findViewById(R.id.card_manual_attendance);
+        cardAttendanceHistory = findViewById(R.id.card_attendance_history);
         btnChangeRole = findViewById(R.id.btn_change_role);
 
         // Check manual attendance config and update visibility
@@ -181,6 +184,17 @@ public class StudentHomeActivity extends AppCompatActivity {
                     serverLogger.userAction("Open Manual Attendance", "Student tapped manual attendance card");
                 }
                 openManualAttendanceRequest();
+            }
+        });
+
+        cardAttendanceHistory.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Logger.userAction("Open Attendance History", "Student tapped attendance history card");
+                if (serverLogger != null) {
+                    serverLogger.userAction("Open Attendance History", "Student tapped attendance history card");
+                }
+                openAttendanceHistory();
             }
         });
 
@@ -299,6 +313,15 @@ public class StudentHomeActivity extends AppCompatActivity {
             serverLogger.userAction("Navigate", "Launching ManualAttendanceRequestActivity");
         }
         Intent intent = new Intent(this, ManualAttendanceRequestActivity.class);
+        startActivity(intent);
+    }
+
+    private void openAttendanceHistory() {
+        Logger.userAction("Navigate", "Launching AttendanceHistoryActivity");
+        if (serverLogger != null) {
+            serverLogger.userAction("Navigate", "Launching AttendanceHistoryActivity");
+        }
+        Intent intent = new Intent(this, AttendanceHistoryActivity.class);
         startActivity(intent);
     }
 

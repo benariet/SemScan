@@ -46,6 +46,9 @@ public interface ApiService {
     Call<Boolean> hasAttended(@Query("sessionId") Long sessionId,
                               @Query("studentUsername") String studentUsername);
 
+    @GET("api/v1/attendance/student/{studentUsername}")
+    Call<List<Attendance>> getAttendanceByStudent(@Path("studentUsername") String studentUsername);
+
     // =============================
     // Manual attendance workflow
     // =============================
@@ -261,6 +264,7 @@ public interface ApiService {
     }
 
     class PresenterCoPresenter {
+        public String username;
         public String name;
         public String degree;
         public String topic;

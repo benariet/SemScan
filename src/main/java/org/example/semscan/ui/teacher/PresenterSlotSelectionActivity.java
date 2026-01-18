@@ -160,6 +160,11 @@ public class PresenterSlotSelectionActivity extends AppCompatActivity implements
             slotAdapter.setUserDegree(response.presenter.degree);
         }
 
+        // Set current username for "(me)" indicator in slot cards
+        String currentUser = preferencesManager.getBguUsername();
+        slotAdapter.setCurrentUsername(currentUser);
+        Logger.d(Logger.TAG_SLOTS_LOAD, "Set currentUsername for (me) indicator: " + currentUser);
+
         slotAdapter.submitList(futureSlots);
         emptyState.setVisibility(futureSlots.isEmpty() ? View.VISIBLE : View.GONE);
 
