@@ -83,6 +83,12 @@
             android:screenOrientation="portrait" />
             
         <activity
+            android:name=".ui.student.AttendanceHistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SemScan"
+            android:screenOrientation="portrait" />
+            
+        <activity
             android:name=".ui.teacher.PresenterHomeActivity"
             android:exported="false"
             android:theme="@style/Theme.SemScan"

@@ -42,6 +42,7 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
     private final SlotActionListener listener;
     private boolean userHasApprovedRegistration = false;
     private String userDegree = null; // "PhD" or "MSc"
+    private String currentUsername = null; // Current logged-in user's username
 
     PresenterSlotsAdapter(@NonNull SlotActionListener listener) {
         this.listener = listener;
@@ -49,6 +50,10 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
 
     void setUserDegree(String degree) {
         this.userDegree = degree;
+    }
+
+    void setCurrentUsername(String username) {
+        this.currentUsername = username != null ? username.toLowerCase().trim() : null;
     }
 
     @NonNull
@@ -112,6 +117,7 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
     /**
      * Format names from registered list for display - each name on its own indented line
      * Shows degree prefix (PhD/MSc) to explain capacity usage
+     * Appends "(me)" if the presenter is the current logged-in user
      * Returns null if no names available
      */
     private String formatNamesForDisplay(List<ApiService.PresenterCoPresenter> registered, int maxCount) {
@@ -129,6 +135,11 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
                     entry.append(presenter.degree.trim()).append(", ");
                 }
                 entry.append(presenter.name.trim());
+                // Append "(me)" if this is the current user
+                if (currentUsername != null && presenter.username != null &&
+                        currentUsername.equals(presenter.username.toLowerCase().trim())) {
+                    entry.append(" (me)");
+                }
                 names.add(entry.toString());
             }
         }
@@ -141,6 +152,7 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
 
     /**
      * Format waiting list as priority numbers with names (#1 - Name)
+     * Appends "(me)" if the presenter is the current logged-in user
      */
     private String formatWaitingListPriorities(List<ApiService.PresenterCoPresenter> waitingList, int maxCount) {
         if (waitingList == null || waitingList.isEmpty()) {
@@ -153,6 +165,11 @@ class PresenterSlotsAdapter extends RecyclerView.Adapter<PresenterSlotsAdapter.S
             String name = (presenter != null && presenter.name != null) ? presenter.name.trim() : "";
             String degree = (presenter != null && presenter.degree != null) ? presenter.degree.trim() : "";
             String displayName = degree.isEmpty() ? name : degree + ", " + name;
+            // Append "(me)" if this is the current user
+            if (currentUsername != null && presenter != null && presenter.username != null &&
+                    currentUsername.equals(presenter.username.toLowerCase().trim())) {
+                displayName += " (me)";
+            }
             priorities.add("    #" + (i + 1) + " - " + displayName);
         }
         return TextUtils.join("\n", priorities);
